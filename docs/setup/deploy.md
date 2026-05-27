@@ -8,11 +8,12 @@ EC2 한 대에서 Docker Compose로 Spring Boot, PostgreSQL, Nginx를 함께 실
 
 | Component | Role | Public |
 |-----------|------|--------|
-| `nginx` | 외부 HTTP 요청을 Spring Boot로 프록시 | `80` |
+| `nginx` | 외부 HTTPS 요청을 Spring Boot로 프록시 | `80`, `443` |
 | `app` | Spring Boot 애플리케이션 | 내부 네트워크 |
 | `postgres` | PostgreSQL DB | 내부 네트워크 |
 
 Spring Boot `8080`과 PostgreSQL `5432`는 인터넷에 직접 개방하지 않습니다.
+Cloudflare를 사용할 때는 Cloudflare Origin Certificate를 Nginx에 설치하고 `Full (strict)` 모드를 사용합니다.
 
 ---
 
@@ -31,7 +32,8 @@ Spring Boot `8080`과 PostgreSQL `5432`는 인터넷에 직접 개방하지 않�
 | Port | Source | Purpose |
 |------|--------|---------|
 | `22` | 내 IP | SSH |
-| `80` | `0.0.0.0/0` | Cloudflare 또는 HTTP 요청 |
+| `80` | `0.0.0.0/0` | HTTP 요청을 HTTPS로 리다이렉트 |
+| `443` | `0.0.0.0/0` | Cloudflare HTTPS 요청 |
 
 Cloudflare를 사용할 때는 가능하면 `80` source를 Cloudflare IP 대역으로 제한합니다.
 
@@ -53,6 +55,10 @@ git clone https://github.com/mega-MSDragon/MSDragon-Backend.git /opt/MSDragon-Ba
 cd /opt/MSDragon-Backend
 cp .env.example .env
 vi .env
+mkdir -p deploy/nginx/certs
+vi deploy/nginx/certs/origin.pem
+vi deploy/nginx/certs/origin.key
+chmod 600 deploy/nginx/certs/origin.pem deploy/nginx/certs/origin.key
 docker compose up -d --build
 ```
 
@@ -60,7 +66,7 @@ docker compose up -d --build
 
 ```bash
 docker compose ps
-curl http://localhost/health
+curl -k https://localhost/health
 ```
 
 ---
@@ -90,11 +96,13 @@ docker compose up -d --build
 
 1. 도메인의 DNS를 Cloudflare로 연결합니다.
 2. `A` 레코드를 EC2 public IP로 설정하고 proxy를 켭니다.
-3. SSL/TLS 모드는 빠른 MVP라면 `Flexible`로 시작할 수 있습니다.
-4. 운영 보안을 올릴 때는 origin certificate을 EC2/Nginx에 설치하고 `Full (strict)`로 전환합니다.
+3. `SSL/TLS > Origin Server`에서 Origin Certificate를 발급합니다.
+4. 발급한 인증서를 EC2의 `deploy/nginx/certs/origin.pem`에 저장합니다.
+5. 발급한 private key를 EC2의 `deploy/nginx/certs/origin.key`에 저장합니다.
+6. SSL/TLS 모드는 `Full (strict)`로 설정합니다.
 
-`Flexible`은 사용자와 Cloudflare 사이만 HTTPS이고 Cloudflare와 EC2 사이 통신은 HTTP입니다.
-최소 배포에는 단순하지만, 로그인/결제/개인정보가 들어가기 시작하면 `Full (strict)`로 바꿉니다.
+Origin Certificate private key는 절대 Git에 커밋하지 않습니다.
+`deploy/nginx/certs/`는 `.gitignore`에 포함되어 있습니다.
 
 ---
 
