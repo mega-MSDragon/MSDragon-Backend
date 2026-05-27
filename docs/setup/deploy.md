@@ -90,6 +90,14 @@ git reset --hard origin/main
 docker compose up -d --build
 ```
 
+자동 배포 전에 EC2에 아래가 먼저 준비되어 있어야 합니다.
+
+- `DEPLOY_PATH` 디렉터리 존재
+- 해당 디렉터리에 Git repository clone 완료
+- `.env` 파일 존재
+- `deploy/nginx/certs/origin.pem` 존재
+- `deploy/nginx/certs/origin.key` 존재
+
 ---
 
 ## Cloudflare

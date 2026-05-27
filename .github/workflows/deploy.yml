@@ -41,20 +41,43 @@ jobs:
           chmod 600 ~/.ssh/msdragon_ec2
           ssh-keyscan -H "$EC2_HOST" >> ~/.ssh/known_hosts
 
-          if [ -z "$DEPLOY_PATH" ]; then
+          if [ -z "${DEPLOY_PATH:-}" ]; then
             DEPLOY_PATH="/opt/MSDragon-Backend"
           fi
 
-          ssh -i ~/.ssh/msdragon_ec2 "$EC2_USER@$EC2_HOST" "DEPLOY_PATH='$DEPLOY_PATH' bash -s" <<'EOF'
+          ssh -i ~/.ssh/msdragon_ec2 "$EC2_USER@$EC2_HOST" "DEPLOY_PATH='$DEPLOY_PATH' bash -se" <<'EOF'
           set -euo pipefail
 
+          echo "Deploy path: $DEPLOY_PATH"
+          if [ ! -d "$DEPLOY_PATH" ]; then
+            echo "Deploy path does not exist: $DEPLOY_PATH" >&2
+            echo "Run the first-time setup on EC2:" >&2
+            echo "  sudo mkdir -p $DEPLOY_PATH" >&2
+            echo "  sudo chown \$USER:\$USER $DEPLOY_PATH" >&2
+            echo "  git clone https://github.com/mega-MSDragon/MSDragon-Backend.git $DEPLOY_PATH" >&2
+            exit 1
+          fi
+
           cd "$DEPLOY_PATH"
+          if [ ! -d .git ]; then
+            echo "Deploy path is not a git repository: $DEPLOY_PATH" >&2
+            exit 1
+          fi
+
           git fetch origin main
           git reset --hard origin/main
 
           if [ ! -f .env ]; then
             echo ".env file is missing in $DEPLOY_PATH" >&2
             echo "Create it from .env.example before deploying." >&2
+            exit 1
+          fi
+
+          if [ ! -f deploy/nginx/certs/origin.pem ] || [ ! -f deploy/nginx/certs/origin.key ]; then
+            echo "Cloudflare origin certificate files are missing." >&2
+            echo "Expected:" >&2
+            echo "  $DEPLOY_PATH/deploy/nginx/certs/origin.pem" >&2
+            echo "  $DEPLOY_PATH/deploy/nginx/certs/origin.key" >&2
             exit 1
           fi
 
