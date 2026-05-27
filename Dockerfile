@@ -3,10 +3,11 @@ WORKDIR /workspace
 
 COPY gradlew .
 COPY gradle gradle
-COPY build.gradle.kts settings.gradle.kts ./
+COPY build.gradle.kts settings.gradle.kts gradle.properties ./
 COPY src src
 
-RUN chmod +x ./gradlew && ./gradlew bootJar --no-daemon
+RUN --mount=type=cache,target=/root/.gradle \
+    chmod +x ./gradlew && ./gradlew bootJar --no-daemon --no-watch-fs
 
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
