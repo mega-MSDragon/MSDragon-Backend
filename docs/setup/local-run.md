@@ -22,6 +22,21 @@
 
 ---
 
+## Docker Compose 실행
+
+```bash
+cp .env.example .env
+docker compose up -d --build
+```
+
+확인:
+
+```bash
+curl http://localhost/health
+```
+
+---
+
 ## 주요 URL
 
 | Name | URL |
