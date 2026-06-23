@@ -1,15 +1,25 @@
-# 모셔용(MoSheoYong) — 정규화 ERD & DB 스키마 설계 (v2, 결정 반영본)
+# 모셔용(MoSheoYong) — 정규화 ERD & DB 스키마 설계 (v3, Figma 와이어프레임 반영본)
 
 > 대상 스택: PostgreSQL 15+ / Spring Data JPA
 > 명명 규칙: `snake_case`, 단수 컬럼 / 복수 테이블, 대리키 `id BIGINT`
 > 메타데이터 표준: 전 테이블 `created_at`, `updated_at`. 사용자 데이터는 `deleted_at` 추가.
+
+## v3 변경 요약 (Figma 와이어프레임 반영)
+- **F1**: Figma 와이어프레임을 DB 설계 기준으로 삼습니다.
+- **F2**: 로그인 provider는 와이어프레임 기준으로 `kakao`, `apple`만 유지합니다.
+- **F3**: 연령대는 공통 `age_band` ENUM으로 관리하고 `undisclosed`를 허용합니다.
+- **F4**: 가족은 자녀 대표 1명, 부모 최대 2명을 앱 검증과 DB trigger로 함께 강제합니다.
+- **F5**: 10계명은 서버 후보군에서 랜덤 10개를 내려주고, 여행별 확정본은 인스턴스로 복사합니다.
+- **F6**: 장소 상세 이미지 대응을 위해 최소 `place_images` 테이블을 둡니다.
+- **F7**: 부모 피드백의 몸 상태, 베스트 장소, 보강된 태그를 저장합니다.
+- **F8**: 효도 리포트는 고정 지표 컬럼으로 관리하고, 기록 화면용 집계값을 리포트에 저장합니다.
 
 ## v2 변경 요약 (결정 반영)
 - **A1**: 단일 `users` 유지 — 역할별 NULL 컬럼이 없어 분리 이득 없음.
 - **A2**: `parent_profiles`는 부모 전용. 자녀 프로필/MBTI 없음(성별·나이대는 `users`).
 - **A3**: `fitness_level`, `activity_level` 별개 컬럼 유지.
 - **B4**: AI 코스 제안 비영속 → `courses` 테이블 **삭제**. 확정 일정만 `trip_days` / `trip_stops`로 보존.
-- **B5**: 10계명은 여행별 인스턴스만(`trip_pledges`). 재사용 템플릿 테이블 없음.
+- **B5**: 10계명은 여행별 인스턴스만(`trip_pledges`). 재사용 템플릿 테이블 없음. → **F5에서 서버 후보군 테이블 도입으로 변경**
 - **C6**: 평가 축 고정 → `filial_report_metrics`(EAV) **삭제**, 고정 컬럼화. `feedback_tags` 마스터 삭제, `feedback_tag` ENUM으로 대체.
 - **C7**: 유저당 1가족 → `family_members.user_id` UNIQUE.
 
@@ -18,8 +28,10 @@
 ## 1. ENUM 타입
 ```sql
 CREATE TYPE user_role          AS ENUM ('child', 'parent');
-CREATE TYPE oauth_provider     AS ENUM ('kakao', 'apple', 'naver', 'google');
+CREATE TYPE oauth_provider     AS ENUM ('kakao', 'apple');
+CREATE TYPE age_band           AS ENUM ('10s', '20s', '30s', '40s', '50s', '60s', '70s', '80s', '90s_plus', 'undisclosed');
 CREATE TYPE gender_type        AS ENUM ('female', 'male', 'undisclosed');
+CREATE TYPE device_platform    AS ENUM ('ios', 'android', 'web');
 CREATE TYPE invite_status      AS ENUM ('active', 'used', 'expired');
 CREATE TYPE food_preference    AS ENUM ('korean_only', 'open_minded');
 CREATE TYPE mobility_aid_type  AS ENUM ('none', 'cane', 'walker', 'wheelchair');
@@ -30,12 +42,15 @@ CREATE TYPE trip_pace          AS ENUM ('relaxed', 'moderate', 'packed');
 CREATE TYPE stop_type          AS ENUM ('sightseeing', 'meal', 'rest', 'cafe');
 CREATE TYPE chat_sender        AS ENUM ('user', 'assistant');
 CREATE TYPE consent_type       AS ENUM ('privacy', 'location', 'feedback_learning');
+CREATE TYPE feedback_body_condition AS ENUM ('comfortable', 'slightly_tired', 'very_tired');
 
 -- C6: 평가 태그 고정 집합 (운영 변경 없음 → 마스터 테이블 대신 ENUM)
 CREATE TYPE feedback_tag AS ENUM (
     'walk_comfortable', 'rest_enough', 'food_satisfied', 'restroom_easy',
-    'quiet_good', 'want_again', 'time_with_family_good',           -- positive
-    'stairs_many', 'walk_long', 'rest_needed', 'crowded', 'cold', 'long_car_ride', 'next_indoor' -- negative
+    'quiet_good', 'want_again', 'time_with_family_good', 'scenery_good',
+    'movement_comfortable', 'seating_enough',                     -- positive
+    'stairs_many', 'walk_long', 'rest_needed', 'crowded', 'cold',
+    'long_car_ride', 'travel_time_long', 'next_indoor'             -- negative
 );
 ```
 
@@ -48,23 +63,42 @@ CREATE TABLE users (
     role            user_role       NOT NULL,
     oauth_provider  oauth_provider  NOT NULL,
     oauth_subject   VARCHAR(255)    NOT NULL,
-    display_name    VARCHAR(50),
-    age_band        VARCHAR(10)     NOT NULL,   -- '10s'..'90s_plus'
-    gender          gender_type,
+    display_name    VARCHAR(50)     NOT NULL,
+    age_band        age_band        NOT NULL DEFAULT 'undisclosed',
+    gender          gender_type     NOT NULL DEFAULT 'undisclosed',
+    signup_completed_at TIMESTAMPTZ,
+    last_login_at   TIMESTAMPTZ,
     created_at      TIMESTAMPTZ     NOT NULL DEFAULT now(),
     updated_at      TIMESTAMPTZ     NOT NULL DEFAULT now(),
     deleted_at      TIMESTAMPTZ,
     UNIQUE (oauth_provider, oauth_subject)
 );
 
+CREATE TABLE user_refresh_tokens (
+    id                 BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    user_id            BIGINT NOT NULL REFERENCES users(id),
+    refresh_token_hash VARCHAR(255) NOT NULL UNIQUE,
+    device_id          VARCHAR(100),
+    platform           device_platform,
+    issued_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
+    expires_at         TIMESTAMPTZ NOT NULL,
+    last_used_at       TIMESTAMPTZ,
+    revoked_at         TIMESTAMPTZ,
+    created_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at         TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX ix_user_refresh_tokens_user_id ON user_refresh_tokens(user_id);
+CREATE INDEX ix_user_refresh_tokens_expires_at ON user_refresh_tokens(expires_at);
+
 CREATE TABLE families (
     id            BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     owner_user_id BIGINT NOT NULL REFERENCES users(id),  -- 대표 자녀
+    is_active     BOOLEAN NOT NULL DEFAULT true,
     created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- C7: 유저당 1가족. 재연결은 탈퇴 후 재가입.
+-- C7/F4: 유저당 1가족. 가족당 자녀 1명, 부모 최대 2명은 앱 검증과 DB trigger로 함께 강제.
 CREATE TABLE family_members (
     id             BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     family_id      BIGINT NOT NULL REFERENCES families(id),
@@ -78,12 +112,14 @@ CREATE TABLE family_members (
 -- 가족당 자녀(대표) 1인 강제
 CREATE UNIQUE INDEX uq_family_one_child
     ON family_members (family_id) WHERE member_role = 'child';
+-- DB trigger: family_id별 member_role='parent' 행이 2개를 초과하지 않도록 강제한다.
 
 CREATE TABLE invite_codes (
     id                 BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     family_id          BIGINT NOT NULL REFERENCES families(id),
     code               VARCHAR(20) NOT NULL UNIQUE,
     status             invite_status NOT NULL DEFAULT 'active',
+    target_role        user_role NOT NULL,
     created_by_user_id BIGINT NOT NULL REFERENCES users(id),
     used_by_user_id    BIGINT REFERENCES users(id),
     expires_at         TIMESTAMPTZ,
@@ -96,9 +132,12 @@ CREATE TABLE user_consents (
     id           BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     user_id      BIGINT NOT NULL REFERENCES users(id),
     consent_type consent_type NOT NULL,
+    policy_version VARCHAR(20) NOT NULL DEFAULT 'v1',
     agreed       BOOLEAN NOT NULL,
     agreed_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
-    created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+    withdrawn_at TIMESTAMPTZ,
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (user_id, consent_type, policy_version)
 );
 
 CREATE TABLE user_settings (
@@ -221,6 +260,16 @@ CREATE TABLE places (
     updated_at          TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- F6: 공공데이터 API 이미지 응답이 불확실하므로 최소 구조만 둔다.
+CREATE TABLE place_images (
+    id         BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    place_id   BIGINT NOT NULL REFERENCES places(id),
+    image_url  VARCHAR(500) NOT NULL,
+    sort_order SMALLINT NOT NULL DEFAULT 1,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (place_id, sort_order)
+);
+
 CREATE TABLE place_accessibility (
     id                    BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     place_id              BIGINT NOT NULL UNIQUE REFERENCES places(id),
@@ -295,8 +344,16 @@ CREATE TABLE trip_stops (
 
 ---
 
-## 6. 여행 10계명 (B5: 여행별 인스턴스)
+## 6. 여행 10계명 (F5: 서버 후보군 + 여행별 인스턴스)
 ```sql
+CREATE TABLE pledge_templates (
+    id         BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    content    VARCHAR(255) NOT NULL,
+    is_active  BOOLEAN NOT NULL DEFAULT true,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 CREATE TABLE trip_pledges (
     id                  BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     trip_id             BIGINT NOT NULL UNIQUE REFERENCES trips(id),
@@ -309,9 +366,10 @@ CREATE TABLE trip_pledges (
 CREATE TABLE pledge_items (
     id               BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     trip_pledge_id   BIGINT NOT NULL REFERENCES trip_pledges(id),
+    pledge_template_id BIGINT REFERENCES pledge_templates(id),
     sort_order       SMALLINT NOT NULL,
     content          VARCHAR(255) NOT NULL,
-    is_from_template BOOLEAN NOT NULL DEFAULT true,  -- 기본 템플릿(앱 하드코딩) 유래 여부
+    is_from_template BOOLEAN NOT NULL DEFAULT true,
     created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at       TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -335,8 +393,10 @@ CREATE TABLE trip_feedbacks (
     trip_id        BIGINT NOT NULL REFERENCES trips(id),
     parent_user_id BIGINT NOT NULL REFERENCES users(id),
     overall_rating NUMERIC(2,1) CHECK (overall_rating BETWEEN 0 AND 5),  -- 0.5 단위
+    body_condition feedback_body_condition,
     walk_rating    SMALLINT,     -- 도보 부담
     rest_rating    SMALLINT,     -- 휴식 간격
+    best_place_id  BIGINT REFERENCES places(id),
     free_comment   VARCHAR(500),
     submitted_at   TIMESTAMPTZ,
     created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -358,11 +418,19 @@ CREATE TABLE filial_reports (
     trip_id             BIGINT NOT NULL UNIQUE REFERENCES trips(id),
     total_score         SMALLINT,   -- 효도 지수
     satisfaction_score  SMALLINT,   -- 만족도
-    rest_interval_score SMALLINT,   -- 휴식 간격
-    walk_burden_score   SMALLINT,   -- 도보 부담
+    leg_comfort_score   SMALLINT,   -- 다리 안아픔 지수
+    nagging_prevention_score SMALLINT, -- 잔소리 방지 점수
+    meal_satisfaction_score SMALLINT,  -- 밥상 만족도
+    restroom_safety_score SMALLINT,    -- 화장실 안심도
+    award_title         VARCHAR(80),
     summary             VARCHAR(255),
     best_place_id       BIGINT REFERENCES places(id),
+    best_comment        VARCHAR(500),
     parent_comment      VARCHAR(500),
+    total_place_count   SMALLINT,
+    total_distance_km   NUMERIC(6,2),
+    total_step_count    INTEGER,
+    share_image_url     VARCHAR(500),
     generated_at        TIMESTAMPTZ,
     created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at          TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -407,6 +475,7 @@ erDiagram
     users ||--o| family_members : "속함(1유저 1가족)"
     families ||--o{ family_members : "구성"
     users ||--o{ families : "소유(자녀)"
+    users ||--o{ user_refresh_tokens : "토큰"
     families ||--o{ invite_codes : "발급"
     users ||--o{ user_consents : "동의"
     users ||--o| user_settings : "설정"
@@ -421,6 +490,7 @@ erDiagram
     parent_personality_results ||--o{ parent_personality_scores : "근거"
 
     regions ||--o{ places : "위치"
+    places ||--o{ place_images : "이미지"
     places ||--o| place_accessibility : "접근성 1:1"
 
     families ||--o{ trips : "여행"
@@ -432,6 +502,7 @@ erDiagram
     trip_days ||--o{ trip_stops : "방문지"
     places ||--o{ trip_stops : "참조"
 
+    pledge_templates ||--o{ pledge_items : "후보"
     trips ||--o| trip_pledges : "10계명"
     trip_pledges ||--o{ pledge_items : "항목"
     trip_pledges ||--o{ pledge_signatures : "서명"
@@ -439,6 +510,7 @@ erDiagram
 
     trips ||--o{ trip_feedbacks : "피드백"
     users ||--o{ trip_feedbacks : "부모"
+    places ||--o{ trip_feedbacks : "베스트장소"
     trip_feedbacks ||--o{ trip_feedback_tags : "태그(ENUM)"
     trips ||--o| filial_reports : "리포트"
     places ||--o| filial_reports : "베스트장소"
@@ -457,19 +529,21 @@ erDiagram
 | 관계 | 카디널리티 | 강제 위치 |
 |---|---|---|
 | users → family_members | 1유저=1가족 | `UNIQUE(user_id)` (C7) |
-| families → family_members | 자녀 1 + 부모 ≤2 | `uq_family_one_child` |
+| families → family_members | 자녀 1 + 부모 ≤2 | 자녀 `uq_family_one_child`, 부모 최대 2명 DB trigger |
+| places → place_images | 장소별 이미지 N개 | `UNIQUE(place_id, sort_order)` |
 | users(부모) ↔ trips | N:M(`trip_participants`) | 최소 1명: 앱 레벨 |
 | trips → trip_days → trip_stops | 1:N:N | 확정 일정만 보존(B4) |
 | parent_profiles ↔ constraints / themes | N:M | 링크 테이블 |
+| pledge_templates → pledge_items | 후보군에서 여행별 확정본 복사 | `pledge_template_id` nullable |
 | trips → trip_feedbacks | 부모별 1건 | `UNIQUE(trip_id, parent_user_id)` |
 | trips → filial_reports | 1:1, 전원 피드백 후 | 앱 레벨 |
 | places ↔ place_accessibility | 1:1 | `UNIQUE(place_id)` |
 
 ---
 
-## 11. 남은 결정사항 (DB 제약 강제 위치만)
-1. **여행 도시 immutable**: DB 트리거 vs 서비스 레이어. (공모전 기간상 서비스 레이어 권장)
-2. **겹치는 일정 차단**: `EXCLUDE USING gist` vs 앱 검증. (마이그레이션 복잡도 고려 시 앱 검증 권장)
-3. **`accessibility_score` 산출 시점**: 적재 시 계산 저장 vs 조회 시 계산.
-
-> 위 3개는 구조가 아니라 "검증을 어디서 하느냐"의 문제라 스키마 형태는 바뀌지 않는다.
+## 11. 남은 구현 메모
+1. **여행 도시 immutable**: Figma 기준으로 변경 불가능. 서비스 레이어에서 우선 강제하고, 필요 시 DB trigger를 추가합니다.
+2. **겹치는 일정 차단**: 이미 선택된 날짜는 비활성화하고 겹치는 여행 생성을 막습니다. 초기 구현은 앱/서비스 검증을 우선합니다.
+3. **부모 최대 2명 제약**: `family_members` insert/update 시 DB trigger로 `member_role='parent'`가 2명을 초과하지 않게 막습니다.
+4. **효도 리포트 집계값**: 걸음수/이동거리/방문 장소 수는 별도 방문 로그 없이 `filial_reports`의 집계 컬럼에 저장합니다.
+5. **장소 이미지**: 공공데이터 API 응답이 확정되기 전까지 `place_images`는 `image_url`, `sort_order` 중심의 최소 구조로 유지합니다.

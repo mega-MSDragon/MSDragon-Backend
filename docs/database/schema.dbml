@@ -1,10 +1,10 @@
 // =====================================================================
 // 모셔용(MoSheoYong) ERD - dbdiagram.io 용 DBML
-// 로그인/회원가입 최소 구현 반영본
-// - 온보딩 상태값 없음
-// - 회원 여부는 users row 존재 여부로 판단
-// - JWT refresh token 저장 테이블 추가
-// - gender는 undisclosed 기본값
+// Figma 와이어프레임 반영본
+// - 로그인 provider는 iOS/Android 와이어프레임 기준으로 kakao/apple만 유지
+// - 가족은 자녀 1명, 부모 최대 2명을 앱 검증과 DB trigger로 강제
+// - 10계명은 서버 후보군에서 랜덤 제공 후 여행별 확정본으로 복사
+// - 효도 리포트는 고정 지표와 기록 화면용 집계값을 저장
 // =====================================================================
 
 // ---------- Enums ----------
@@ -16,6 +16,19 @@ Enum user_role {
 Enum oauth_provider {
   kakao
   apple
+}
+
+Enum age_band {
+  "10s"
+  "20s"
+  "30s"
+  "40s"
+  "50s"
+  "60s"
+  "70s"
+  "80s"
+  "90s_plus"
+  undisclosed
 }
 
 Enum gender_type {
@@ -91,6 +104,12 @@ Enum consent_type {
   feedback_learning
 }
 
+Enum feedback_body_condition {
+  comfortable
+  slightly_tired
+  very_tired
+}
+
 Enum feedback_tag {
   walk_comfortable
   rest_enough
@@ -99,12 +118,16 @@ Enum feedback_tag {
   quiet_good
   want_again
   time_with_family_good
+  scenery_good
+  movement_comfortable
+  seating_enough
   stairs_many
   walk_long
   rest_needed
   crowded
   cold
   long_car_ride
+  travel_time_long
   next_indoor
 }
 
@@ -115,7 +138,7 @@ Table users {
   oauth_provider oauth_provider [not null]
   oauth_subject varchar(255) [not null]
   display_name varchar(50) [not null]
-  age_band varchar(20) [not null, default: 'undisclosed']
+  age_band age_band [not null, default: 'undisclosed']
   gender gender_type [not null, default: 'undisclosed']
   signup_completed_at datetime
   last_login_at datetime
@@ -164,6 +187,8 @@ Table family_members {
   joined_at datetime [not null, default: `now()`]
   created_at datetime [not null, default: `now()`]
   updated_at datetime [not null, default: `now()`]
+
+  Note: '가족당 자녀 1명, 부모 최대 2명은 앱 검증과 DB trigger로 함께 강제한다.'
 }
 
 Table invite_codes {
@@ -323,6 +348,18 @@ Table places {
   updated_at datetime [not null, default: `now()`]
 }
 
+Table place_images {
+  id bigint [pk, increment]
+  place_id bigint [not null]
+  image_url varchar(500) [not null]
+  sort_order smallint [not null, default: 1]
+  created_at datetime [not null, default: `now()`]
+
+  indexes {
+    (place_id, sort_order) [unique]
+  }
+}
+
 Table place_accessibility {
   id bigint [pk, increment]
   place_id bigint [not null, unique]
@@ -394,6 +431,14 @@ Table trip_stops {
 }
 
 // ---------- 5. 여행 10계명 ----------
+Table pledge_templates {
+  id bigint [pk, increment]
+  content varchar(255) [not null]
+  is_active boolean [not null, default: true]
+  created_at datetime [not null, default: `now()`]
+  updated_at datetime [not null, default: `now()`]
+}
+
 Table trip_pledges {
   id bigint [pk, increment]
   trip_id bigint [not null, unique]
@@ -407,6 +452,7 @@ Table trip_pledges {
 Table pledge_items {
   id bigint [pk, increment]
   trip_pledge_id bigint [not null]
+  pledge_template_id bigint
   sort_order smallint [not null]
   content varchar(255) [not null]
   is_from_template boolean [not null, default: true]
@@ -433,8 +479,10 @@ Table trip_feedbacks {
   trip_id bigint [not null]
   parent_user_id bigint [not null]
   overall_rating decimal(2,1)
+  body_condition feedback_body_condition
   walk_rating smallint
   rest_rating smallint
+  best_place_id bigint
   free_comment varchar(500)
   submitted_at datetime
   created_at datetime [not null, default: `now()`]
@@ -460,11 +508,19 @@ Table filial_reports {
   trip_id bigint [not null, unique]
   total_score smallint
   satisfaction_score smallint
-  rest_interval_score smallint
-  walk_burden_score smallint
+  leg_comfort_score smallint
+  nagging_prevention_score smallint
+  meal_satisfaction_score smallint
+  restroom_safety_score smallint
+  award_title varchar(80)
   summary varchar(255)
   best_place_id bigint
+  best_comment varchar(500)
   parent_comment varchar(500)
+  total_place_count smallint
+  total_distance_km decimal(6,2)
+  total_step_count int
+  share_image_url varchar(500)
   generated_at datetime
   created_at datetime [not null, default: `now()`]
   updated_at datetime [not null, default: `now()`]
@@ -518,6 +574,7 @@ Ref: parent_personality_results.travel_personality_type_id > travel_personality_
 Ref: parent_personality_scores.result_id > parent_personality_results.id
 
 Ref: places.region_id > regions.id
+Ref: place_images.place_id > places.id
 Ref: place_accessibility.place_id - places.id
 
 Ref: trips.family_id > families.id
@@ -531,11 +588,13 @@ Ref: trip_stops.place_id > places.id
 
 Ref: trip_pledges.trip_id - trips.id
 Ref: pledge_items.trip_pledge_id > trip_pledges.id
+Ref: pledge_items.pledge_template_id > pledge_templates.id
 Ref: pledge_signatures.trip_pledge_id > trip_pledges.id
 Ref: pledge_signatures.user_id > users.id
 
 Ref: trip_feedbacks.trip_id > trips.id
 Ref: trip_feedbacks.parent_user_id > users.id
+Ref: trip_feedbacks.best_place_id > places.id
 Ref: trip_feedback_tags.trip_feedback_id > trip_feedbacks.id
 Ref: filial_reports.trip_id - trips.id
 Ref: filial_reports.best_place_id > places.id
