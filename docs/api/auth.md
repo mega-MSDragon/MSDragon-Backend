@@ -1,0 +1,150 @@
+# Auth API
+
+카카오/애플 소셜 로그인과 회원가입 완료를 처리합니다.
+
+---
+
+## 결정 사항
+
+- 카카오는 앱에서 받은 `accessToken`을 백엔드로 전달합니다.
+- 애플은 앱에서 받은 `identityToken`을 백엔드로 전달합니다.
+- 미가입 사용자는 DB에 임시 `users` row를 만들지 않고 `signupToken`을 발급합니다.
+  - 이유: `users.role`은 필수 컬럼이므로 역할 선택 전 row를 만들면 스키마와 충돌합니다.
+- 회원가입 완료 시 `users`를 생성하고 access/refresh token을 발급합니다.
+- access token 만료 시간은 1시간, refresh token 만료 시간은 14일, signup token 만료 시간은 30분입니다.
+- refresh token은 원문을 저장하지 않고 SHA-256 해시로 저장하며, 재발급 시 회전합니다.
+- 가족 코드 발급/매칭은 이번 구현 범위에서 제외합니다.
+
+---
+
+## 엔드포인트
+
+| Method | Path | 설명 |
+|--------|------|------|
+| `POST` | `/api/v1/auth/social-login` | 소셜 토큰 검증 및 가입 상태 확인 |
+| `POST` | `/api/v1/auth/signup/complete` | 회원가입 완료 및 서비스 토큰 발급 |
+| `POST` | `/api/v1/auth/refresh` | refresh token 회전 및 토큰 재발급 |
+
+---
+
+## POST /api/v1/auth/social-login
+
+### Request
+
+```json
+{
+  "provider": "kakao",
+  "token": "kakao-access-token",
+  "deviceId": "device-1",
+  "platform": "android"
+}
+```
+
+`provider`는 `kakao`, `apple`을 지원합니다. `platform`은 `ios`, `android`, `web`을 허용합니다.
+
+### Response: 미가입
+
+```json
+{
+  "status": 200,
+  "success": true,
+  "message": "소셜 로그인 처리 성공",
+  "data": {
+    "signupRequired": true,
+    "signupToken": "..."
+  }
+}
+```
+
+### Response: 가입 완료 사용자
+
+```json
+{
+  "status": 200,
+  "success": true,
+  "message": "소셜 로그인 처리 성공",
+  "data": {
+    "signupRequired": false,
+    "accessToken": "...",
+    "refreshToken": "...",
+    "tokenType": "Bearer",
+    "accessTokenExpiresInSeconds": 3600,
+    "refreshTokenExpiresInSeconds": 1209600,
+    "user": {
+      "id": 1,
+      "role": "child",
+      "displayName": "최혜린",
+      "ageBand": "20s",
+      "gender": "female",
+      "signupCompleted": true
+    }
+  }
+}
+```
+
+---
+
+## POST /api/v1/auth/signup/complete
+
+### Request
+
+```json
+{
+  "signupToken": "...",
+  "role": "child",
+  "displayName": "최혜린",
+  "ageBand": "20s",
+  "gender": "female",
+  "deviceId": "device-1",
+  "platform": "android"
+}
+```
+
+역할별 연령대 검증:
+
+| role | 허용 ageBand |
+|------|--------------|
+| `child` | `10s`, `20s`, `30s`, `40s`, `50s`, `60s_plus`, `undisclosed` |
+| `parent` | `50s`, `60s`, `70s`, `80s`, `90s_plus`, `undisclosed` |
+
+### Response
+
+```json
+{
+  "status": 201,
+  "success": true,
+  "message": "회원가입 완료",
+  "data": {
+    "signupRequired": false,
+    "accessToken": "...",
+    "refreshToken": "...",
+    "tokenType": "Bearer",
+    "accessTokenExpiresInSeconds": 3600,
+    "refreshTokenExpiresInSeconds": 1209600,
+    "user": {
+      "id": 1,
+      "role": "child",
+      "displayName": "최혜린",
+      "ageBand": "20s",
+      "gender": "female",
+      "signupCompleted": true
+    }
+  }
+}
+```
+
+---
+
+## POST /api/v1/auth/refresh
+
+### Request
+
+```json
+{
+  "refreshToken": "..."
+}
+```
+
+### Response
+
+`/social-login`의 가입 완료 사용자 응답과 같은 형태입니다.

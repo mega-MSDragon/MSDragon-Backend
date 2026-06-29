@@ -11,6 +11,7 @@
 |--------|------------|------|
 | `root` | `com.msdragon.backend` | 애플리케이션 진입점 |
 | `common` | `com.msdragon.backend.common` | 공통 응답, 예외, advice, config, 엔티티 기반 클래스가 추가될 때 사용 |
+| `auth` | `com.msdragon.backend.auth` | 카카오/애플 소셜 로그인, 회원가입 완료, 토큰 재발급 |
 | `health` | `com.msdragon.backend.health` | health 체크 API (`controller/service/dto`) |
 
 ---
@@ -32,3 +33,4 @@
 | 2026-05-27 | Codex 하네스 초기 구조 생성 (`root`, `common` 기준 문서화) |
 | 2026-05-27 | health 체크 API 도메인 추가 |
 | 2026-05-27 | Docker Compose 기반 배포 구성 추가 |
+| 2026-06-29 | auth 도메인 추가 |

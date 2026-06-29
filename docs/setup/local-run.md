@@ -49,10 +49,28 @@ curl http://localhost/health
 
 ---
 
+## 인증 환경 변수
+
+로컬 기본값으로 실행할 수 있지만, 운영 환경에서는 아래 값을 반드시 설정합니다.
+
+| Name | 설명 |
+|------|------|
+| `APP_AUTH_JWT_SECRET` | 서비스 access/signup JWT 서명 secret. 32바이트 이상 필요 |
+| `APP_AUTH_APPLE_CLIENT_ID` | Apple identity token의 audience 검증에 사용할 client id 또는 iOS Bundle ID |
+
+`APP_AUTH_APPLE_CLIENT_ID`가 비어 있으면 Apple 로그인 요청은 설정 오류로 실패합니다. 카카오 로그인은 앱에서 받은 access token으로 Kakao user info API를 호출합니다.
+
+---
+
 ## DB 설정
 
-현재 `build.gradle.kts`에는 H2와 PostgreSQL driver 의존성이 포함되어 있습니다.
-실제 datasource/profile 설정이 추가되면 `src/main/resources/application.yaml`과 이 문서를 함께 갱신합니다.
+`local` profile은 H2 인메모리 DB를 사용합니다.
+
+| Name | Value |
+|------|-------|
+| JDBC URL | `jdbc:h2:mem:msdragon` |
+| username | `sa` |
+| H2 Console | `/h2-console` |
 
 ---
 

@@ -1,7 +1,8 @@
 # API Response Convention
 
 일반 API 응답은 공통 응답 객체 `ApiResponse<T>`로 감싸는 것을 기본 기준으로 합니다.
-아직 코드가 도입되지 않았다면, 공통 응답 구현 시 이 구조를 우선 적용합니다.
+
+구현 위치: `com.msdragon.backend.common.response.ApiResponse`
 
 ---
 
@@ -49,4 +50,5 @@
 - `message`는 사용자 또는 API 소비자가 이해할 수 있는 응답 메시지입니다.
 - `data`는 응답 데이터가 있을 때만 포함합니다.
 - Health check처럼 단순 상태 확인 API는 예외적으로 전용 응답 DTO를 사용할 수 있습니다.
-- validation error 표현 방식은 공통 예외 처리 구현 시 이 문서에 추가합니다.
+- Bean Validation 실패는 첫 번째 field error의 `defaultMessage`를 `message`로 내려줍니다.
+- validation error의 필드별 상세 목록은 아직 응답에 포함하지 않습니다.

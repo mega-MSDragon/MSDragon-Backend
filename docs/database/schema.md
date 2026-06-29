@@ -6,31 +6,49 @@ DB 스키마와 공통 엔티티 규칙을 기록합니다.
 
 ## 현재 상태
 
-아직 도메인 Entity가 정의되지 않았습니다.
+인증 도메인 Entity가 도입되었습니다.
+
+| Entity | Table | 설명 |
+|--------|-------|------|
+| `User` | `users` | 소셜 로그인 사용자와 회원가입 완료 프로필 |
+| `UserRefreshToken` | `user_refresh_tokens` | 해시로 저장하는 refresh token 세션 |
 
 ---
 
 ## 공통 엔티티 기반
 
-생성/수정 시간 추적이 필요한 JPA Entity에는 `BaseTimeEntity` 형태의 공통 기반 클래스를 도입하는 것을 기본 기준으로 합니다.
-아직 코드가 도입되지 않았다면 Entity 추가 시 함께 검토합니다.
+생성/수정 시간 추적이 필요한 JPA Entity에는 `BaseTimeEntity`를 사용합니다.
+현재 구현은 JPA Auditing 설정 없이 `@PrePersist`, `@PreUpdate`로 시간을 기록합니다.
 
 | Field | Type | Nullable | Description |
 |-------|------|----------|-------------|
-| `createdAt` | `LocalDateTime` | true | 생성 시간, JPA Auditing으로 기록 |
-| `updatedAt` | `LocalDateTime` | true | 수정 시간, JPA Auditing으로 기록 |
+| `createdAt` | `LocalDateTime` | false | 생성 시간 |
+| `updatedAt` | `LocalDateTime` | false | 수정 시간 |
+
+---
+
+## 인증 테이블 구현 메모
+
+### users
+
+- `oauth_provider + oauth_subject`는 unique입니다.
+- DB 저장 enum 값은 DBML과 맞춰 소문자 문자열을 사용합니다.
+- 회원가입 전 사용자는 저장하지 않습니다. 소셜 로그인 후 `signupToken`을 발급하고, 회원가입 완료 시 `users` row를 생성합니다.
+
+### user_refresh_tokens
+
+- refresh token 원문은 저장하지 않고 SHA-256 해시를 저장합니다.
+- 재발급 시 기존 refresh token은 `revoked_at`을 기록하고 새 refresh token을 발급합니다.
 
 ---
 
 ## 로컬 DB
 
-현재 `build.gradle.kts`에는 H2와 PostgreSQL driver 의존성이 포함되어 있습니다.
-실제 datasource/profile/H2 Console 설정이 추가되면 아래 항목을 확정합니다.
+로컬 profile은 H2 인메모리 DB를 사용합니다.
 
-- JDBC URL
-- username/password
-- H2 Console 경로
-- PostgreSQL 전환 방법
+- JDBC URL: `jdbc:h2:mem:msdragon`
+- username: `sa`
+- H2 Console path: `/h2-console`
 
 ---
 

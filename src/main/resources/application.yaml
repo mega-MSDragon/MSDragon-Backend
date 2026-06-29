@@ -1,3 +1,19 @@
 spring:
   application:
     name: backend
+
+app:
+  auth:
+    jwt:
+      issuer: msdragon
+      secret: ${APP_AUTH_JWT_SECRET:local-dev-secret-for-msdragon-auth-token-must-be-over-32-bytes}
+      access-token-expiration: PT1H
+      refresh-token-expiration: P14D
+      signup-token-expiration: PT30M
+    oauth:
+      kakao:
+        user-info-uri: https://kapi.kakao.com/v2/user/me
+      apple:
+        issuer: https://appleid.apple.com
+        jwks-uri: https://appleid.apple.com/auth/keys
+        client-id: ${APP_AUTH_APPLE_CLIENT_ID:}
