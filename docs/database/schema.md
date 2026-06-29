@@ -39,6 +39,8 @@ DB 스키마와 공통 엔티티 규칙을 기록합니다.
 
 - refresh token 원문은 저장하지 않고 SHA-256 해시를 저장합니다.
 - 재발급 시 기존 refresh token은 `revoked_at`을 기록하고 새 refresh token을 발급합니다.
+- `platform`은 요청 앱 플랫폼(`ios`, `android`, `web`)을 선택적으로 기록합니다.
+- `device_id`는 현재 요구사항에서 사용하지 않아 두지 않습니다. 기기별 세션 관리가 필요해질 때 추가합니다.
 
 ---
 

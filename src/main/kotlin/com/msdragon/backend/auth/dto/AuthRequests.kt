@@ -1,24 +1,27 @@
 package com.msdragon.backend.auth.dto
 
+import com.msdragon.backend.auth.entity.AgeBand
+import com.msdragon.backend.auth.entity.DevicePlatform
+import com.msdragon.backend.auth.entity.GenderType
+import com.msdragon.backend.auth.entity.OAuthProvider
+import com.msdragon.backend.auth.entity.UserRole
 import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.constraints.NotBlank
+import jakarta.validation.constraints.NotNull
 import jakarta.validation.constraints.Size
 
 @Schema(description = "소셜 로그인 요청")
 data class SocialLoginRequest(
-	@field:Schema(description = "소셜 로그인 provider", example = "kakao", allowableValues = ["kakao", "apple"])
-	@field:NotBlank(message = "provider를 입력해주세요.")
-	val provider: String,
+	@field:Schema(description = "소셜 로그인 provider. 카카오는 accessToken, 애플은 identityToken을 token에 전달합니다.", example = "kakao", allowableValues = ["kakao", "apple"])
+	@field:NotNull(message = "provider를 입력해주세요.")
+	val provider: OAuthProvider,
 
 	@field:Schema(description = "카카오 accessToken 또는 애플 identityToken", example = "social-token")
 	@field:NotBlank(message = "소셜 로그인 토큰을 입력해주세요.")
 	val token: String,
 
-	@field:Schema(description = "기기 식별자", example = "ios-device-1", nullable = true)
-	val deviceId: String? = null,
-
-	@field:Schema(description = "기기 플랫폼", example = "ios", allowableValues = ["ios", "android", "web"], nullable = true)
-	val platform: String? = null,
+	@field:Schema(description = "요청이 발생한 앱 플랫폼. 통계/디버깅용 선택 값입니다.", example = "ios", allowableValues = ["ios", "android", "web"], nullable = true)
+	val platform: DevicePlatform? = null,
 )
 
 @Schema(description = "회원가입 완료 요청")
@@ -28,27 +31,24 @@ data class CompleteSignupRequest(
 	val signupToken: String,
 
 	@field:Schema(description = "사용자 역할", example = "child", allowableValues = ["child", "parent"])
-	@field:NotBlank(message = "역할을 선택해주세요.")
-	val role: String,
+	@field:NotNull(message = "역할을 선택해주세요.")
+	val role: UserRole,
 
 	@field:Schema(description = "이름 또는 닉네임", example = "최혜린")
 	@field:NotBlank(message = "이름을 입력해주세요.")
 	@field:Size(max = 50, message = "이름은 50자 이하로 입력해주세요.")
 	val displayName: String,
 
-	@field:Schema(description = "연령대", example = "20s")
-	@field:NotBlank(message = "연령대를 선택해주세요.")
-	val ageBand: String,
+	@field:Schema(description = "연령대. 역할별 허용 범위가 다르며 서버에서 검증합니다.", example = "20s", allowableValues = ["10s", "20s", "30s", "40s", "50s", "60s", "60s_plus", "70s", "80s", "90s_plus", "undisclosed"])
+	@field:NotNull(message = "연령대를 선택해주세요.")
+	val ageBand: AgeBand,
 
 	@field:Schema(description = "성별", example = "female", allowableValues = ["female", "male", "undisclosed"])
-	@field:NotBlank(message = "성별을 선택해주세요.")
-	val gender: String,
+	@field:NotNull(message = "성별을 선택해주세요.")
+	val gender: GenderType,
 
-	@field:Schema(description = "기기 식별자", example = "ios-device-1", nullable = true)
-	val deviceId: String? = null,
-
-	@field:Schema(description = "기기 플랫폼", example = "ios", allowableValues = ["ios", "android", "web"], nullable = true)
-	val platform: String? = null,
+	@field:Schema(description = "요청이 발생한 앱 플랫폼. 통계/디버깅용 선택 값입니다.", example = "ios", allowableValues = ["ios", "android", "web"], nullable = true)
+	val platform: DevicePlatform? = null,
 )
 
 @Schema(description = "토큰 재발급 요청")

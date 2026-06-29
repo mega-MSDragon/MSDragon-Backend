@@ -13,6 +13,8 @@
 - 회원가입 완료 시 `users`를 생성하고 access/refresh token을 발급합니다.
 - access token 만료 시간은 1시간, refresh token 만료 시간은 14일, signup token 만료 시간은 30분입니다.
 - refresh token은 원문을 저장하지 않고 SHA-256 해시로 저장하며, 재발급 시 회전합니다.
+- 요청 enum은 API DTO에서 enum 타입으로 받으며 JSON 값은 소문자 문자열을 사용합니다.
+- `deviceId`는 현재 요구사항에서 쓰이지 않으므로 받지 않습니다. 기기별 로그아웃/푸시/기기 관리가 필요해질 때 다시 추가합니다.
 - 가족 코드 발급/매칭은 이번 구현 범위에서 제외합니다.
 
 ---
@@ -35,12 +37,17 @@
 {
   "provider": "kakao",
   "token": "kakao-access-token",
-  "deviceId": "device-1",
   "platform": "android"
 }
 ```
 
-`provider`는 `kakao`, `apple`을 지원합니다. `platform`은 `ios`, `android`, `web`을 허용합니다.
+요청 값:
+
+| Field | Type | Required | 허용 값 | 설명 |
+|-------|------|----------|---------|------|
+| `provider` | enum | true | `kakao`, `apple` | 소셜 로그인 종류 |
+| `token` | string | true | - | Kakao `accessToken` 또는 Apple `identityToken` |
+| `platform` | enum | false | `ios`, `android`, `web` | 요청 앱 플랫폼. 통계/디버깅용 선택 값 |
 
 ### Response: 미가입
 
@@ -95,10 +102,18 @@
   "displayName": "최혜린",
   "ageBand": "20s",
   "gender": "female",
-  "deviceId": "device-1",
   "platform": "android"
 }
 ```
+
+요청 enum 값:
+
+| Field | Type | Required | 허용 값 |
+|-------|------|----------|---------|
+| `role` | enum | true | `child`, `parent` |
+| `ageBand` | enum | true | `10s`, `20s`, `30s`, `40s`, `50s`, `60s`, `60s_plus`, `70s`, `80s`, `90s_plus`, `undisclosed` |
+| `gender` | enum | true | `female`, `male`, `undisclosed` |
+| `platform` | enum | false | `ios`, `android`, `web` |
 
 역할별 연령대 검증:
 

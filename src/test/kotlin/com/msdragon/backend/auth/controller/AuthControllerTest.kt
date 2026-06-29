@@ -53,7 +53,6 @@ class AuthControllerTest {
 					{
 					  "provider": "kakao",
 					  "token": "kakao-token",
-					  "deviceId": "device-1",
 					  "platform": "android"
 					}
 					""".trimIndent(),
@@ -80,7 +79,6 @@ class AuthControllerTest {
 					  "displayName": "최혜린",
 					  "ageBand": "20s",
 					  "gender": "female",
-					  "deviceId": "device-1",
 					  "platform": "android"
 					}
 					""".trimIndent(),
@@ -125,6 +123,18 @@ class AuthControllerTest {
 		)
 			.andExpect(status().isBadRequest)
 			.andExpect(jsonPath("$.success").value(false))
+	}
+
+	@Test
+	fun `지원하지 않는 enum 값이면 공통 실패 응답을 반환한다`() {
+		mockMvc.perform(
+			post("/api/v1/auth/social-login")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""{"provider":"google","token":"google-token"}"""),
+		)
+			.andExpect(status().isBadRequest)
+			.andExpect(jsonPath("$.success").value(false))
+			.andExpect(jsonPath("$.message").value("지원하지 않는 값입니다: google"))
 	}
 
 	@Test

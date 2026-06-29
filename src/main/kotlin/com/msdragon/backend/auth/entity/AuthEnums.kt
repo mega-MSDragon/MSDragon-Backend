@@ -1,5 +1,7 @@
 package com.msdragon.backend.auth.entity
 
+import com.fasterxml.jackson.annotation.JsonCreator
+import com.fasterxml.jackson.annotation.JsonValue
 import com.msdragon.backend.common.exception.BadRequestException
 import jakarta.persistence.AttributeConverter
 import jakarta.persistence.Converter
@@ -9,6 +11,7 @@ interface DbEnum {
 }
 
 enum class OAuthProvider(
+	@get:JsonValue
 	override val value: String,
 ) : DbEnum {
 	KAKAO("kakao"),
@@ -16,11 +19,14 @@ enum class OAuthProvider(
 	;
 
 	companion object {
+		@JvmStatic
+		@JsonCreator(mode = JsonCreator.Mode.DELEGATING)
 		fun from(value: String): OAuthProvider = enumValueOf(value, entries)
 	}
 }
 
 enum class UserRole(
+	@get:JsonValue
 	override val value: String,
 ) : DbEnum {
 	CHILD("child"),
@@ -28,11 +34,14 @@ enum class UserRole(
 	;
 
 	companion object {
+		@JvmStatic
+		@JsonCreator(mode = JsonCreator.Mode.DELEGATING)
 		fun from(value: String): UserRole = enumValueOf(value, entries)
 	}
 }
 
 enum class AgeBand(
+	@get:JsonValue
 	override val value: String,
 ) : DbEnum {
 	AGE_10S("10s"),
@@ -49,11 +58,14 @@ enum class AgeBand(
 	;
 
 	companion object {
+		@JvmStatic
+		@JsonCreator(mode = JsonCreator.Mode.DELEGATING)
 		fun from(value: String): AgeBand = enumValueOf(value, entries)
 	}
 }
 
 enum class GenderType(
+	@get:JsonValue
 	override val value: String,
 ) : DbEnum {
 	FEMALE("female"),
@@ -62,11 +74,14 @@ enum class GenderType(
 	;
 
 	companion object {
+		@JvmStatic
+		@JsonCreator(mode = JsonCreator.Mode.DELEGATING)
 		fun from(value: String): GenderType = enumValueOf(value, entries)
 	}
 }
 
 enum class DevicePlatform(
+	@get:JsonValue
 	override val value: String,
 ) : DbEnum {
 	IOS("ios"),
@@ -75,6 +90,8 @@ enum class DevicePlatform(
 	;
 
 	companion object {
+		@JvmStatic
+		@JsonCreator(mode = JsonCreator.Mode.DELEGATING)
 		fun from(value: String): DevicePlatform = enumValueOf(value, entries)
 	}
 }

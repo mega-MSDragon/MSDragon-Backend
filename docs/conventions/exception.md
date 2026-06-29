@@ -23,6 +23,7 @@ BaseException
 - 커스텀 예외는 `ControllerExceptionAdvice`에서 공통 실패 응답으로 변환합니다.
 - 요청 파라미터 누락은 `MissingServletRequestParameterException`에서 처리합니다.
 - Bean Validation 실패는 `MethodArgumentNotValidException`에서 처리합니다.
+- JSON 본문 파싱 실패는 `HttpMessageNotReadableException`에서 처리합니다. enum 역직렬화 중 `BaseException`이 감싸진 경우 원래 메시지를 사용합니다.
 - 잘못된 인자는 `IllegalArgumentException`에서 처리합니다.
 - 현재 공통 예외 응답에는 별도 에러 코드 enum을 포함하지 않습니다.
 

@@ -3,6 +3,7 @@ package com.msdragon.backend.common.exception
 import com.msdragon.backend.common.response.ApiResponse
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
+import org.springframework.http.converter.HttpMessageNotReadableException
 import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.MissingServletRequestParameterException
 import org.springframework.web.bind.annotation.ExceptionHandler
@@ -30,9 +31,33 @@ class ControllerExceptionAdvice {
 			.status(HttpStatus.BAD_REQUEST)
 			.body(ApiResponse.failure(HttpStatus.BAD_REQUEST.value(), "${exception.parameterName} 값이 입력되지 않았습니다."))
 
+	@ExceptionHandler(HttpMessageNotReadableException::class)
+	fun handleHttpMessageNotReadable(exception: HttpMessageNotReadableException): ResponseEntity<ApiResponse<Unit>> {
+		val baseException = exception.findCause<BaseException>()
+		return ResponseEntity
+			.status(HttpStatus.BAD_REQUEST)
+			.body(
+				ApiResponse.failure(
+					status = HttpStatus.BAD_REQUEST.value(),
+					message = baseException?.message ?: "요청 본문이 올바르지 않습니다.",
+				),
+			)
+	}
+
 	@ExceptionHandler(IllegalArgumentException::class)
 	fun handleIllegalArgumentException(exception: IllegalArgumentException): ResponseEntity<ApiResponse<Unit>> =
 		ResponseEntity
 			.status(HttpStatus.BAD_REQUEST)
 			.body(ApiResponse.failure(HttpStatus.BAD_REQUEST.value(), exception.message ?: "잘못된 요청입니다."))
+}
+
+private inline fun <reified T : Throwable> Throwable.findCause(): T? {
+	var current: Throwable? = this
+	while (current != null) {
+		if (current is T) {
+			return current
+		}
+		current = current.cause
+	}
+	return null
 }

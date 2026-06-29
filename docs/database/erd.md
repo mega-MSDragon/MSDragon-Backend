@@ -87,7 +87,6 @@ CREATE TABLE user_refresh_tokens (
     id                 BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     user_id            BIGINT NOT NULL REFERENCES users(id),
     refresh_token_hash VARCHAR(255) NOT NULL UNIQUE,
-    device_id          VARCHAR(100),
     platform           device_platform,
     issued_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
     expires_at         TIMESTAMPTZ NOT NULL,

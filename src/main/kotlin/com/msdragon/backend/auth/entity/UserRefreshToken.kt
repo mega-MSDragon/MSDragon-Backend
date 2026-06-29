@@ -22,9 +22,6 @@ class UserRefreshToken(
 	@Column(name = "refresh_token_hash", nullable = false, unique = true, length = 255)
 	val refreshTokenHash: String,
 
-	@Column(name = "device_id", length = 100)
-	val deviceId: String?,
-
 	@Column(name = "platform", length = 20)
 	val platform: DevicePlatform?,
 

@@ -7,8 +7,6 @@ import com.msdragon.backend.auth.dto.RefreshTokenRequest
 import com.msdragon.backend.auth.dto.SocialLoginRequest
 import com.msdragon.backend.auth.entity.AgeBand
 import com.msdragon.backend.auth.entity.DevicePlatform
-import com.msdragon.backend.auth.entity.GenderType
-import com.msdragon.backend.auth.entity.OAuthProvider
 import com.msdragon.backend.auth.entity.User
 import com.msdragon.backend.auth.entity.UserRefreshToken
 import com.msdragon.backend.auth.entity.UserRole
@@ -29,9 +27,7 @@ class AuthService(
 ) {
 	@Transactional
 	fun socialLogin(request: SocialLoginRequest): AuthResponse {
-		val provider = OAuthProvider.from(request.provider)
-		val platform = request.platform?.let(DevicePlatform::from)
-		val oAuthUserInfo = oAuthClientResolver.resolve(provider).verify(request.token)
+		val oAuthUserInfo = oAuthClientResolver.resolve(request.provider).verify(request.token)
 		val user = userRepository.findByOauthProviderAndOauthSubjectAndDeletedAtIsNull(
 			oauthProvider = oAuthUserInfo.provider,
 			oauthSubject = oAuthUserInfo.subject,
@@ -45,18 +41,14 @@ class AuthService(
 		}
 
 		user.updateLastLogin()
-		return createLoginResponse(user, request.deviceId, platform)
+		return createLoginResponse(user, request.platform)
 	}
 
 	@Transactional
 	fun completeSignup(request: CompleteSignupRequest): AuthResponse {
 		val signupClaims = tokenService.parseSignupToken(request.signupToken)
-		val role = UserRole.from(request.role)
-		val ageBand = AgeBand.from(request.ageBand)
-		val gender = GenderType.from(request.gender)
-		val platform = request.platform?.let(DevicePlatform::from)
 
-		validateAgeBand(role, ageBand)
+		validateAgeBand(request.role, request.ageBand)
 
 		val existingUser = userRepository.findByOauthProviderAndOauthSubjectAndDeletedAtIsNull(
 			oauthProvider = signupClaims.provider,
@@ -66,23 +58,23 @@ class AuthService(
 			if (existingUser.isSignupCompleted()) {
 				throw BadRequestException("이미 가입 완료된 사용자입니다.")
 			}
-			existingUser.completeSignup(role, request.displayName.trim(), ageBand, gender)
+			existingUser.completeSignup(request.role, request.displayName.trim(), request.ageBand, request.gender)
 			existingUser.updateLastLogin()
-			return createLoginResponse(existingUser, request.deviceId, platform)
+			return createLoginResponse(existingUser, request.platform)
 		}
 
 		val user = User(
-			role = role,
+			role = request.role,
 			oauthProvider = signupClaims.provider,
 			oauthSubject = signupClaims.subject,
 			displayName = request.displayName.trim(),
-			ageBand = ageBand,
-			gender = gender,
+			ageBand = request.ageBand,
+			gender = request.gender,
 			signupCompletedAt = LocalDateTime.now(),
 			lastLoginAt = LocalDateTime.now(),
 		)
 		val savedUser = userRepository.save(user)
-		return createLoginResponse(savedUser, request.deviceId, platform)
+		return createLoginResponse(savedUser, request.platform)
 	}
 
 	@Transactional
@@ -103,12 +95,11 @@ class AuthService(
 			throw UnAuthorizedException("로그인할 수 없는 사용자입니다.")
 		}
 
-		return createLoginResponse(user, savedRefreshToken.deviceId, savedRefreshToken.platform)
+		return createLoginResponse(user, savedRefreshToken.platform)
 	}
 
 	private fun createLoginResponse(
 		user: User,
-		deviceId: String?,
 		platform: DevicePlatform?,
 	): AuthResponse {
 		val accessToken = tokenService.createAccessToken(user)
@@ -118,7 +109,6 @@ class AuthService(
 			UserRefreshToken(
 				user = user,
 				refreshTokenHash = tokenService.hashRefreshToken(refreshToken),
-				deviceId = deviceId,
 				platform = platform,
 				issuedAt = issuedAt,
 				expiresAt = issuedAt.plus(tokenService.refreshTokenExpiration()),
