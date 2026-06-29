@@ -55,6 +55,7 @@ git clone https://github.com/mega-MSDragon/MSDragon-Backend.git /opt/MSDragon-Ba
 cd /opt/MSDragon-Backend
 cp .env.example .env
 vi .env
+openssl rand -base64 48
 mkdir -p deploy/nginx/certs
 vi deploy/nginx/certs/origin.pem
 vi deploy/nginx/certs/origin.key
@@ -68,6 +69,15 @@ docker compose up -d --build
 docker compose ps
 curl -k https://localhost/health
 ```
+
+`.env`의 인증 관련 값:
+
+```env
+APP_AUTH_JWT_SECRET=<openssl rand -base64 48 결과값>
+APP_AUTH_APPLE_CLIENT_ID=com.msdragon.ios
+```
+
+`APP_AUTH_JWT_SECRET`은 의미 있는 단어가 아니라 충분히 긴 랜덤 문자열이어야 합니다. 이 값을 변경하면 기존 로그인 토큰은 모두 무효화됩니다.
 
 ---
 
@@ -95,6 +105,7 @@ docker compose up -d --build
 - `DEPLOY_PATH` 디렉터리 존재
 - 해당 디렉터리에 Git repository clone 완료
 - `.env` 파일 존재
+- `.env`에 `APP_AUTH_JWT_SECRET`, `APP_AUTH_APPLE_CLIENT_ID` 설정 완료
 - `deploy/nginx/certs/origin.pem` 존재
 - `deploy/nginx/certs/origin.key` 존재
 
