@@ -36,6 +36,38 @@ data class FamilyMatchResponse(
 	}
 }
 
+@Schema(description = "내 가족 조회 응답")
+data class MyFamilyResponse(
+	@field:Schema(description = "가족 ID. 아직 매칭되지 않았으면 null입니다.", example = "1", nullable = true)
+	val familyId: Long?,
+
+	@field:Schema(description = "이미 발급된 내 가족 코드. 발급 전이면 null입니다.", example = "MSH-2405", nullable = true)
+	val myCode: String?,
+
+	@field:Schema(description = "가족 구성원 목록")
+	val members: List<FamilyMemberResponse>,
+) {
+	companion object {
+		fun empty(myCode: String?): MyFamilyResponse =
+			MyFamilyResponse(
+				familyId = null,
+				myCode = myCode,
+				members = emptyList(),
+			)
+
+		fun of(
+			family: Family,
+			myCode: String?,
+			members: List<FamilyMember>,
+		): MyFamilyResponse =
+			MyFamilyResponse(
+				familyId = requireNotNull(family.id),
+				myCode = myCode,
+				members = members.map(FamilyMemberResponse::from),
+			)
+	}
+}
+
 @Schema(description = "가족 사용자 응답")
 data class FamilyUserResponse(
 	@field:Schema(description = "사용자 ID", example = "1")
@@ -68,6 +100,12 @@ data class FamilyMemberResponse(
 	@field:Schema(description = "이름 또는 닉네임", example = "최혜린")
 	val displayName: String,
 
+	@field:Schema(description = "연령대", example = "20s")
+	val ageBand: String,
+
+	@field:Schema(description = "성별", example = "female", allowableValues = ["female", "male", "undisclosed"])
+	val gender: String,
+
 	@field:Schema(description = "가족 관계 표시 이름", example = "엄마", nullable = true)
 	val relationLabel: String?,
 ) {
@@ -77,6 +115,8 @@ data class FamilyMemberResponse(
 				userId = requireNotNull(member.user.id),
 				role = member.memberRole.value,
 				displayName = member.user.displayName,
+				ageBand = member.user.ageBand.value,
+				gender = member.user.gender.value,
 				relationLabel = member.relationLabel,
 			)
 	}

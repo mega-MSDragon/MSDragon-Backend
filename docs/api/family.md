@@ -21,8 +21,61 @@
 
 | Method | Path | 설명 |
 |--------|------|------|
+| `GET` | `/api/v1/family` | 내 가족과 구성원 조회 |
 | `POST` | `/api/v1/family/code` | 내 가족 코드 발급/조회 |
 | `POST` | `/api/v1/family/matches` | 상대방 코드로 가족 매칭 |
+
+---
+
+## GET /api/v1/family
+
+### Response: 매칭 전
+
+```json
+{
+  "status": 200,
+  "success": true,
+  "message": "내 가족 조회 성공",
+  "data": {
+    "familyId": null,
+    "myCode": "MSH-2405",
+    "members": []
+  }
+}
+```
+
+### Response: 매칭 후
+
+```json
+{
+  "status": 200,
+  "success": true,
+  "message": "내 가족 조회 성공",
+  "data": {
+    "familyId": 1,
+    "myCode": "MSH-2405",
+    "members": [
+      {
+        "userId": 2,
+        "role": "child",
+        "displayName": "혜린",
+        "ageBand": "20s",
+        "gender": "female",
+        "relationLabel": null
+      },
+      {
+        "userId": 1,
+        "role": "parent",
+        "displayName": "엄마",
+        "ageBand": "60s",
+        "gender": "undisclosed",
+        "relationLabel": "엄마"
+      }
+    ]
+  }
+}
+
+```
 
 ---
 
@@ -78,12 +131,16 @@
         "userId": 2,
         "role": "child",
         "displayName": "혜린",
+        "ageBand": "20s",
+        "gender": "female",
         "relationLabel": null
       },
       {
         "userId": 1,
         "role": "parent",
         "displayName": "엄마",
+        "ageBand": "60s",
+        "gender": "undisclosed",
         "relationLabel": "엄마"
       }
     ]

@@ -6,6 +6,10 @@ import com.msdragon.backend.auth.repository.UserRefreshTokenRepository
 import com.msdragon.backend.auth.repository.UserRepository
 import com.msdragon.backend.auth.service.KakaoOAuthClient
 import com.msdragon.backend.auth.service.OAuthUserInfo
+import com.msdragon.backend.family.repository.FamilyCodeRepository
+import com.msdragon.backend.family.repository.FamilyCodeUsageRepository
+import com.msdragon.backend.family.repository.FamilyMemberRepository
+import com.msdragon.backend.family.repository.FamilyRepository
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.BDDMockito.given
@@ -31,11 +35,27 @@ class AuthControllerTest {
 	@Autowired
 	private lateinit var userRefreshTokenRepository: UserRefreshTokenRepository
 
+	@Autowired
+	private lateinit var familyCodeUsageRepository: FamilyCodeUsageRepository
+
+	@Autowired
+	private lateinit var familyMemberRepository: FamilyMemberRepository
+
+	@Autowired
+	private lateinit var familyCodeRepository: FamilyCodeRepository
+
+	@Autowired
+	private lateinit var familyRepository: FamilyRepository
+
 	@MockitoBean
 	private lateinit var kakaoOAuthClient: KakaoOAuthClient
 
 	@BeforeEach
 	fun setUp() {
+		familyCodeUsageRepository.deleteAll()
+		familyMemberRepository.deleteAll()
+		familyCodeRepository.deleteAll()
+		familyRepository.deleteAll()
 		userRefreshTokenRepository.deleteAll()
 		userRepository.deleteAll()
 	}

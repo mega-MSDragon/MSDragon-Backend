@@ -6,12 +6,14 @@ import com.msdragon.backend.common.response.ApiResponse
 import com.msdragon.backend.family.dto.FamilyCodeResponse
 import com.msdragon.backend.family.dto.FamilyMatchResponse
 import com.msdragon.backend.family.dto.MatchFamilyCodeRequest
+import com.msdragon.backend.family.dto.MyFamilyResponse
 import com.msdragon.backend.family.service.FamilyService
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.responses.ApiResponse as SwaggerApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
+import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
@@ -23,6 +25,25 @@ import org.springframework.web.bind.annotation.RestController
 class FamilyController(
 	private val familyService: FamilyService,
 ) {
+	@Operation(
+		summary = "내 가족 조회",
+		description = "로그인 사용자의 가족과 구성원을 조회합니다. 아직 매칭되지 않았으면 familyId는 null이고 members는 빈 배열입니다.",
+	)
+	@ApiResponses(
+		value = [
+			SwaggerApiResponse(responseCode = "200", description = "내 가족 조회 성공"),
+			SwaggerApiResponse(responseCode = "401", description = "인증 실패"),
+		],
+	)
+	@GetMapping
+	fun getMyFamily(
+		@CurrentUser currentUser: AuthenticatedUser,
+	): ApiResponse<MyFamilyResponse> =
+		ApiResponse.success(
+			message = "내 가족 조회 성공",
+			data = familyService.getMyFamily(currentUser.id),
+		)
+
 	@Operation(
 		summary = "내 가족 코드 발급/조회",
 		description = "로그인 사용자의 고정 가족 코드를 발급하거나 기존 코드를 조회합니다. Authorization Bearer access token이 필요합니다.",

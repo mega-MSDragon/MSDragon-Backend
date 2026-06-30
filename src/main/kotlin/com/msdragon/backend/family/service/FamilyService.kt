@@ -9,6 +9,7 @@ import com.msdragon.backend.common.exception.NotFoundException
 import com.msdragon.backend.common.exception.UnAuthorizedException
 import com.msdragon.backend.family.dto.FamilyCodeResponse
 import com.msdragon.backend.family.dto.FamilyMatchResponse
+import com.msdragon.backend.family.dto.MyFamilyResponse
 import com.msdragon.backend.family.dto.MatchFamilyCodeRequest
 import com.msdragon.backend.family.entity.Family
 import com.msdragon.backend.family.entity.FamilyCode
@@ -39,6 +40,19 @@ class FamilyService(
 			?: familyCodeRepository.save(FamilyCode(user = user, code = generateUniqueCode()))
 
 		return FamilyCodeResponse(code = familyCode.code)
+	}
+
+	@Transactional(readOnly = true)
+	fun getMyFamily(userId: Long): MyFamilyResponse {
+		getLoginUser(userId)
+		val myCode = familyCodeRepository.findByUserId(userId)?.code
+		val myMember = familyMemberRepository.findByUserId(userId)
+			?: return MyFamilyResponse.empty(myCode)
+		return MyFamilyResponse.of(
+			family = myMember.family,
+			myCode = myCode,
+			members = familyMembers(myMember.family),
+		)
 	}
 
 	@Transactional

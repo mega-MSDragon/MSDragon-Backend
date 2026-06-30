@@ -21,6 +21,7 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.http.MediaType
 import org.springframework.test.web.servlet.MockMvc
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
@@ -76,6 +77,19 @@ class FamilyControllerTest {
 	}
 
 	@Test
+	fun `매칭 전 내 가족을 조회하면 빈 구성원을 반환한다`() {
+		val child = saveUser(UserRole.CHILD, "child-1", "혜린")
+
+		mockMvc.perform(
+			get("/api/v1/family")
+				.header("Authorization", "Bearer ${tokenService.createAccessToken(child)}"),
+		)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.data.familyId").doesNotExist())
+			.andExpect(jsonPath("$.data.members.length()").value(0))
+	}
+
+	@Test
 	fun `부모가 자녀 코드로 가족을 매칭한다`() {
 		val child = saveUser(UserRole.CHILD, "child-1", "혜린")
 		val parent = saveUser(UserRole.PARENT, "parent-1", "엄마")
@@ -91,6 +105,26 @@ class FamilyControllerTest {
 			.andExpect(jsonPath("$.data.familyId").isNumber)
 			.andExpect(jsonPath("$.data.matchedUser.id").value(requireNotNull(child.id).toInt()))
 			.andExpect(jsonPath("$.data.members.length()").value(2))
+	}
+
+	@Test
+	fun `매칭 후 내 가족 구성원을 조회한다`() {
+		val child = saveUser(UserRole.CHILD, "child-1", "혜린")
+		val parent = saveUser(UserRole.PARENT, "parent-1", "엄마")
+		val childCode = issueCode(child)
+		match(parent, childCode)
+
+		mockMvc.perform(
+			get("/api/v1/family")
+				.header("Authorization", "Bearer ${tokenService.createAccessToken(child)}"),
+		)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.data.familyId").isNumber)
+			.andExpect(jsonPath("$.data.members.length()").value(2))
+			.andExpect(jsonPath("$.data.members[0].role").value("child"))
+			.andExpect(jsonPath("$.data.members[1].role").value("parent"))
+			.andExpect(jsonPath("$.data.members[1].ageBand").value("60s"))
+			.andExpect(jsonPath("$.data.members[1].gender").value("undisclosed"))
 	}
 
 	@Test

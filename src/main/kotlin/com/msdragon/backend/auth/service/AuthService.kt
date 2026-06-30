@@ -5,11 +5,9 @@ import com.msdragon.backend.auth.dto.AuthUserResponse
 import com.msdragon.backend.auth.dto.CompleteSignupRequest
 import com.msdragon.backend.auth.dto.RefreshTokenRequest
 import com.msdragon.backend.auth.dto.SocialLoginRequest
-import com.msdragon.backend.auth.entity.AgeBand
 import com.msdragon.backend.auth.entity.DevicePlatform
 import com.msdragon.backend.auth.entity.User
 import com.msdragon.backend.auth.entity.UserRefreshToken
-import com.msdragon.backend.auth.entity.UserRole
 import com.msdragon.backend.auth.repository.UserRefreshTokenRepository
 import com.msdragon.backend.auth.repository.UserRepository
 import com.msdragon.backend.common.exception.BadRequestException
@@ -24,6 +22,7 @@ class AuthService(
 	private val userRefreshTokenRepository: UserRefreshTokenRepository,
 	private val oAuthClientResolver: OAuthClientResolver,
 	private val tokenService: TokenService,
+	private val userProfilePolicy: UserProfilePolicy,
 ) {
 	@Transactional
 	fun socialLogin(request: SocialLoginRequest): AuthResponse {
@@ -48,7 +47,7 @@ class AuthService(
 	fun completeSignup(request: CompleteSignupRequest): AuthResponse {
 		val signupClaims = tokenService.parseSignupToken(request.signupToken)
 
-		validateAgeBand(request.role, request.ageBand)
+		userProfilePolicy.validateAgeBand(request.role, request.ageBand)
 
 		val existingUser = userRepository.findByOauthProviderAndOauthSubjectAndDeletedAtIsNull(
 			oauthProvider = signupClaims.provider,
@@ -125,30 +124,4 @@ class AuthService(
 		)
 	}
 
-	private fun validateAgeBand(role: UserRole, ageBand: AgeBand) {
-		val allowed = when (role) {
-			UserRole.CHILD -> setOf(
-				AgeBand.AGE_10S,
-				AgeBand.AGE_20S,
-				AgeBand.AGE_30S,
-				AgeBand.AGE_40S,
-				AgeBand.AGE_50S,
-				AgeBand.AGE_60S_PLUS,
-				AgeBand.UNDISCLOSED,
-			)
-
-			UserRole.PARENT -> setOf(
-				AgeBand.AGE_50S,
-				AgeBand.AGE_60S,
-				AgeBand.AGE_70S,
-				AgeBand.AGE_80S,
-				AgeBand.AGE_90S_PLUS,
-				AgeBand.UNDISCLOSED,
-			)
-		}
-
-		if (ageBand !in allowed) {
-			throw BadRequestException("선택한 역할에서 사용할 수 없는 연령대입니다.")
-		}
-	}
 }

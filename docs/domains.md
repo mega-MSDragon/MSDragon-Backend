@@ -14,6 +14,7 @@
 | `auth` | `com.msdragon.backend.auth` | 카카오/애플 소셜 로그인, 회원가입 완료, 토큰 재발급 |
 | `family` | `com.msdragon.backend.family` | 가족 코드 발급, 가족 매칭, 가족 구성원 조회 |
 | `health` | `com.msdragon.backend.health` | health 체크 API (`controller/service/dto`) |
+| `profile` | `com.msdragon.backend.profile` | 마이페이지 내 프로필 조회와 수정 |
 
 ---
 
@@ -36,3 +37,4 @@
 | 2026-05-27 | Docker Compose 기반 배포 구성 추가 |
 | 2026-06-29 | auth 도메인 추가 |
 | 2026-06-30 | family 도메인 추가 |
+| 2026-06-30 | profile 도메인 추가 |

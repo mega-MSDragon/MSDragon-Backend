@@ -1,4 +1,4 @@
-package com.msdragon.backend.auth.controller
+package com.msdragon.backend.profile.controller
 
 import com.msdragon.backend.auth.entity.AgeBand
 import com.msdragon.backend.auth.entity.GenderType
@@ -8,9 +8,6 @@ import com.msdragon.backend.auth.entity.UserRole
 import com.msdragon.backend.auth.repository.UserRefreshTokenRepository
 import com.msdragon.backend.auth.repository.UserRepository
 import com.msdragon.backend.auth.service.TokenService
-import com.msdragon.backend.auth.support.AuthenticatedUser
-import com.msdragon.backend.auth.support.CurrentUser
-import com.msdragon.backend.common.response.ApiResponse
 import com.msdragon.backend.family.repository.FamilyCodeRepository
 import com.msdragon.backend.family.repository.FamilyCodeUsageRepository
 import com.msdragon.backend.family.repository.FamilyMemberRepository
@@ -19,22 +16,18 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
-import org.springframework.context.annotation.Bean
-import org.springframework.context.annotation.Import
+import org.springframework.http.MediaType
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
-import org.springframework.web.bind.annotation.GetMapping
-import org.springframework.web.bind.annotation.RestController
 import java.time.LocalDateTime
 
 @SpringBootTest
 @AutoConfigureMockMvc
-@Import(AuthAuthenticationTest.TestControllerConfig::class)
-class AuthAuthenticationTest {
+class ProfileControllerTest {
 	@Autowired
 	private lateinit var mockMvc: MockMvc
 
@@ -70,76 +63,68 @@ class AuthAuthenticationTest {
 	}
 
 	@Test
-	fun `Bearer access token으로 보호 API에 접근한다`() {
-		val user = saveUser()
-		val accessToken = tokenService.createAccessToken(user)
+	fun `내 프로필을 조회한다`() {
+		val child = saveUser(UserRole.CHILD, "child-1", "혜린")
 
 		mockMvc.perform(
-			get("/api/v1/probe/current-user")
-				.header("Authorization", "Bearer $accessToken"),
+			get("/api/v1/users/me")
+				.header("Authorization", "Bearer ${tokenService.createAccessToken(child)}"),
 		)
 			.andExpect(status().isOk)
-			.andExpect(jsonPath("$.data.id").value(requireNotNull(user.id).toInt()))
+			.andExpect(jsonPath("$.data.id").value(requireNotNull(child.id).toInt()))
 			.andExpect(jsonPath("$.data.role").value("child"))
+			.andExpect(jsonPath("$.data.displayName").value("혜린"))
+			.andExpect(jsonPath("$.data.ageBand").value("20s"))
 	}
 
 	@Test
-	fun `Authorization 헤더가 없으면 보호 API 접근을 거절한다`() {
-		mockMvc.perform(get("/api/v1/probe/current-user"))
-			.andExpect(status().isUnauthorized)
-			.andExpect(jsonPath("$.success").value(false))
-			.andExpect(jsonPath("$.message").value("Authorization 헤더가 필요합니다."))
-	}
+	fun `내 프로필을 수정한다`() {
+		val child = saveUser(UserRole.CHILD, "child-1", "혜린")
 
-	@Test
-	fun `Bearer 형식이 아니면 보호 API 접근을 거절한다`() {
 		mockMvc.perform(
-			get("/api/v1/probe/current-user")
-				.header("Authorization", "Basic invalid"),
+			patch("/api/v1/users/me")
+				.header("Authorization", "Bearer ${tokenService.createAccessToken(child)}")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(
+					"""
+					{
+					  "displayName": "최혜린",
+					  "ageBand": "30s",
+					  "gender": "female"
+					}
+					""".trimIndent(),
+				),
 		)
-			.andExpect(status().isUnauthorized)
-			.andExpect(jsonPath("$.success").value(false))
-			.andExpect(jsonPath("$.message").value("Bearer 토큰 형식이 올바르지 않습니다."))
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.data.displayName").value("최혜린"))
+			.andExpect(jsonPath("$.data.ageBand").value("30s"))
+			.andExpect(jsonPath("$.data.gender").value("female"))
 	}
 
-	private fun saveUser(): User =
+	@Test
+	fun `역할에 맞지 않는 연령대로 프로필 수정을 거절한다`() {
+		val parent = saveUser(UserRole.PARENT, "parent-1", "엄마")
+
+		mockMvc.perform(
+			patch("/api/v1/users/me")
+				.header("Authorization", "Bearer ${tokenService.createAccessToken(parent)}")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""{"ageBand":"20s"}"""),
+		)
+			.andExpect(status().isBadRequest)
+			.andExpect(jsonPath("$.message").value("선택한 역할에서 사용할 수 없는 연령대입니다."))
+	}
+
+	private fun saveUser(role: UserRole, subject: String, displayName: String): User =
 		userRepository.save(
 			User(
-				role = UserRole.CHILD,
+				role = role,
 				oauthProvider = OAuthProvider.KAKAO,
-				oauthSubject = "12345",
-				displayName = "최혜린",
-				ageBand = AgeBand.AGE_20S,
-				gender = GenderType.FEMALE,
+				oauthSubject = subject,
+				displayName = displayName,
+				ageBand = if (role == UserRole.CHILD) AgeBand.AGE_20S else AgeBand.AGE_60S,
+				gender = GenderType.UNDISCLOSED,
 				signupCompletedAt = LocalDateTime.now(),
 			),
 		)
-
-	@TestConfiguration
-	class TestControllerConfig {
-		@Bean
-		fun authProbeController(): AuthProbeController = AuthProbeController()
-	}
-}
-
-@RestController
-class AuthProbeController {
-	@GetMapping("/api/v1/probe/current-user")
-	fun currentUser(
-		@CurrentUser currentUser: AuthenticatedUser,
-	): ApiResponse<AuthProbeResponse> =
-		ApiResponse.success(data = AuthProbeResponse.from(currentUser))
-}
-
-data class AuthProbeResponse(
-	val id: Long,
-	val role: String,
-) {
-	companion object {
-		fun from(currentUser: AuthenticatedUser): AuthProbeResponse =
-			AuthProbeResponse(
-				id = currentUser.id,
-				role = currentUser.role.value,
-			)
-	}
 }
