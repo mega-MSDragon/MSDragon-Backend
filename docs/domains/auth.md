@@ -14,6 +14,8 @@ Auth 도메인은 소셜 로그인, 회원가입 완료, 서비스 토큰 발급
 - refresh token은 해시만 저장하고 재발급 시 기존 token을 폐기합니다.
 - API 요청 enum은 DTO에서 직접 enum 타입으로 받고, JSON 값은 `kakao`, `child`, `20s`처럼 DB 저장 값과 같은 소문자 문자열을 사용합니다.
 - `deviceId`는 현재 인증 흐름에서 쓰지 않으므로 받지 않습니다.
+- `/api/v1/auth/**`를 제외한 보호 API는 `Authorization: Bearer {accessToken}`으로 인증합니다.
+- 컨트롤러는 `@CurrentUser AuthenticatedUser` 파라미터로 현재 로그인 사용자 ID와 역할을 받을 수 있습니다.
 
 ---
 
@@ -26,7 +28,8 @@ auth
 ├── dto
 ├── entity
 ├── repository
-└── service
+├── service
+└── support
 ```
 
 ---
@@ -50,4 +53,3 @@ auth
 
 - 가족 코드 발급
 - 가족 코드 매칭
-- 인증 사용자 argument resolver 또는 interceptor 공통화

@@ -15,6 +15,7 @@
 - refresh token은 원문을 저장하지 않고 SHA-256 해시로 저장하며, 재발급 시 회전합니다.
 - 요청 enum은 API DTO에서 enum 타입으로 받으며 JSON 값은 소문자 문자열을 사용합니다.
 - `deviceId`는 현재 요구사항에서 쓰이지 않으므로 받지 않습니다. 기기별 로그아웃/푸시/기기 관리가 필요해질 때 다시 추가합니다.
+- 로그인 이후 보호 API는 `Authorization: Bearer {accessToken}` 헤더로 인증합니다.
 - 가족 코드 발급/매칭은 이번 구현 범위에서 제외합니다.
 
 ---
@@ -26,6 +27,18 @@
 | `POST` | `/api/v1/auth/social-login` | 소셜 토큰 검증 및 가입 상태 확인 |
 | `POST` | `/api/v1/auth/signup/complete` | 회원가입 완료 및 서비스 토큰 발급 |
 | `POST` | `/api/v1/auth/refresh` | refresh token 회전 및 토큰 재발급 |
+
+---
+
+## 인증 헤더
+
+`/api/v1/auth/**`를 제외한 보호 API는 access token을 Bearer 형식으로 전달해야 합니다.
+
+```http
+Authorization: Bearer {accessToken}
+```
+
+access token이 없거나, 형식이 다르거나, 만료/변조된 경우 `401` 공통 실패 응답을 반환합니다.
 
 ---
 

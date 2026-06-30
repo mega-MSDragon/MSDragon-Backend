@@ -9,4 +9,6 @@ interface UserRepository : JpaRepository<User, Long> {
 		oauthProvider: OAuthProvider,
 		oauthSubject: String,
 	): User?
+
+	fun findByIdAndDeletedAtIsNull(id: Long): User?
 }
