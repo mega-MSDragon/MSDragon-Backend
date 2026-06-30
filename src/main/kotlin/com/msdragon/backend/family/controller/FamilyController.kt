@@ -2,6 +2,7 @@ package com.msdragon.backend.family.controller
 
 import com.msdragon.backend.auth.support.AuthenticatedUser
 import com.msdragon.backend.auth.support.CurrentUser
+import com.msdragon.backend.common.config.BEARER_AUTH_SCHEME
 import com.msdragon.backend.common.response.ApiResponse
 import com.msdragon.backend.family.dto.FamilyCodeResponse
 import com.msdragon.backend.family.dto.FamilyMatchResponse
@@ -11,6 +12,7 @@ import com.msdragon.backend.family.service.FamilyService
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.responses.ApiResponse as SwaggerApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
+import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import org.springframework.web.bind.annotation.GetMapping
@@ -22,6 +24,7 @@ import org.springframework.web.bind.annotation.RestController
 @RestController
 @RequestMapping("/api/v1/family")
 @Tag(name = "Family", description = "가족 코드 발급과 가족 매칭 API 입니다.")
+@SecurityRequirement(name = BEARER_AUTH_SCHEME)
 class FamilyController(
 	private val familyService: FamilyService,
 ) {

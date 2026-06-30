@@ -55,6 +55,17 @@ val provider: OAuthProvider
 - JSON 값은 Kotlin enum 이름이 아니라 API에서 실제로 주고받는 문자열을 적습니다. 예: `KAKAO`가 아니라 `kakao`.
 - 역할별 허용 범위처럼 단순 enum 목록 외 검증 조건이 있으면 필드 설명이나 API 문서에 추가로 적습니다.
 
+보호 API:
+
+```kotlin
+@SecurityRequirement(name = BEARER_AUTH_SCHEME)
+class SampleController
+```
+
+- `Authorization: Bearer {accessToken}`이 필요한 컨트롤러에는 `@SecurityRequirement`를 붙입니다.
+- OpenAPI 보안 스키마 이름은 `common.config.BEARER_AUTH_SCHEME`의 `bearerAuth`를 사용합니다.
+- `/api/v1/auth/**`처럼 로그인 전 호출해야 하는 공개 API에는 보안 요구사항을 붙이지 않습니다.
+
 ---
 
 ## 이름 충돌 규칙
@@ -72,3 +83,4 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse as SwaggerApiResponse
 - `./gradlew test`로 컴파일을 확인합니다.
 - Swagger UI를 사용한다면 `/swagger-ui.html`에서 태그, 요약, 설명, 응답 코드 노출을 확인합니다.
 - enum 요청값은 `/v3/api-docs`의 schema `enum` 배열에 실제 JSON 값으로 노출되는지 확인합니다.
+- 보호 API는 `/v3/api-docs`의 `components.securitySchemes.bearerAuth`와 operation `security`에 노출되는지 확인합니다.

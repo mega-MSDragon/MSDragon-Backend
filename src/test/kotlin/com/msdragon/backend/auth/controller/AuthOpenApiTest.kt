@@ -17,6 +17,18 @@ class AuthOpenApiTest {
 	private lateinit var mockMvc: MockMvc
 
 	@Test
+	fun `Bearer 인증 스키마와 보호 API 보안 요구사항이 OpenAPI에 노출된다`() {
+		mockMvc.perform(get("/v3/api-docs"))
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.components.securitySchemes.bearerAuth.type").value("http"))
+			.andExpect(jsonPath("$.components.securitySchemes.bearerAuth.scheme").value("bearer"))
+			.andExpect(jsonPath("$.components.securitySchemes.bearerAuth.bearerFormat").value("JWT"))
+			.andExpect(jsonPath("$.paths['/api/v1/family'].get.security[0].bearerAuth").isArray)
+			.andExpect(jsonPath("$.paths['/api/v1/users/me'].get.security[0].bearerAuth").isArray)
+			.andExpect(jsonPath("$.paths['/api/v1/auth/social-login'].post.security").doesNotExist())
+	}
+
+	@Test
 	fun `인증 요청 enum 값이 OpenAPI schema에 노출된다`() {
 		mockMvc.perform(get("/v3/api-docs"))
 			.andExpect(status().isOk)

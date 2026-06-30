@@ -2,6 +2,7 @@ package com.msdragon.backend.profile.controller
 
 import com.msdragon.backend.auth.support.AuthenticatedUser
 import com.msdragon.backend.auth.support.CurrentUser
+import com.msdragon.backend.common.config.BEARER_AUTH_SCHEME
 import com.msdragon.backend.common.response.ApiResponse
 import com.msdragon.backend.profile.dto.MyProfileResponse
 import com.msdragon.backend.profile.dto.UpdateMyProfileRequest
@@ -9,6 +10,7 @@ import com.msdragon.backend.profile.service.ProfileService
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.responses.ApiResponse as SwaggerApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
+import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import org.springframework.web.bind.annotation.GetMapping
@@ -20,6 +22,7 @@ import org.springframework.web.bind.annotation.RestController
 @RestController
 @RequestMapping("/api/v1/users")
 @Tag(name = "Profile", description = "마이페이지 내 프로필 API 입니다.")
+@SecurityRequirement(name = BEARER_AUTH_SCHEME)
 class ProfileController(
 	private val profileService: ProfileService,
 ) {
