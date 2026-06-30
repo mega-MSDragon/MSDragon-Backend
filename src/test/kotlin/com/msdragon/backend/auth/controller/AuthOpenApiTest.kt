@@ -26,6 +26,11 @@ class AuthOpenApiTest {
 			.andExpect(jsonPath("$.paths['/api/v1/family'].get.security[0].bearerAuth").isArray)
 			.andExpect(jsonPath("$.paths['/api/v1/users/me'].get.security[0].bearerAuth").isArray)
 			.andExpect(jsonPath("$.paths['/api/v1/auth/social-login'].post.security").doesNotExist())
+			.andExpect(jsonPath("$.paths['/api/v1/family'].get.parameters").doesNotExist())
+			.andExpect(jsonPath("$.paths['/api/v1/family/code'].post.parameters").doesNotExist())
+			.andExpect(jsonPath("$.paths['/api/v1/family/matches'].post.parameters").doesNotExist())
+			.andExpect(jsonPath("$.paths['/api/v1/users/me'].get.parameters").doesNotExist())
+			.andExpect(jsonPath("$.paths['/api/v1/users/me'].patch.parameters").doesNotExist())
 	}
 
 	@Test

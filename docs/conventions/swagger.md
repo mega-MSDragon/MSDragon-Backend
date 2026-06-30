@@ -65,6 +65,7 @@ class SampleController
 - `Authorization: Bearer {accessToken}`이 필요한 컨트롤러에는 `@SecurityRequirement`를 붙입니다.
 - OpenAPI 보안 스키마 이름은 `common.config.BEARER_AUTH_SCHEME`의 `bearerAuth`를 사용합니다.
 - `/api/v1/auth/**`처럼 로그인 전 호출해야 하는 공개 API에는 보안 요구사항을 붙이지 않습니다.
+- `@CurrentUser`처럼 서버에서 주입하는 파라미터는 클라이언트 요청값이 아니므로 `@Parameter(hidden = true)`로 Swagger에서 숨깁니다.
 
 ---
 
