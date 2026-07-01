@@ -15,6 +15,7 @@ import com.msdragon.backend.family.repository.FamilyCodeRepository
 import com.msdragon.backend.family.repository.FamilyCodeUsageRepository
 import com.msdragon.backend.family.repository.FamilyMemberRepository
 import com.msdragon.backend.family.repository.FamilyRepository
+import com.msdragon.backend.parentprofile.repository.ParentProfileRepository
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -59,8 +60,12 @@ class AuthAuthenticationTest {
 	@Autowired
 	private lateinit var familyRepository: FamilyRepository
 
+	@Autowired
+	private lateinit var parentProfileRepository: ParentProfileRepository
+
 	@BeforeEach
 	fun setUp() {
+		parentProfileRepository.deleteAll()
 		familyCodeUsageRepository.deleteAll()
 		familyMemberRepository.deleteAll()
 		familyCodeRepository.deleteAll()

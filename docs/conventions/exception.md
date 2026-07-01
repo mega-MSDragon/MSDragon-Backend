@@ -12,6 +12,7 @@
 BaseException
 ├── BadRequestException
 ├── UnAuthorizedException
+├── ForbiddenException
 ├── NotFoundException
 └── InternalServerException
 ```
@@ -26,6 +27,7 @@ BaseException
 - JSON 본문 파싱 실패는 `HttpMessageNotReadableException`에서 처리합니다. enum 역직렬화 중 `BaseException`이 감싸진 경우 원래 메시지를 사용합니다.
 - 잘못된 인자는 `IllegalArgumentException`에서 처리합니다.
 - 현재 공통 예외 응답에는 별도 에러 코드 enum을 포함하지 않습니다.
+- 인증은 되었지만 리소스 접근 권한이 없으면 `ForbiddenException`으로 `403`을 반환합니다.
 
 ---
 

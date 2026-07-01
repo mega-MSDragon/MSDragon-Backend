@@ -13,6 +13,7 @@ import com.msdragon.backend.family.repository.FamilyCodeRepository
 import com.msdragon.backend.family.repository.FamilyCodeUsageRepository
 import com.msdragon.backend.family.repository.FamilyMemberRepository
 import com.msdragon.backend.family.repository.FamilyRepository
+import com.msdragon.backend.parentprofile.repository.ParentProfileRepository
 import org.hamcrest.Matchers.matchesPattern
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -54,8 +55,12 @@ class FamilyControllerTest {
 	@Autowired
 	private lateinit var familyCodeUsageRepository: FamilyCodeUsageRepository
 
+	@Autowired
+	private lateinit var parentProfileRepository: ParentProfileRepository
+
 	@BeforeEach
 	fun setUp() {
+		parentProfileRepository.deleteAll()
 		familyCodeUsageRepository.deleteAll()
 		familyMemberRepository.deleteAll()
 		familyCodeRepository.deleteAll()
