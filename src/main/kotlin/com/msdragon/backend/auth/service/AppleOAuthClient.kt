@@ -5,12 +5,12 @@ import com.msdragon.backend.auth.entity.OAuthProvider
 import com.msdragon.backend.common.exception.InternalServerException
 import com.msdragon.backend.common.exception.UnAuthorizedException
 import com.nimbusds.jose.JWSAlgorithm
-import com.nimbusds.jose.jwk.source.RemoteJWKSet
+import com.nimbusds.jose.jwk.source.JWKSourceBuilder
 import com.nimbusds.jose.proc.JWSVerificationKeySelector
 import com.nimbusds.jose.proc.SecurityContext
 import com.nimbusds.jwt.proc.DefaultJWTProcessor
 import org.springframework.stereotype.Component
-import java.net.URL
+import java.net.URI
 
 @Component
 class AppleOAuthClient(
@@ -24,7 +24,7 @@ class AppleOAuthClient(
 
 		val claims = try {
 			val processor = DefaultJWTProcessor<SecurityContext>()
-			val jwkSource = RemoteJWKSet<SecurityContext>(URL(apple.jwksUri))
+			val jwkSource = JWKSourceBuilder.create<SecurityContext>(URI(apple.jwksUri).toURL()).build()
 			processor.jwsKeySelector = JWSVerificationKeySelector(JWSAlgorithm.RS256, jwkSource)
 			processor.process(token, null)
 		} catch (_: Exception) {
