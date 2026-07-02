@@ -100,7 +100,6 @@ class FamilyService(
 				family = family,
 				user = parent,
 				memberRole = UserRole.PARENT,
-				relationLabel = request.relationLabel?.trim()?.takeIf { it.isNotBlank() },
 			),
 		)
 		recordCodeUsageIfNeeded(targetCode, requester, family)

@@ -60,6 +60,7 @@ DB 스키마와 공통 엔티티 규칙을 기록합니다.
 ### family_members
 
 - `user_id`는 unique입니다. 한 사용자는 하나의 가족에만 속합니다.
+- `relation_label` 컬럼은 남겨두지만 현재 가족 매칭 API에서는 입력받지 않습니다. 가족 응답의 `relationLabel`은 부모 `users.gender` 기준으로 서버에서 계산합니다.
 - 가족당 자녀 1명, 부모 최대 2명 제약은 서비스에서 검증합니다.
 - 운영 DB에서는 DBML/ERD 설계처럼 자녀 1명 partial unique index와 부모 최대 2명 trigger를 추가 검토합니다.
 

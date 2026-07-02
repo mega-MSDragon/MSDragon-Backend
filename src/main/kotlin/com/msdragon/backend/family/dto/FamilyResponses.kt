@@ -1,6 +1,8 @@
 package com.msdragon.backend.family.dto
 
+import com.msdragon.backend.auth.entity.GenderType
 import com.msdragon.backend.auth.entity.User
+import com.msdragon.backend.auth.entity.UserRole
 import com.msdragon.backend.family.entity.Family
 import com.msdragon.backend.family.entity.FamilyMember
 import io.swagger.v3.oas.annotations.media.Schema
@@ -106,7 +108,7 @@ data class FamilyMemberResponse(
 	@field:Schema(description = "성별", example = "female", allowableValues = ["female", "male", "undisclosed"])
 	val gender: String,
 
-	@field:Schema(description = "가족 관계 표시 이름", example = "엄마", nullable = true)
+	@field:Schema(description = "부모 성별 기반 가족 관계 표시 이름. female이면 엄마, male이면 아빠, 그 외에는 null입니다.", example = "엄마", nullable = true)
 	val relationLabel: String?,
 ) {
 	companion object {
@@ -117,7 +119,18 @@ data class FamilyMemberResponse(
 				displayName = member.user.displayName,
 				ageBand = member.user.ageBand.value,
 				gender = member.user.gender.value,
-				relationLabel = member.relationLabel,
+				relationLabel = relationLabelOf(member),
 			)
+
+		private fun relationLabelOf(member: FamilyMember): String? {
+			if (member.memberRole != UserRole.PARENT) {
+				return null
+			}
+			return when (member.user.gender) {
+				GenderType.FEMALE -> "엄마"
+				GenderType.MALE -> "아빠"
+				GenderType.UNDISCLOSED -> null
+			}
+		}
 	}
 }

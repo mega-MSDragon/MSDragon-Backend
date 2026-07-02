@@ -14,6 +14,7 @@
 - 한 사용자는 하나의 가족에만 속할 수 있습니다.
 - 가족당 자녀는 1명, 부모는 최대 2명까지 연결합니다.
 - 자녀 쪽 가족을 기준으로 가족을 만들고, `families.owner_user_id`는 대표 자녀입니다.
+- 가족 구성원 응답의 `relationLabel`은 클라이언트 요청값이 아니라 부모 성별로 서버에서 계산합니다. `female`은 `엄마`, `male`은 `아빠`, `undisclosed`는 `null`입니다.
 
 ---
 
@@ -68,7 +69,7 @@
         "role": "parent",
         "displayName": "엄마",
         "ageBand": "60s",
-        "gender": "undisclosed",
+        "gender": "female",
         "relationLabel": "엄마"
       }
     ]
@@ -102,15 +103,13 @@
 
 ```json
 {
-  "code": "MSH-2405",
-  "relationLabel": "엄마"
+  "code": "MSH-2405"
 }
 ```
 
 | Field | Type | Required | 설명 |
 |-------|------|----------|------|
 | `code` | string | true | 상대방 가족 코드 |
-| `relationLabel` | string | false | 가족 관계 표시 이름. 예: `엄마`, `아빠` |
 
 ### Response
 
@@ -140,7 +139,7 @@
         "role": "parent",
         "displayName": "엄마",
         "ageBand": "60s",
-        "gender": "undisclosed",
+        "gender": "female",
         "relationLabel": "엄마"
       }
     ]

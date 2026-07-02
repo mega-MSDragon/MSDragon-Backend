@@ -97,25 +97,26 @@ class FamilyControllerTest {
 	@Test
 	fun `부모가 자녀 코드로 가족을 매칭한다`() {
 		val child = saveUser(UserRole.CHILD, "child-1", "혜린")
-		val parent = saveUser(UserRole.PARENT, "parent-1", "엄마")
+		val parent = saveUser(UserRole.PARENT, "parent-1", "아빠", GenderType.MALE)
 		val childCode = issueCode(child)
 
 		mockMvc.perform(
 			post("/api/v1/family/matches")
 				.header("Authorization", "Bearer ${tokenService.createAccessToken(parent)}")
 				.contentType(MediaType.APPLICATION_JSON)
-				.content("""{"code":"$childCode","relationLabel":"엄마"}"""),
+				.content("""{"code":"$childCode"}"""),
 		)
 			.andExpect(status().isOk)
 			.andExpect(jsonPath("$.data.familyId").isNumber)
 			.andExpect(jsonPath("$.data.matchedUser.id").value(requireNotNull(child.id).toInt()))
 			.andExpect(jsonPath("$.data.members.length()").value(2))
+			.andExpect(jsonPath("$.data.members[1].relationLabel").value("아빠"))
 	}
 
 	@Test
 	fun `매칭 후 내 가족 구성원을 조회한다`() {
 		val child = saveUser(UserRole.CHILD, "child-1", "혜린")
-		val parent = saveUser(UserRole.PARENT, "parent-1", "엄마")
+		val parent = saveUser(UserRole.PARENT, "parent-1", "엄마", GenderType.FEMALE)
 		val childCode = issueCode(child)
 		match(parent, childCode)
 
@@ -129,7 +130,8 @@ class FamilyControllerTest {
 			.andExpect(jsonPath("$.data.members[0].role").value("child"))
 			.andExpect(jsonPath("$.data.members[1].role").value("parent"))
 			.andExpect(jsonPath("$.data.members[1].ageBand").value("60s"))
-			.andExpect(jsonPath("$.data.members[1].gender").value("undisclosed"))
+			.andExpect(jsonPath("$.data.members[1].gender").value("female"))
+			.andExpect(jsonPath("$.data.members[1].relationLabel").value("엄마"))
 	}
 
 	@Test
@@ -190,7 +192,12 @@ class FamilyControllerTest {
 			.andExpect(status().isOk)
 	}
 
-	private fun saveUser(role: UserRole, subject: String, displayName: String): User =
+	private fun saveUser(
+		role: UserRole,
+		subject: String,
+		displayName: String,
+		gender: GenderType = GenderType.UNDISCLOSED,
+	): User =
 		userRepository.save(
 			User(
 				role = role,
@@ -198,7 +205,7 @@ class FamilyControllerTest {
 				oauthSubject = subject,
 				displayName = displayName,
 				ageBand = if (role == UserRole.CHILD) AgeBand.AGE_20S else AgeBand.AGE_60S,
-				gender = GenderType.UNDISCLOSED,
+				gender = gender,
 				signupCompletedAt = LocalDateTime.now(),
 			),
 		)

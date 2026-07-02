@@ -112,7 +112,7 @@ CREATE TABLE family_members (
     family_id      BIGINT NOT NULL REFERENCES families(id),
     user_id        BIGINT NOT NULL UNIQUE REFERENCES users(id),  -- 1유저 = 1가족
     member_role    user_role NOT NULL,
-    relation_label VARCHAR(20),                -- '엄마','아빠'
+    relation_label VARCHAR(20),                -- 현재 API 입력값 아님. 응답 relationLabel은 부모 성별 기반 계산
     joined_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at     TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -244,7 +244,7 @@ CREATE TABLE parent_personality_scores (
 );
 ```
 
-마이페이지의 기본 프로필 수정은 `users.display_name`, `age_band`, `gender`를 갱신합니다. 자녀/부모가 보는 가족 목록은 `family_members`와 연결된 `users`를 조회하고, 엄마/아빠/딸 같은 표시는 `family_members.relation_label`을 사용합니다.
+마이페이지의 기본 프로필 수정은 `users.display_name`, `age_band`, `gender`를 갱신합니다. 자녀/부모가 보는 가족 목록은 `family_members`와 연결된 `users`를 조회하고, 엄마/아빠 표시는 부모 `users.gender`가 `female`이면 `엄마`, `male`이면 `아빠`, `undisclosed`이면 `null`로 응답에서 계산합니다.
 
 부모 프로필 카드와 MBTI 상세는 `parent_profiles`, `parent_personality_results.is_current = true`, `travel_personality_types`, `parent_personality_scores`에서 조회합니다. `새로운 MBTI 뽑기`는 부모 프로필 작성 플로우를 다시 진행한 뒤 기존 current 결과를 false로 변경하고 새 결과를 current로 저장합니다. `profile_snapshot`에는 재진단 당시 입력값을 보관해 과거 진단 결과와 현재 수정된 프로필이 섞이지 않게 합니다.
 
