@@ -35,6 +35,8 @@ docker compose up -d --build
 curl http://localhost/health
 ```
 
+Compose로 실행하면 PostgreSQL도 host port로 publish됩니다. 기본 포트는 `.env`의 `POSTGRES_HOST_PORT=5432`이며, 로컬에 이미 PostgreSQL이 떠 있으면 다른 포트로 바꿉니다.
+
 ---
 
 ## 주요 URL
@@ -71,6 +73,16 @@ curl http://localhost/health
 | JDBC URL | `jdbc:h2:mem:msdragon` |
 | username | `sa` |
 | H2 Console | `/h2-console` |
+
+Docker Compose의 PostgreSQL에 직접 접속할 때는 아래 값을 사용합니다.
+
+| Name | Value |
+|------|-------|
+| Host | `localhost` |
+| Port | `.env`의 `POSTGRES_HOST_PORT` |
+| Database | `.env`의 `POSTGRES_DB` |
+| Username | `.env`의 `POSTGRES_USER` |
+| Password | `.env`의 `POSTGRES_PASSWORD` |
 
 ---
 

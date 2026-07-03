@@ -10,9 +10,10 @@ EC2 한 대에서 Docker Compose로 Spring Boot, PostgreSQL, Nginx를 함께 실
 |-----------|------|--------|
 | `nginx` | 외부 HTTPS 요청을 Spring Boot로 프록시 | `80`, `443` |
 | `app` | Spring Boot 애플리케이션 | 내부 네트워크 |
-| `postgres` | PostgreSQL DB | 내부 네트워크 |
+| `postgres` | PostgreSQL DB | `5432` |
 
-Spring Boot `8080`과 PostgreSQL `5432`는 인터넷에 직접 개방하지 않습니다.
+Spring Boot `8080`은 인터넷에 직접 개방하지 않습니다.
+PostgreSQL `5432`는 DBeaver 등 DB 클라이언트 접근을 위해 host port로 publish하되, AWS 보안 그룹에서 접근 가능한 IP를 제한합니다.
 Cloudflare를 사용할 때는 Cloudflare Origin Certificate를 Nginx에 설치하고 `Full (strict)` 모드를 사용합니다.
 
 ---
@@ -34,8 +35,10 @@ Cloudflare를 사용할 때는 Cloudflare Origin Certificate를 Nginx에 설치�
 | `22` | 내 IP | SSH |
 | `80` | `0.0.0.0/0` | HTTP 요청을 HTTPS로 리다이렉트 |
 | `443` | `0.0.0.0/0` | Cloudflare HTTPS 요청 |
+| `5432` | 내 IP 또는 팀원 IP | PostgreSQL 클라이언트 접속 |
 
 Cloudflare를 사용할 때는 가능하면 `80` source를 Cloudflare IP 대역으로 제한합니다.
+PostgreSQL `5432`를 `0.0.0.0/0`로 여는 것은 임시 확인 목적에만 사용하고, 가능한 한 `/32` 단위의 허용 IP만 등록합니다.
 
 EC2에 Docker와 Docker Compose plugin을 설치합니다.
 
@@ -78,6 +81,7 @@ APP_AUTH_APPLE_CLIENT_ID=com.msdragon.ios
 ```
 
 `APP_AUTH_JWT_SECRET`은 의미 있는 단어가 아니라 충분히 긴 랜덤 문자열이어야 합니다. 이 값을 변경하면 기존 로그인 토큰은 모두 무효화됩니다.
+`POSTGRES_HOST_PORT`는 EC2 host에서 publish할 PostgreSQL 포트입니다. DBeaver에서 직접 접속하려면 기본값 `5432`를 사용하고, 보안 그룹에서도 같은 포트를 허용합니다.
 
 ---
 
