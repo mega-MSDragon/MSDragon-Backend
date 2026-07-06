@@ -14,7 +14,7 @@
 - **F7**: 부모 피드백의 몸 상태, 베스트 장소, 보강된 태그를 저장합니다.
 - **F8**: 효도 리포트는 고정 지표 컬럼으로 관리하고, 기록 화면용 집계값을 리포트에 저장합니다.
 - **F9**: 가족 매칭 코드는 사용자별 고정 코드로 관리하고, 실제 매칭 이력은 별도 테이블에 기록합니다.
-- **F10**: 부모 프로필은 PDF 확정 플로우 기준으로 걷는 속도, 쉬는 시간, 배려 항목, 여행 취향, 음식 취향, 피해야 할 음식을 단계별 draft 저장합니다.
+- **F10**: 부모 프로필은 확정 플로우 기준으로 걷는 속도, 이동 도움 필요 여부, 여행 취향 7종, 음식 취향 3종을 단계별 draft 저장합니다.
 - **F11**: 앱 도시 선택용 `travel_destinations`와 공공데이터 행정 구역 `regions`를 분리하고, 코스 생성 job/API 사용 이력/티맵 경로 구간을 저장합니다.
 - **F12**: 여행모드는 여행 기간으로 계산하고, 주변 화장실/의료시설 캐시와 여행모드 AI 챗봇 컨텍스트를 저장합니다.
 - **F13**: PDF 확정본 기준으로 동의/알림/위치 권한 설정은 앱 로컬/OS 권한으로 관리하고 백엔드 ERD에서 제외합니다.
@@ -24,7 +24,7 @@
 ## v2 변경 요약 (결정 반영)
 - **A1**: 단일 `users` 유지 — 역할별 NULL 컬럼이 없어 분리 이득 없음.
 - **A2**: `parent_profiles`는 부모 전용. 자녀 프로필/MBTI 없음(성별·나이대는 `users`).
-- **A3**: `fitness_level`, `activity_level` 별개 컬럼 유지. → **F10/F13에서 PDF 확정 기준의 `walking_pace`, `rest_preference`, 배려 항목 구조로 변경**
+- **A3**: `fitness_level`, `activity_level` 별개 컬럼 유지. → **F10/F13에서 확정 기준의 `walking_pace`, `needs_mobility_assistance` 구조로 변경**
 - **B4**: AI 코스 제안 비영속 → `courses` 테이블 **삭제**. 확정 일정만 `trip_days` / `trip_stops`로 보존.
 - **B5**: 10계명은 여행별 인스턴스만(`trip_pledges`). 재사용 템플릿 테이블 없음. → **F5에서 서버 후보군 테이블 도입으로 변경**
 - **C6**: 평가 축 고정 → `filial_report_metrics`(EAV) **삭제**, 고정 컬럼화. `feedback_tags` 마스터 삭제, `feedback_tag` ENUM으로 대체.
@@ -41,13 +41,11 @@ CREATE TYPE gender_type        AS ENUM ('female', 'male', 'undisclosed');
 CREATE TYPE device_platform    AS ENUM ('ios', 'android', 'web');
 CREATE TYPE parent_profile_status AS ENUM ('draft', 'completed');
 CREATE TYPE walking_pace       AS ENUM ('slow', 'normal', 'fast');          -- 천천히/보통/빠르게
-CREATE TYPE rest_preference    AS ENUM ('frequent', 'normal', 'low');       -- 자주 필요/보통/적게
-CREATE TYPE travel_theme_code  AS ENUM ('nature_scenery', 'history_walk', 'food', 'exhibition', 'market', 'experience');
-CREATE TYPE food_preference_code AS ENUM ('korean', 'mild', 'low_waiting', 'cafe', 'comfortable_seat', 'diverse_menu');
+CREATE TYPE travel_theme_code  AS ENUM ('nature_scenery', 'history_culture', 'shopping', 'activity', 'culture_life', 'landmark', 'experience');
+CREATE TYPE food_preference_code AS ENUM ('korean', 'familiar', 'adventurous');
 CREATE TYPE trip_status        AS ENUM ('planning', 'ready', 'in_progress', 'completed', 'archived');
 CREATE TYPE trip_pledge_status AS ENUM ('draft', 'reviewed', 'signature_requested', 'completed');
 CREATE TYPE trip_companion_scope AS ENUM ('with_parents', 'whole_family', 'parents_only');
-CREATE TYPE care_need_code     AS ENUM ('low_stairs', 'nearby_restroom', 'indoor', 'easy_parking');
 CREATE TYPE stop_type          AS ENUM ('sightseeing', 'meal', 'rest', 'cafe');
 CREATE TYPE course_generation_status AS ENUM ('pending', 'collecting_data', 'routing', 'generating', 'completed', 'failed');
 CREATE TYPE external_api_provider AS ENUM ('tour_api', 'tmap', 'kakao_map', 'public_data', 'local_excel', 'internal');
@@ -156,30 +154,18 @@ CREATE TABLE parent_profiles (
     status             parent_profile_status NOT NULL DEFAULT 'draft',
     current_step       SMALLINT NOT NULL DEFAULT 1,
     walking_pace       walking_pace,       -- 천천히/보통/빠르게
-    rest_preference    rest_preference,    -- 자주 필요/보통/적게
-    foods_to_avoid     VARCHAR(255),
+    needs_mobility_assistance BOOLEAN,     -- 완료 시 true/false 필수
+    food_preference    food_preference_code,
     completion_percent SMALLINT NOT NULL DEFAULT 0,
     completed_at       TIMESTAMPTZ,
     created_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at         TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE TABLE parent_profile_care_needs (
-    parent_profile_id    BIGINT NOT NULL REFERENCES parent_profiles(id),
-    care_need_code       care_need_code NOT NULL,
-    UNIQUE (parent_profile_id, care_need_code)
-);
-
 CREATE TABLE parent_profile_themes (
     parent_profile_id BIGINT NOT NULL REFERENCES parent_profiles(id),
     theme_code        travel_theme_code NOT NULL,
     UNIQUE (parent_profile_id, theme_code)   -- 최대 3개: 서비스 레이어
-);
-
-CREATE TABLE parent_profile_food_preferences (
-    parent_profile_id     BIGINT NOT NULL REFERENCES parent_profiles(id),
-    food_preference_code  food_preference_code NOT NULL,
-    UNIQUE (parent_profile_id, food_preference_code)
 );
 
 CREATE TABLE travel_personality_types (
@@ -214,7 +200,7 @@ CREATE TABLE parent_personality_scores (
 
 마이페이지의 기본 프로필 수정은 `users.display_name`, `age_band`, `gender`를 갱신합니다. 자녀/부모가 보는 가족 목록은 `family_members`와 연결된 `users`를 조회하고, 엄마/아빠 표시는 부모 `users.gender`가 `female`이면 `엄마`, `male`이면 `아빠`, `undisclosed`이면 `null`로 응답에서 계산합니다.
 
-부모 프로필 카드와 MBTI 상세는 `parent_profiles`, enum 링크 테이블인 `parent_profile_care_needs`, `parent_profile_themes`, `parent_profile_food_preferences`, `parent_personality_results.is_current = true`, `travel_personality_types`, `parent_personality_scores`에서 조회합니다. PDF 예시는 `CARE`/`배려형 플래너`이며, 최종 타입 목록은 `travel_personality_types` seed data로 관리합니다. `새로운 MBTI 뽑기`는 부모 프로필 작성 플로우를 다시 진행한 뒤 기존 current 결과를 false로 변경하고 새 결과를 current로 저장합니다. `profile_snapshot`에는 재진단 당시 입력값을 보관해 과거 진단 결과와 현재 수정된 프로필이 섞이지 않게 합니다.
+부모 프로필 카드와 MBTI 상세는 `parent_profiles`, `parent_profile_themes`, `parent_personality_results.is_current = true`, `travel_personality_types`, `parent_personality_scores`에서 조회합니다. 최종 타입과 가중치 정책은 `docs/policy/parent-travel-mbti.md`에서 관리합니다. `새로운 MBTI 뽑기`는 부모 프로필 작성 플로우를 다시 진행한 뒤 기존 current 결과를 false로 변경하고 새 결과를 current로 저장합니다. `profile_snapshot`에는 재진단 당시 입력값을 보관해 과거 진단 결과와 현재 수정된 프로필이 섞이지 않게 합니다.
 
 ---
 
@@ -690,9 +676,7 @@ erDiagram
     families ||--o{ family_code_usages : "매칭이력"
 
     users ||--o| parent_profiles : "부모 1:1"
-    parent_profiles ||--o{ parent_profile_care_needs : "배려항목"
     parent_profiles ||--o{ parent_profile_themes : "여행취향"
-    parent_profiles ||--o{ parent_profile_food_preferences : "음식취향"
     parent_profiles ||--o{ parent_personality_results : "진단"
     travel_personality_types ||--o{ parent_personality_results : ""
     parent_personality_results ||--o{ parent_personality_scores : "근거"
@@ -771,7 +755,7 @@ erDiagram
 | trips → trip_days → trip_stops | 1:N:N | 확정 일정만 보존(B4) |
 | trip_days → trip_daily_checklist_items | 1:N | 여행 모드/마지막 날 체크리스트 |
 | trip_stops → trip_route_segments | 방문지 간 이동거리/시간 | Tmap 등 외부 경로 API 결과 |
-| parent_profiles ↔ care/theme/food enum links | N:M-like enum rows | PDF 확정 추천 기준 링크 테이블 |
+| parent_profiles ↔ parent_profile_themes | N:M-like enum rows | 여행 취향 1~3개 링크 테이블 |
 | parent_profiles → parent_personality_results | MBTI 재진단 이력 | `is_current=true` partial unique |
 | pledge_templates → pledge_items | 후보군에서 여행별 확정본 복사 | `pledge_template_id` nullable |
 | trips → trip_pledges → pledge_signatures | 여행별 10계명과 가족 전원 서명 진행 상태 | `trip_pledges.status`, `UNIQUE(trip_id)`, `UNIQUE(trip_pledge_id, user_id)` |

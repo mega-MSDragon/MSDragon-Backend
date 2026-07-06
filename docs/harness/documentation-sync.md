@@ -34,6 +34,7 @@
 | 새 API 추가/수정 | `docs/api/{도메인}.md`, Swagger 어노테이션 |
 | 새 도메인/기능 추가 | `docs/domains/{도메인}.md`, `docs/domains.md` |
 | Entity/Repository/DB 설정 변경 | `docs/database/schema.md` |
+| 기획/정책/추천 계산 규칙 변경 | `docs/policy/*.md`, 관련 `docs/database/`, `docs/api/`, `docs/domains/` 문서 |
 | 공통 응답/예외 변경 | `docs/conventions/api-response.md`, `docs/conventions/exception.md` |
 | 패키지 구조 변경 | `docs/conventions/package.md`, `docs/domains.md` |
 | 실행/환경 설정 변경 | `docs/setup/local-run.md` |
@@ -77,6 +78,7 @@ git diff
 - API 문서: `docs/api/{도메인}.md`
 - 도메인 문서: `docs/domains/{도메인}.md`
 - DB 문서: `docs/database/schema.md`
+- 정책 문서: `docs/policy/{정책명}.md`
 - 컨벤션 문서: `docs/conventions/*.md`
 - 환경/실행 문서: `docs/setup/*.md`
 - 하네스 문서: `docs/harness/*.md`

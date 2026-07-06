@@ -42,6 +42,10 @@ parentprofile
 - `PUT /api/v1/parent-profiles/me`
 - `GET /api/v1/parent-profiles/{parentUserId}`
 
+## 관련 정책
+
+- 부모님 여행 MBTI 타입과 가중치 계산 정책: `docs/policy/parent-travel-mbti.md`
+
 ---
 
 ## 구현 결정
