@@ -6,6 +6,8 @@ import com.msdragon.backend.common.config.BEARER_AUTH_SCHEME
 import com.msdragon.backend.common.response.ApiResponse
 import com.msdragon.backend.trip.dto.CreateTripRequest
 import com.msdragon.backend.trip.dto.MyTripsResponse
+import com.msdragon.backend.trip.dto.SaveTripCourseRequest
+import com.msdragon.backend.trip.dto.TripCourseResponse
 import com.msdragon.backend.trip.dto.TripDestinationResponse
 import com.msdragon.backend.trip.dto.TripDetailResponse
 import com.msdragon.backend.trip.dto.TripParentCandidatesResponse
@@ -21,6 +23,7 @@ import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.ResponseStatus
@@ -115,6 +118,29 @@ class TripController(
 		)
 
 	@Operation(
+		summary = "여행 코스 조회",
+		description = "같은 가족 구성원이 일자별 방문지 코스를 조회합니다. 아직 저장된 방문지가 없으면 일자별 빈 목록을 반환합니다.",
+	)
+	@ApiResponses(
+		value = [
+			SwaggerApiResponse(responseCode = "200", description = "여행 코스 조회 성공"),
+			SwaggerApiResponse(responseCode = "401", description = "인증 실패"),
+			SwaggerApiResponse(responseCode = "403", description = "조회 권한 없음"),
+			SwaggerApiResponse(responseCode = "404", description = "여행을 찾을 수 없음"),
+		],
+	)
+	@GetMapping("/{tripId}/course")
+	fun getTripCourse(
+		@CurrentUser currentUser: AuthenticatedUser,
+		@Parameter(description = "여행 ID", example = "1")
+		@PathVariable tripId: Long,
+	): ApiResponse<TripCourseResponse> =
+		ApiResponse.success(
+			message = "여행 코스 조회 성공",
+			data = tripService.getTripCourse(currentUser, tripId),
+		)
+
+	@Operation(
 		summary = "여행 생성",
 		description = "자녀 사용자가 여행 대상 부모, 도시, 날짜를 선택해 여행 기본 정보를 생성합니다. 실제 추천 코스 생성은 후속 작업입니다.",
 	)
@@ -135,5 +161,30 @@ class TripController(
 			status = HttpStatus.CREATED.value(),
 			message = "여행 생성 성공",
 			data = tripService.createTrip(currentUser, request),
+		)
+
+	@Operation(
+		summary = "여행 코스 저장",
+		description = "같은 가족 구성원이 일자별 방문지 코스를 전체 저장합니다. 요청 배열 순서가 해당 일자의 방문 순서가 되며, 포함하지 않은 일자는 빈 코스로 저장됩니다.",
+	)
+	@ApiResponses(
+		value = [
+			SwaggerApiResponse(responseCode = "200", description = "여행 코스 저장 성공"),
+			SwaggerApiResponse(responseCode = "400", description = "코스 저장 요청 값이 올바르지 않음"),
+			SwaggerApiResponse(responseCode = "401", description = "인증 실패"),
+			SwaggerApiResponse(responseCode = "403", description = "저장 권한 없음"),
+			SwaggerApiResponse(responseCode = "404", description = "여행을 찾을 수 없음"),
+		],
+	)
+	@PutMapping("/{tripId}/course")
+	fun saveTripCourse(
+		@CurrentUser currentUser: AuthenticatedUser,
+		@Parameter(description = "여행 ID", example = "1")
+		@PathVariable tripId: Long,
+		@Valid @RequestBody request: SaveTripCourseRequest,
+	): ApiResponse<TripCourseResponse> =
+		ApiResponse.success(
+			message = "여행 코스 저장 성공",
+			data = tripService.saveTripCourse(currentUser, tripId, request),
 		)
 }

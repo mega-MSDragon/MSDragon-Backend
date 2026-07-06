@@ -340,6 +340,8 @@ CREATE INDEX ix_support_facilities_type_lat_lng
 
 방문지 검색/추가 화면의 검색 결과와 선택 칩은 저장 전 임시 UI 상태로 둡니다. 사용자가 "일정에 장소 추가" CTA를 누른 뒤 선택 장소를 해당 일자의 `trip_stops` 뒤에 추가합니다. 추천/카테고리 영역은 TourAPI 연관관광지 정보를 사용할 수 있도록 `place_relations`에 캐시합니다.
 
+현재 MVP 구현은 `places` 마스터 FK 없이 `trip_stops`에 장소명, 외부 ID, 주소, 좌표, 이미지, 원본 payload 일부를 스냅샷으로 저장합니다. 실제 외부 API 캐시 전략이 확정되면 `places`와 연결할 수 있습니다.
+
 여행모드의 근처 시설 안내는 `support_facilities`를 좌표 반경으로 조회합니다. 화장실은 엑셀 원천을 `local_excel` provider로 적재하고, 병원/약국은 공공데이터 또는 지도 API 응답을 같은 테이블에 캐시합니다.
 
 ---
@@ -438,14 +440,26 @@ CREATE TABLE trip_days (
 CREATE TABLE trip_stops (
     id            BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     trip_day_id   BIGINT NOT NULL REFERENCES trip_days(id),
-    place_id      BIGINT NOT NULL REFERENCES places(id),
     sort_order    SMALLINT NOT NULL,
     stop_type     stop_type NOT NULL DEFAULT 'sightseeing',
+    source_provider external_api_provider NOT NULL DEFAULT 'tour_api',
+    external_place_id VARCHAR(120),
+    content_type_id VARCHAR(20),
+    name          VARCHAR(120) NOT NULL,
+    category      VARCHAR(60),
+    address       VARCHAR(255),
+    latitude      NUMERIC(10,7),
+    longitude     NUMERIC(10,7),
+    phone         VARCHAR(30),
+    homepage_url  VARCHAR(500),
+    image_url     VARCHAR(500),
+    overview      TEXT,
     arrival_time  TIME,
     dwell_minutes SMALLINT,
     note          VARCHAR(255),
     recommendation_reason VARCHAR(255),
     recommendation_tags JSONB,
+    source_payload JSONB,
     is_manual_added BOOLEAN NOT NULL DEFAULT false,
     created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -703,7 +717,6 @@ erDiagram
     trips ||--o{ trip_days : "일자"
     trip_days ||--o{ trip_stops : "방문지"
     trip_days ||--o{ trip_daily_checklist_items : "체크리스트"
-    places ||--o{ trip_stops : "참조"
     trip_days ||--o{ trip_route_segments : "동선"
     trip_stops ||--o{ trip_route_segments : "출발"
     trip_stops ||--o{ trip_route_segments : "도착"
@@ -752,7 +765,7 @@ erDiagram
 | users ↔ trips | N:M(`trip_participants`) | PDF 여행 대상 기준 실제 함께 가는 가족만 저장. 생성자는 `created_by_user_id`로 별도 보존 |
 | course_generation_jobs → trips | 생성 job 완료 후 확정 여행 연결 | `trip_id` nullable unique |
 | course_generation_jobs → course_generation_api_usages | 공공데이터/Tmap 호출 이력 | provider/purpose별 기록 |
-| trips → trip_days → trip_stops | 1:N:N | 확정 일정만 보존(B4) |
+| trips → trip_days → trip_stops | 1:N:N | 확정 일정과 장소 스냅샷만 보존(B4) |
 | trip_days → trip_daily_checklist_items | 1:N | 여행 모드/마지막 날 체크리스트 |
 | trip_stops → trip_route_segments | 방문지 간 이동거리/시간 | Tmap 등 외부 경로 API 결과 |
 | parent_profiles ↔ parent_profile_themes | N:M-like enum rows | 여행 취향 1~3개 링크 테이블 |

@@ -16,12 +16,16 @@ import com.msdragon.backend.parentprofile.entity.TravelThemeCode
 import com.msdragon.backend.parentprofile.repository.ParentProfileRepository
 import com.msdragon.backend.trip.dto.CreateTripRequest
 import com.msdragon.backend.trip.dto.MyTripsResponse
+import com.msdragon.backend.trip.dto.SaveTripCourseRequest
+import com.msdragon.backend.trip.dto.TripCourseDayResponse
+import com.msdragon.backend.trip.dto.TripCourseResponse
 import com.msdragon.backend.trip.dto.TripParentProfileSnapshotResponse
 import com.msdragon.backend.trip.dto.TripDestinationResponse
 import com.msdragon.backend.trip.dto.TripDetailResponse
 import com.msdragon.backend.trip.dto.TripParentCandidateResponse
 import com.msdragon.backend.trip.dto.TripParentCandidatesResponse
 import com.msdragon.backend.trip.dto.TripRecommendationSnapshotResponse
+import com.msdragon.backend.trip.dto.TripStopResponse
 import com.msdragon.backend.trip.dto.TripSummaryResponse
 import com.msdragon.backend.trip.dto.relationLabelOf
 import com.msdragon.backend.trip.entity.Trip
@@ -29,11 +33,14 @@ import com.msdragon.backend.trip.entity.TripDay
 import com.msdragon.backend.trip.entity.TripDestinationCode
 import com.msdragon.backend.trip.entity.TripParticipant
 import com.msdragon.backend.trip.entity.TripStatus
+import com.msdragon.backend.trip.entity.TripStop
 import com.msdragon.backend.trip.repository.TripDayRepository
 import com.msdragon.backend.trip.repository.TripParticipantRepository
 import com.msdragon.backend.trip.repository.TripRepository
+import com.msdragon.backend.trip.repository.TripStopRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import tools.jackson.databind.JsonNode
 import tools.jackson.databind.ObjectMapper
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -48,6 +55,7 @@ class TripService(
 	private val tripRepository: TripRepository,
 	private val tripParticipantRepository: TripParticipantRepository,
 	private val tripDayRepository: TripDayRepository,
+	private val tripStopRepository: TripStopRepository,
 	private val objectMapper: ObjectMapper,
 ) {
 	@Transactional(readOnly = true)
@@ -96,6 +104,16 @@ class TripService(
 		validateTripReadable(currentUser.id, trip)
 
 		return tripDetail(trip)
+	}
+
+	@Transactional(readOnly = true)
+	fun getTripCourse(currentUser: AuthenticatedUser, tripId: Long): TripCourseResponse {
+		getLoginUser(currentUser.id)
+		val trip = tripRepository.findByIdAndDeletedAtIsNull(tripId)
+			?: throw NotFoundException("여행을 찾을 수 없습니다.")
+		validateTripReadable(currentUser.id, trip)
+
+		return tripCourse(trip)
 	}
 
 	@Transactional
@@ -151,6 +169,68 @@ class TripService(
 		}
 
 		return tripDetail(trip)
+	}
+
+	@Transactional
+	fun saveTripCourse(
+		currentUser: AuthenticatedUser,
+		tripId: Long,
+		request: SaveTripCourseRequest,
+	): TripCourseResponse {
+		getLoginUser(currentUser.id)
+		val trip = tripRepository.findByIdAndDeletedAtIsNull(tripId)
+			?: throw NotFoundException("여행을 찾을 수 없습니다.")
+		validateTripReadable(currentUser.id, trip)
+
+		val tripDays = tripDayRepository.findAllByTripIdOrderByDayNumberAsc(tripId)
+		val tripDaysByNumber = tripDays.associateBy { it.dayNumber }
+		val requestedDayNumbers = request.days.map { it.dayNumber }
+		if (requestedDayNumbers.distinct().size != requestedDayNumbers.size) {
+			throw BadRequestException("같은 여행 일자를 중복 저장할 수 없습니다.")
+		}
+		val invalidDayNumber = requestedDayNumbers.firstOrNull { it !in tripDaysByNumber.keys }
+		if (invalidDayNumber != null) {
+			throw BadRequestException("여행에 존재하지 않는 일자입니다: ${invalidDayNumber}일차")
+		}
+
+		val existingStops = tripStopRepository.findAllByTripDayTripIdOrderByTripDayDayNumberAscSortOrderAsc(tripId)
+		if (existingStops.isNotEmpty()) {
+			tripStopRepository.deleteAllInBatch(existingStops)
+			tripStopRepository.flush()
+		}
+
+		request.days.forEach { dayRequest ->
+			val tripDay = requireNotNull(tripDaysByNumber[dayRequest.dayNumber])
+			val stops = dayRequest.stops.mapIndexed { index, stopRequest ->
+				TripStop(
+					tripDay = tripDay,
+					sortOrder = index + 1,
+					stopType = stopRequest.stopType,
+					sourceProvider = stopRequest.sourceProvider,
+					externalPlaceId = stopRequest.externalPlaceId.trimToNull(),
+					contentTypeId = stopRequest.contentTypeId.trimToNull(),
+					name = stopRequest.name.trim(),
+					category = stopRequest.category.trimToNull(),
+					address = stopRequest.address.trimToNull(),
+					latitude = stopRequest.latitude,
+					longitude = stopRequest.longitude,
+					phone = stopRequest.phone.trimToNull(),
+					homepageUrl = stopRequest.homepageUrl.trimToNull(),
+					imageUrl = stopRequest.imageUrl.trimToNull(),
+					overview = stopRequest.overview.trimToNull(),
+					arrivalTime = stopRequest.arrivalTime,
+					dwellMinutes = stopRequest.dwellMinutes,
+					note = stopRequest.note.trimToNull(),
+					recommendationReason = stopRequest.recommendationReason.trimToNull(),
+					recommendationTags = writeRecommendationTags(stopRequest.recommendationTags),
+					sourcePayload = stopRequest.sourcePayload?.let { objectMapper.writeValueAsString(it) },
+					isManualAdded = stopRequest.isManualAdded,
+				)
+			}
+			tripStopRepository.saveAll(stops)
+		}
+
+		return tripCourse(trip, tripDays)
 	}
 
 	private fun resolveSelectedParents(familyId: Long, parentUserIds: List<Long>): List<FamilyMember> {
@@ -251,6 +331,49 @@ class TripService(
 		)
 	}
 
+	private fun tripCourse(
+		trip: Trip,
+		tripDays: List<TripDay> = tripDayRepository.findAllByTripIdOrderByDayNumberAsc(requireNotNull(trip.id)),
+	): TripCourseResponse {
+		val tripId = requireNotNull(trip.id)
+		val stopsByDayId = tripStopRepository.findAllByTripDayTripIdOrderByTripDayDayNumberAscSortOrderAsc(tripId)
+			.groupBy { requireNotNull(it.tripDay.id) }
+		return TripCourseResponse(
+			tripId = tripId,
+			title = trip.title,
+			destination = TripDestinationResponse.from(trip.destinationCode),
+			status = trip.status,
+			days = tripDays.map { day ->
+				TripCourseDayResponse(
+					tripDayId = requireNotNull(day.id),
+					dayNumber = day.dayNumber,
+					travelDate = day.travelDate,
+					stops = stopsByDayId[requireNotNull(day.id)]
+						.orEmpty()
+						.map { stop ->
+							TripStopResponse.of(
+								stop = stop,
+								recommendationTags = readRecommendationTags(stop.recommendationTags),
+								sourcePayload = readSourcePayload(stop.sourcePayload),
+							)
+						},
+				)
+			},
+		)
+	}
+
+	private fun writeRecommendationTags(tags: List<String>): String? =
+		tags.mapNotNull { it.trimToNull() }
+			.takeIf { it.isNotEmpty() }
+			?.let { objectMapper.writeValueAsString(it) }
+
+	private fun readRecommendationTags(value: String?): List<String> =
+		value?.let { objectMapper.readValue(it, Array<String>::class.java).toList() }
+			.orEmpty()
+
+	private fun readSourcePayload(value: String?): JsonNode? =
+		value?.let { objectMapper.readValue(it, JsonNode::class.java) }
+
 	private fun validateChild(user: User) {
 		if (user.role != UserRole.CHILD) {
 			throw BadRequestException("자녀 사용자만 여행을 만들 수 있습니다.")
@@ -268,3 +391,6 @@ class TripService(
 		private const val PARENT_TRAVEL_MBTI_POLICY_VERSION = "parent-travel-mbti-v1"
 	}
 }
+
+private fun String?.trimToNull(): String? =
+	this?.trim()?.takeIf { it.isNotEmpty() }

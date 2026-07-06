@@ -10,14 +10,20 @@ import com.msdragon.backend.parentprofile.entity.ParentProfileStatus
 import com.msdragon.backend.parentprofile.entity.TravelPersonalityTypeCode
 import com.msdragon.backend.parentprofile.entity.TravelThemeCode
 import com.msdragon.backend.parentprofile.entity.WalkingPace
+import com.msdragon.backend.trip.entity.ExternalApiProvider
+import com.msdragon.backend.trip.entity.StopType
 import com.msdragon.backend.trip.entity.Trip
 import com.msdragon.backend.trip.entity.TripDay
 import com.msdragon.backend.trip.entity.TripDestinationCode
 import com.msdragon.backend.trip.entity.TripParticipant
 import com.msdragon.backend.trip.entity.TripStatus
+import com.msdragon.backend.trip.entity.TripStop
 import io.swagger.v3.oas.annotations.media.Schema
+import tools.jackson.databind.JsonNode
+import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.LocalTime
 
 @Schema(description = "여행 대상 부모 후보 목록 응답")
 data class TripParentCandidatesResponse(
@@ -323,6 +329,140 @@ data class TripDayResponse(
 				id = requireNotNull(day.id),
 				dayNumber = day.dayNumber,
 				travelDate = day.travelDate,
+			)
+	}
+}
+
+@Schema(description = "여행 코스 응답")
+data class TripCourseResponse(
+	@field:Schema(description = "여행 ID", example = "1")
+	val tripId: Long,
+
+	@field:Schema(description = "여행 제목", example = "경주 여행")
+	val title: String,
+
+	@field:Schema(description = "여행 도시")
+	val destination: TripDestinationResponse,
+
+	@field:Schema(description = "여행 상태", example = "planning", allowableValues = ["planning", "ready", "in_progress", "completed", "archived"])
+	val status: TripStatus,
+
+	@field:Schema(description = "일자별 코스")
+	val days: List<TripCourseDayResponse>,
+)
+
+@Schema(description = "여행 일자별 코스 응답")
+data class TripCourseDayResponse(
+	@field:Schema(description = "여행 일자 ID", example = "1")
+	val tripDayId: Long,
+
+	@field:Schema(description = "여행 며칠차", example = "1")
+	val dayNumber: Int,
+
+	@field:Schema(description = "날짜", example = "2026-07-10")
+	val travelDate: LocalDate,
+
+	@field:Schema(description = "방문지 목록")
+	val stops: List<TripStopResponse>,
+)
+
+@Schema(description = "여행 방문지 응답")
+data class TripStopResponse(
+	@field:Schema(description = "방문지 ID", example = "1")
+	val id: Long,
+
+	@field:Schema(description = "방문 순서", example = "1")
+	val sortOrder: Int,
+
+	@field:Schema(description = "방문지 유형", example = "sightseeing", allowableValues = ["sightseeing", "meal", "rest", "cafe"])
+	val stopType: StopType,
+
+	@field:Schema(
+		description = "장소 원천 provider",
+		example = "tour_api",
+		allowableValues = ["tour_api", "tmap", "kakao_map", "public_data", "local_excel", "internal"],
+	)
+	val sourceProvider: ExternalApiProvider,
+
+	@field:Schema(description = "외부 장소 ID", example = "988449", nullable = true)
+	val externalPlaceId: String?,
+
+	@field:Schema(description = "TourAPI contentTypeId", example = "12", nullable = true)
+	val contentTypeId: String?,
+
+	@field:Schema(description = "장소명", example = "오도리 공원")
+	val name: String,
+
+	@field:Schema(description = "장소 카테고리", example = "관광지", nullable = true)
+	val category: String?,
+
+	@field:Schema(description = "주소", example = "대구광역시 동구 효목동", nullable = true)
+	val address: String?,
+
+	@field:Schema(description = "위도", example = "35.8821234", nullable = true)
+	val latitude: BigDecimal?,
+
+	@field:Schema(description = "경도", example = "128.6212345", nullable = true)
+	val longitude: BigDecimal?,
+
+	@field:Schema(description = "전화번호", example = "053-123-4567", nullable = true)
+	val phone: String?,
+
+	@field:Schema(description = "홈페이지 URL", example = "https://example.com", nullable = true)
+	val homepageUrl: String?,
+
+	@field:Schema(description = "대표 이미지 URL", example = "https://example.com/image.jpg", nullable = true)
+	val imageUrl: String?,
+
+	@field:Schema(description = "장소 소개", example = "짧은 산책을 즐기기 좋은 공원입니다.", nullable = true)
+	val overview: String?,
+
+	@field:Schema(description = "도착 예정 시간", example = "10:30", nullable = true)
+	val arrivalTime: LocalTime?,
+
+	@field:Schema(description = "예상 체류 시간(분)", example = "60", nullable = true)
+	val dwellMinutes: Int?,
+
+	@field:Schema(description = "방문지 메모", example = "부모님과 사진 찍기", nullable = true)
+	val note: String?,
+
+	@field:Schema(description = "추천 이유", example = "짧은 산책과 휴식에 적합합니다.", nullable = true)
+	val recommendationReason: String?,
+
+	@field:Schema(description = "추천 태그", example = "[\"nature_scenery\",\"low_slope\"]")
+	val recommendationTags: List<String>,
+
+	@field:Schema(description = "외부 API 원본 응답 일부", nullable = true)
+	val sourcePayload: JsonNode?,
+
+	@field:Schema(description = "사용자가 직접 추가한 장소 여부", example = "false")
+	val isManualAdded: Boolean,
+) {
+	companion object {
+		fun of(stop: TripStop, recommendationTags: List<String>, sourcePayload: JsonNode?): TripStopResponse =
+			TripStopResponse(
+				id = requireNotNull(stop.id),
+				sortOrder = stop.sortOrder,
+				stopType = stop.stopType,
+				sourceProvider = stop.sourceProvider,
+				externalPlaceId = stop.externalPlaceId,
+				contentTypeId = stop.contentTypeId,
+				name = stop.name,
+				category = stop.category,
+				address = stop.address,
+				latitude = stop.latitude,
+				longitude = stop.longitude,
+				phone = stop.phone,
+				homepageUrl = stop.homepageUrl,
+				imageUrl = stop.imageUrl,
+				overview = stop.overview,
+				arrivalTime = stop.arrivalTime,
+				dwellMinutes = stop.dwellMinutes,
+				note = stop.note,
+				recommendationReason = stop.recommendationReason,
+				recommendationTags = recommendationTags,
+				sourcePayload = sourcePayload,
+				isManualAdded = stop.isManualAdded,
 			)
 	}
 }

@@ -23,6 +23,7 @@ DB 스키마와 공통 엔티티 규칙을 기록합니다.
 | `Trip` | `trips` | 여행 기본 정보 |
 | `TripParticipant` | `trip_participants` | 여행 참여자 |
 | `TripDay` | `trip_days` | 여행 일자 |
+| `TripStop` | `trip_stops` | 여행 일자별 방문지 코스와 장소 스냅샷 |
 
 ---
 
@@ -129,7 +130,16 @@ DB 스키마와 공통 엔티티 규칙을 기록합니다.
 
 - 여행 시작일과 종료일을 기준으로 날짜 수만큼 `trip_days` row를 생성합니다.
 - `trip_id`, `day_number` 조합은 unique입니다.
-- 방문지(`trip_stops`)와 경로(`trip_route_segments`)는 후속 작업에서 연결합니다.
+
+### trip_stops
+
+- `trip_day_id`, `sort_order` 조합은 unique입니다.
+- 코스 저장 API는 요청 배열 순서대로 `sort_order`를 1부터 다시 부여하고 기존 방문지를 전체 덮어씁니다.
+- 현재 구현은 `places` 마스터 FK 없이 장소명, 카테고리, 주소, 좌표, 대표 이미지, 소개, 외부 장소 ID 등을 스냅샷으로 저장합니다.
+- `source_provider`는 `tour_api`, `tmap`, `kakao_map`, `public_data`, `local_excel`, `internal` 중 하나입니다.
+- `stop_type`은 `sightseeing`, `meal`, `rest`, `cafe` 중 하나입니다.
+- `recommendation_tags`, `source_payload`는 JSON 문자열로 저장합니다.
+- 실제 외부 API 연동, 장소 마스터 캐시, Tmap 경로 세그먼트 계산은 후속 작업입니다.
 
 ---
 

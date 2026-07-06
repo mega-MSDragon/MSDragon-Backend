@@ -25,6 +25,7 @@ import com.msdragon.backend.parentprofile.repository.ParentProfileRepository
 import com.msdragon.backend.trip.repository.TripDayRepository
 import com.msdragon.backend.trip.repository.TripParticipantRepository
 import com.msdragon.backend.trip.repository.TripRepository
+import com.msdragon.backend.trip.repository.TripStopRepository
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -34,6 +35,7 @@ import org.springframework.http.MediaType
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import java.time.LocalDate
@@ -77,10 +79,14 @@ class TripControllerTest {
 	private lateinit var tripParticipantRepository: TripParticipantRepository
 
 	@Autowired
+	private lateinit var tripStopRepository: TripStopRepository
+
+	@Autowired
 	private lateinit var tripRepository: TripRepository
 
 	@BeforeEach
 	fun setUp() {
+		tripStopRepository.deleteAll()
 		tripDayRepository.deleteAll()
 		tripParticipantRepository.deleteAll()
 		tripRepository.deleteAll()
@@ -279,6 +285,123 @@ class TripControllerTest {
 			.andExpect(status().isOk)
 			.andExpect(jsonPath("$.data.trips.length()").value(1))
 			.andExpect(jsonPath("$.data.trips[0].id").value(tripId))
+	}
+
+	@Test
+	fun `가족 구성원은 여행 코스를 저장하고 조회한다`() {
+		val child = saveUser(UserRole.CHILD, "child-1", "혜린")
+		val mother = saveUser(UserRole.PARENT, "parent-1", "엄마", GenderType.FEMALE)
+		connectFamily(child, mother)
+		saveCompletedParentProfile(mother)
+		val startDate = futureDate(10)
+		val tripId = createTrip(child, mother, startDate, startDate.plusDays(1))
+
+		mockMvc.perform(
+			put("/api/v1/trips/$tripId/course")
+				.header("Authorization", "Bearer ${tokenService.createAccessToken(child)}")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(
+					"""
+					{
+					  "days": [
+					    {
+					      "dayNumber": 1,
+					      "stops": [
+					        {
+					          "stopType": "sightseeing",
+					          "sourceProvider": "tour_api",
+					          "externalPlaceId": "988449",
+					          "contentTypeId": "12",
+					          "name": "오도리 공원",
+					          "category": "관광지",
+					          "address": "대구광역시 동구 효목동",
+					          "latitude": 35.8821234,
+					          "longitude": 128.6212345,
+					          "phone": "053-123-4567",
+					          "homepageUrl": "https://example.com",
+					          "imageUrl": "https://example.com/park.jpg",
+					          "overview": "짧은 산책을 즐기기 좋은 공원입니다.",
+					          "arrivalTime": "10:30",
+					          "dwellMinutes": 60,
+					          "note": "부모님과 사진 찍기",
+					          "recommendationReason": "짧은 산책과 휴식에 적합합니다.",
+					          "recommendationTags": ["nature_scenery", "low_slope"],
+					          "sourcePayload": {
+					            "contentid": "988449",
+					            "route": "출입구까지 경사로가 설치되어 있음"
+					          },
+					          "isManualAdded": false
+					        },
+					        {
+					          "stopType": "meal",
+					          "sourceProvider": "kakao_map",
+					          "externalPlaceId": "restaurant-1",
+					          "name": "경주 한식당",
+					          "category": "한식",
+					          "isManualAdded": true
+					        }
+					      ]
+					    }
+					  ]
+					}
+					""".trimIndent(),
+				),
+		)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.data.tripId").value(tripId))
+			.andExpect(jsonPath("$.data.days.length()").value(2))
+			.andExpect(jsonPath("$.data.days[0].stops.length()").value(2))
+			.andExpect(jsonPath("$.data.days[0].stops[0].sortOrder").value(1))
+			.andExpect(jsonPath("$.data.days[0].stops[0].name").value("오도리 공원"))
+			.andExpect(jsonPath("$.data.days[0].stops[0].stopType").value("sightseeing"))
+			.andExpect(jsonPath("$.data.days[0].stops[0].sourceProvider").value("tour_api"))
+			.andExpect(jsonPath("$.data.days[0].stops[0].recommendationTags[0]").value("nature_scenery"))
+			.andExpect(jsonPath("$.data.days[0].stops[0].sourcePayload.route").value("출입구까지 경사로가 설치되어 있음"))
+			.andExpect(jsonPath("$.data.days[0].stops[1].sortOrder").value(2))
+			.andExpect(jsonPath("$.data.days[0].stops[1].isManualAdded").value(true))
+			.andExpect(jsonPath("$.data.days[1].stops.length()").value(0))
+
+		mockMvc.perform(
+			get("/api/v1/trips/$tripId/course")
+				.header("Authorization", "Bearer ${tokenService.createAccessToken(mother)}"),
+		)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.data.days[0].stops.length()").value(2))
+			.andExpect(jsonPath("$.data.days[0].stops[0].externalPlaceId").value("988449"))
+			.andExpect(jsonPath("$.data.days[0].stops[0].arrivalTime").value("10:30:00"))
+	}
+
+	@Test
+	fun `존재하지 않는 여행 일자에 코스를 저장할 수 없다`() {
+		val child = saveUser(UserRole.CHILD, "child-1", "혜린")
+		val mother = saveUser(UserRole.PARENT, "parent-1", "엄마", GenderType.FEMALE)
+		connectFamily(child, mother)
+		saveCompletedParentProfile(mother)
+		val tripId = createTrip(child, mother, futureDate(10), futureDate(10))
+
+		mockMvc.perform(
+			put("/api/v1/trips/$tripId/course")
+				.header("Authorization", "Bearer ${tokenService.createAccessToken(child)}")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(
+					"""
+					{
+					  "days": [
+					    {
+					      "dayNumber": 2,
+					      "stops": [
+					        {
+					          "name": "없는 일자 방문지"
+					        }
+					      ]
+					    }
+					  ]
+					}
+					""".trimIndent(),
+				),
+		)
+			.andExpect(status().isBadRequest)
+			.andExpect(jsonPath("$.message").value("여행에 존재하지 않는 일자입니다: 2일차"))
 	}
 
 	@Test

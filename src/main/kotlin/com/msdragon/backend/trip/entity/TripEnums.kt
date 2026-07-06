@@ -53,6 +53,42 @@ enum class TripDestinationCode(
 	}
 }
 
+enum class StopType(
+	@get:JsonValue
+	override val value: String,
+) : DbEnum {
+	SIGHTSEEING("sightseeing"),
+	MEAL("meal"),
+	REST("rest"),
+	CAFE("cafe"),
+	;
+
+	companion object {
+		@JvmStatic
+		@JsonCreator(mode = JsonCreator.Mode.DELEGATING)
+		fun from(value: String): StopType = enumValueOf(value, entries)
+	}
+}
+
+enum class ExternalApiProvider(
+	@get:JsonValue
+	override val value: String,
+) : DbEnum {
+	TOUR_API("tour_api"),
+	TMAP("tmap"),
+	KAKAO_MAP("kakao_map"),
+	PUBLIC_DATA("public_data"),
+	LOCAL_EXCEL("local_excel"),
+	INTERNAL("internal"),
+	;
+
+	companion object {
+		@JvmStatic
+		@JsonCreator(mode = JsonCreator.Mode.DELEGATING)
+		fun from(value: String): ExternalApiProvider = enumValueOf(value, entries)
+	}
+}
+
 private fun <T> enumValueOf(value: String, entries: Iterable<T>): T where T : Enum<T>, T : DbEnum =
 	entries.firstOrNull { it.value == value.lowercase() || it.name.equals(value, ignoreCase = true) }
 		?: throw BadRequestException("지원하지 않는 값입니다: $value")
@@ -71,3 +107,9 @@ class TripStatusConverter : TripDbEnumConverter<TripStatus>(TripStatus.entries)
 
 @Converter(autoApply = true)
 class TripDestinationCodeConverter : TripDbEnumConverter<TripDestinationCode>(TripDestinationCode.entries)
+
+@Converter(autoApply = true)
+class StopTypeConverter : TripDbEnumConverter<StopType>(StopType.entries)
+
+@Converter(autoApply = true)
+class ExternalApiProviderConverter : TripDbEnumConverter<ExternalApiProvider>(ExternalApiProvider.entries)

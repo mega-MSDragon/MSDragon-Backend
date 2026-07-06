@@ -572,14 +572,26 @@ Table trip_days {
 Table trip_stops {
   id bigint [pk, increment]
   trip_day_id bigint [not null]
-  place_id bigint [not null]
   sort_order smallint [not null]
   stop_type stop_type [not null, default: 'sightseeing']
+  source_provider external_api_provider [not null, default: 'tour_api']
+  external_place_id varchar(120)
+  content_type_id varchar(20)
+  name varchar(120) [not null]
+  category varchar(60)
+  address varchar(255)
+  latitude decimal(10,7)
+  longitude decimal(10,7)
+  phone varchar(30)
+  homepage_url varchar(500)
+  image_url varchar(500)
+  overview text
   arrival_time time
   dwell_minutes smallint
   note varchar(255)
   recommendation_reason varchar(255)
   recommendation_tags jsonb
+  source_payload jsonb
   is_manual_added boolean [not null, default: false]
   created_at datetime [not null, default: `now()`]
   updated_at datetime [not null, default: `now()`]
@@ -587,6 +599,8 @@ Table trip_stops {
   indexes {
     (trip_day_id, sort_order) [unique]
   }
+
+  Note: '현재 구현은 places 마스터 FK 없이 코스 저장 시 장소 스냅샷을 직접 저장한다. 후속 외부 API 연동 후 장소 캐시가 필요해지면 places와 연결한다.'
 }
 
 Table trip_daily_checklist_items {
@@ -850,7 +864,6 @@ Ref: course_generation_job_participants.personality_result_id > parent_personali
 Ref: course_generation_api_usages.course_generation_job_id > course_generation_jobs.id
 Ref: trip_days.trip_id > trips.id
 Ref: trip_stops.trip_day_id > trip_days.id
-Ref: trip_stops.place_id > places.id
 Ref: trip_daily_checklist_items.trip_day_id > trip_days.id
 Ref: trip_route_segments.trip_day_id > trip_days.id
 Ref: trip_route_segments.from_trip_stop_id > trip_stops.id
