@@ -14,6 +14,7 @@
 - 여행 기간 상한은 두지 않습니다. 시작일은 오늘 또는 이후여야 하고, 종료일은 시작일과 같거나 이후여야 합니다.
 - 같은 가족에서 날짜가 겹치는 여행은 생성할 수 없습니다.
 - 도시 목록은 현재 서버 고정 catalog로 내려주고, 여행에는 `destinationCode` 문자열을 저장합니다.
+- 여행 생성 시 선택한 부모의 추천 입력값을 `recommendationSnapshot`으로 저장합니다. 이후 부모 프로필이 수정되어도 생성 당시 추천 기준은 유지됩니다.
 - 실제 공공데이터/Tmap 연동과 추천 코스 생성은 후속 작업입니다.
 
 ---
@@ -150,6 +151,27 @@
         "relationLabel": "엄마"
       }
     ],
+    "recommendationSnapshot": {
+      "policyVersion": "parent-travel-mbti-v1",
+      "capturedAt": "2026-07-06T12:00:00",
+      "destinationCode": "gyeongju",
+      "startDate": "2026-07-10",
+      "endDate": "2026-07-11",
+      "parents": [
+        {
+          "parentUserId": 2,
+          "parentProfileId": 1,
+          "displayName": "김영희",
+          "relationLabel": "엄마",
+          "walkingPace": "slow",
+          "needsMobilityAssistance": false,
+          "travelThemes": ["nature_scenery"],
+          "foodPreference": "familiar",
+          "personalityType": "healing_traveler",
+          "profileCompletedAt": "2026-07-01T12:00:00"
+        }
+      ]
+    },
     "days": [
       {
         "id": 1,
@@ -167,6 +189,7 @@
 ```
 
 생성 직후 `status`는 `planning`입니다. 코스 생성/편집 기능이 붙으면 `ready`, `in_progress`, `completed` 전환을 별도 정책으로 확정합니다.
+`recommendationSnapshot.policyVersion`은 부모 여행 MBTI 정책 버전을 의미합니다.
 
 ---
 

@@ -114,6 +114,8 @@ DB 스키마와 공통 엔티티 규칙을 기록합니다.
 - MVP 구현은 `travel_destinations` 마스터 테이블 FK 대신 `destination_code` enum 문자열을 저장합니다.
 - `destination_code`는 `daegu`, `gangneung_sokcho`, `gyeongju`, `busan`, `yeosu`, `incheon`, `jeonju`, `jeju`, `seoul`, `suwon_yongin`, `tongyeong_geoje_namhae`, `pohang_andong` 중 하나입니다.
 - 여행 생성 직후 `status`는 `planning`입니다.
+- 여행 생성 시 `recommendation_snapshot`에 부모 프로필 추천 입력값을 JSON 문자열로 저장합니다.
+  현재 스냅샷에는 정책 버전, 도시/날짜, 부모별 `walkingPace`, `needsMobilityAssistance`, `travelThemes`, `foodPreference`, `personalityType`을 포함합니다.
 - 같은 가족에서 날짜가 겹치는 여행은 서비스에서 생성 거부합니다.
 - 여행 기간 상한은 두지 않습니다. 시작일은 오늘 또는 이후여야 하고, 종료일은 시작일과 같거나 이후여야 합니다.
 

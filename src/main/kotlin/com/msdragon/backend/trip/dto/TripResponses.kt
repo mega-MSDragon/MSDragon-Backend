@@ -4,8 +4,12 @@ import com.msdragon.backend.auth.entity.GenderType
 import com.msdragon.backend.auth.entity.User
 import com.msdragon.backend.auth.entity.UserRole
 import com.msdragon.backend.family.entity.FamilyMember
+import com.msdragon.backend.parentprofile.entity.FoodPreference
 import com.msdragon.backend.parentprofile.entity.ParentProfile
 import com.msdragon.backend.parentprofile.entity.ParentProfileStatus
+import com.msdragon.backend.parentprofile.entity.TravelPersonalityTypeCode
+import com.msdragon.backend.parentprofile.entity.TravelThemeCode
+import com.msdragon.backend.parentprofile.entity.WalkingPace
 import com.msdragon.backend.trip.entity.Trip
 import com.msdragon.backend.trip.entity.TripDay
 import com.msdragon.backend.trip.entity.TripDestinationCode
@@ -13,6 +17,7 @@ import com.msdragon.backend.trip.entity.TripParticipant
 import com.msdragon.backend.trip.entity.TripStatus
 import io.swagger.v3.oas.annotations.media.Schema
 import java.time.LocalDate
+import java.time.LocalDateTime
 
 @Schema(description = "여행 대상 부모 후보 목록 응답")
 data class TripParentCandidatesResponse(
@@ -190,6 +195,9 @@ data class TripDetailResponse(
 	@field:Schema(description = "여행 참여자")
 	val participants: List<TripParticipantResponse>,
 
+	@field:Schema(description = "여행 생성 시 확정한 추천 입력 스냅샷", nullable = true)
+	val recommendationSnapshot: TripRecommendationSnapshotResponse?,
+
 	@field:Schema(description = "여행 일자")
 	val days: List<TripDayResponse>,
 ) {
@@ -198,6 +206,7 @@ data class TripDetailResponse(
 			trip: Trip,
 			participants: List<TripParticipant>,
 			days: List<TripDay>,
+			recommendationSnapshot: TripRecommendationSnapshotResponse?,
 		): TripDetailResponse =
 			TripDetailResponse(
 				id = requireNotNull(trip.id),
@@ -208,10 +217,65 @@ data class TripDetailResponse(
 				endDate = trip.endDate,
 				status = trip.status,
 				participants = participants.map(TripParticipantResponse::from),
+				recommendationSnapshot = recommendationSnapshot,
 				days = days.map(TripDayResponse::from),
 			)
 	}
 }
+
+@Schema(description = "여행 추천 입력 스냅샷")
+data class TripRecommendationSnapshotResponse(
+	@field:Schema(description = "추천 정책 버전", example = "parent-travel-mbti-v1")
+	val policyVersion: String,
+
+	@field:Schema(description = "스냅샷 생성 시간", example = "2026-07-06T12:00:00")
+	val capturedAt: LocalDateTime,
+
+	@field:Schema(description = "여행 도시 코드", example = "gyeongju")
+	val destinationCode: TripDestinationCode,
+
+	@field:Schema(description = "여행 시작일", example = "2026-07-10")
+	val startDate: LocalDate,
+
+	@field:Schema(description = "여행 종료일", example = "2026-07-11")
+	val endDate: LocalDate,
+
+	@field:Schema(description = "여행 대상 부모별 추천 입력값")
+	val parents: List<TripParentProfileSnapshotResponse>,
+)
+
+@Schema(description = "여행 대상 부모 프로필 추천 입력 스냅샷")
+data class TripParentProfileSnapshotResponse(
+	@field:Schema(description = "부모 사용자 ID", example = "2")
+	val parentUserId: Long,
+
+	@field:Schema(description = "부모 프로필 ID", example = "1")
+	val parentProfileId: Long,
+
+	@field:Schema(description = "부모 이름 또는 닉네임", example = "김영희")
+	val displayName: String,
+
+	@field:Schema(description = "부모 성별 기반 가족 관계 표시 이름", example = "엄마", nullable = true)
+	val relationLabel: String?,
+
+	@field:Schema(description = "하루 이동 성향", example = "slow", allowableValues = ["slow", "normal", "fast"])
+	val walkingPace: WalkingPace,
+
+	@field:Schema(description = "이동 도움 필요 여부", example = "false")
+	val needsMobilityAssistance: Boolean,
+
+	@field:Schema(description = "선호 여행 테마", example = "[\"nature_scenery\",\"history_culture\"]")
+	val travelThemes: List<TravelThemeCode>,
+
+	@field:Schema(description = "음식 취향", example = "familiar", allowableValues = ["korean", "familiar", "adventurous"])
+	val foodPreference: FoodPreference,
+
+	@field:Schema(description = "추천용 부모님 여행 MBTI", example = "healing_traveler", allowableValues = ["urban_explorer", "culture_stroller", "healing_traveler", "heritage_walker", "active_adventurer", "local_challenger"])
+	val personalityType: TravelPersonalityTypeCode,
+
+	@field:Schema(description = "프로필 작성 완료 시간", example = "2026-07-01T12:00:00", nullable = true)
+	val profileCompletedAt: LocalDateTime?,
+)
 
 @Schema(description = "여행 참여자 응답")
 data class TripParticipantResponse(
@@ -263,7 +327,7 @@ data class TripDayResponse(
 	}
 }
 
-private fun relationLabelOf(user: User): String? {
+fun relationLabelOf(user: User): String? {
 	if (user.role != UserRole.PARENT) {
 		return null
 	}

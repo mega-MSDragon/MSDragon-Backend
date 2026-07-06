@@ -10,15 +10,20 @@ import com.msdragon.backend.common.exception.NotFoundException
 import com.msdragon.backend.common.exception.UnAuthorizedException
 import com.msdragon.backend.family.entity.FamilyMember
 import com.msdragon.backend.family.repository.FamilyMemberRepository
+import com.msdragon.backend.parentprofile.entity.ParentProfile
 import com.msdragon.backend.parentprofile.entity.ParentProfileStatus
+import com.msdragon.backend.parentprofile.entity.TravelThemeCode
 import com.msdragon.backend.parentprofile.repository.ParentProfileRepository
 import com.msdragon.backend.trip.dto.CreateTripRequest
 import com.msdragon.backend.trip.dto.MyTripsResponse
+import com.msdragon.backend.trip.dto.TripParentProfileSnapshotResponse
 import com.msdragon.backend.trip.dto.TripDestinationResponse
 import com.msdragon.backend.trip.dto.TripDetailResponse
 import com.msdragon.backend.trip.dto.TripParentCandidateResponse
 import com.msdragon.backend.trip.dto.TripParentCandidatesResponse
+import com.msdragon.backend.trip.dto.TripRecommendationSnapshotResponse
 import com.msdragon.backend.trip.dto.TripSummaryResponse
+import com.msdragon.backend.trip.dto.relationLabelOf
 import com.msdragon.backend.trip.entity.Trip
 import com.msdragon.backend.trip.entity.TripDay
 import com.msdragon.backend.trip.entity.TripDestinationCode
@@ -29,7 +34,9 @@ import com.msdragon.backend.trip.repository.TripParticipantRepository
 import com.msdragon.backend.trip.repository.TripRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import tools.jackson.databind.ObjectMapper
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 
@@ -41,6 +48,7 @@ class TripService(
 	private val tripRepository: TripRepository,
 	private val tripParticipantRepository: TripParticipantRepository,
 	private val tripDayRepository: TripDayRepository,
+	private val objectMapper: ObjectMapper,
 ) {
 	@Transactional(readOnly = true)
 	fun getParentCandidates(currentUser: AuthenticatedUser): TripParentCandidatesResponse {
@@ -106,9 +114,16 @@ class TripService(
 		}
 
 		val selectedParents = resolveSelectedParents(familyId, request.parentUserIds)
-		validateSelectedParentProfiles(selectedParents)
+		val selectedParentProfiles = resolveSelectedParentProfiles(selectedParents)
 
 		val destination = request.destinationCode
+		val recommendationSnapshot = buildRecommendationSnapshot(
+			destination = destination,
+			startDate = request.startDate,
+			endDate = request.endDate,
+			selectedParents = selectedParents,
+			selectedParentProfiles = selectedParentProfiles,
+		)
 		val trip = tripRepository.save(
 			Trip(
 				family = family,
@@ -117,6 +132,7 @@ class TripService(
 				title = request.title?.trim()?.takeIf { it.isNotBlank() } ?: "${destination.displayName} 여행",
 				startDate = request.startDate,
 				endDate = request.endDate,
+				recommendationSnapshot = objectMapper.writeValueAsString(recommendationSnapshot),
 			),
 		)
 
@@ -159,14 +175,51 @@ class TripService(
 		}
 	}
 
-	private fun validateSelectedParentProfiles(selectedParents: List<FamilyMember>) {
-		selectedParents.forEach { parent ->
+	private fun resolveSelectedParentProfiles(selectedParents: List<FamilyMember>): List<ParentProfile> =
+		selectedParents.map { parent ->
 			val profile = parentProfileRepository.findByUserId(requireNotNull(parent.user.id))
-			if (profile?.status != ParentProfileStatus.COMPLETED) {
+			if (
+				profile?.status != ParentProfileStatus.COMPLETED ||
+				profile.walkingPace == null ||
+				profile.needsMobilityAssistance == null ||
+				profile.travelThemes.isEmpty() ||
+				profile.foodPreference == null ||
+				profile.personalityType == null
+			) {
 				throw BadRequestException("부모님 상세 프로필 작성이 필요합니다.")
 			}
+			profile
 		}
-	}
+
+	private fun buildRecommendationSnapshot(
+		destination: TripDestinationCode,
+		startDate: LocalDate,
+		endDate: LocalDate,
+		selectedParents: List<FamilyMember>,
+		selectedParentProfiles: List<ParentProfile>,
+	): TripRecommendationSnapshotResponse =
+		TripRecommendationSnapshotResponse(
+			policyVersion = PARENT_TRAVEL_MBTI_POLICY_VERSION,
+			capturedAt = LocalDateTime.now(),
+			destinationCode = destination,
+			startDate = startDate,
+			endDate = endDate,
+			parents = selectedParents.zip(selectedParentProfiles).map { (parent, profile) ->
+				TripParentProfileSnapshotResponse(
+					parentUserId = requireNotNull(parent.user.id),
+					parentProfileId = requireNotNull(profile.id),
+					displayName = parent.user.displayName,
+					relationLabel = relationLabelOf(parent.user),
+					walkingPace = requireNotNull(profile.walkingPace),
+					needsMobilityAssistance = requireNotNull(profile.needsMobilityAssistance),
+					travelThemes = profile.travelThemes.map(TravelThemeCode::from)
+						.sortedBy { TravelThemeCode.entries.indexOf(it) },
+					foodPreference = requireNotNull(profile.foodPreference),
+					personalityType = requireNotNull(profile.personalityType),
+					profileCompletedAt = profile.completedAt,
+				)
+			},
+		)
 
 	private fun validateDateRange(startDate: LocalDate, endDate: LocalDate): Int {
 		if (endDate.isBefore(startDate)) {
@@ -193,6 +246,8 @@ class TripService(
 			trip = trip,
 			participants = tripParticipantRepository.findAllByTripIdOrderByIdAsc(tripId),
 			days = tripDayRepository.findAllByTripIdOrderByDayNumberAsc(tripId),
+			recommendationSnapshot = trip.recommendationSnapshot
+				?.let { objectMapper.readValue(it, TripRecommendationSnapshotResponse::class.java) },
 		)
 	}
 
@@ -210,5 +265,6 @@ class TripService(
 	companion object {
 		private val SERVICE_ZONE_ID: ZoneId = ZoneId.of("Asia/Seoul")
 		private const val MAX_PARENT_COUNT = 2
+		private const val PARENT_TRAVEL_MBTI_POLICY_VERSION = "parent-travel-mbti-v1"
 	}
 }

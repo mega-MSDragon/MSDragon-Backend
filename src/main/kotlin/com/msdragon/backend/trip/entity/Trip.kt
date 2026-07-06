@@ -41,6 +41,9 @@ class Trip(
 	@Column(name = "status", nullable = false, length = 30)
 	var status: TripStatus = TripStatus.PLANNING,
 
+	@Column(name = "recommendation_snapshot", columnDefinition = "text")
+	var recommendationSnapshot: String? = null,
+
 	@Column(name = "deleted_at")
 	var deletedAt: LocalDateTime? = null,
 ) : BaseTimeEntity() {

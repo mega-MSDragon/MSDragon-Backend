@@ -19,6 +19,7 @@ import com.msdragon.backend.parentprofile.entity.FoodPreference
 import com.msdragon.backend.parentprofile.entity.ParentProfile
 import com.msdragon.backend.parentprofile.entity.ParentProfileStatus
 import com.msdragon.backend.parentprofile.entity.TravelPersonalityTypeCode
+import com.msdragon.backend.parentprofile.entity.TravelThemeCode
 import com.msdragon.backend.parentprofile.entity.WalkingPace
 import com.msdragon.backend.parentprofile.repository.ParentProfileRepository
 import com.msdragon.backend.trip.repository.TripDayRepository
@@ -157,6 +158,15 @@ class TripControllerTest {
 			.andExpect(jsonPath("$.data.status").value("planning"))
 			.andExpect(jsonPath("$.data.participants.length()").value(2))
 			.andExpect(jsonPath("$.data.participants[1].relationLabel").value("엄마"))
+			.andExpect(jsonPath("$.data.recommendationSnapshot.policyVersion").value("parent-travel-mbti-v1"))
+			.andExpect(jsonPath("$.data.recommendationSnapshot.destinationCode").value("gyeongju"))
+			.andExpect(jsonPath("$.data.recommendationSnapshot.parents.length()").value(1))
+			.andExpect(jsonPath("$.data.recommendationSnapshot.parents[0].parentUserId").value(requireNotNull(mother.id).toInt()))
+			.andExpect(jsonPath("$.data.recommendationSnapshot.parents[0].walkingPace").value("slow"))
+			.andExpect(jsonPath("$.data.recommendationSnapshot.parents[0].needsMobilityAssistance").value(false))
+			.andExpect(jsonPath("$.data.recommendationSnapshot.parents[0].travelThemes[0]").value("nature_scenery"))
+			.andExpect(jsonPath("$.data.recommendationSnapshot.parents[0].foodPreference").value("familiar"))
+			.andExpect(jsonPath("$.data.recommendationSnapshot.parents[0].personalityType").value("healing_traveler"))
 			.andExpect(jsonPath("$.data.days.length()").value(2))
 				.andExpect(jsonPath("$.data.days[0].dayNumber").value(1))
 				.andExpect(jsonPath("$.data.days[1].dayNumber").value(2))
@@ -327,6 +337,7 @@ class TripControllerTest {
 				walkingPace = WalkingPace.SLOW,
 				foodPreference = FoodPreference.FAMILIAR,
 				needsMobilityAssistance = false,
+				travelThemes = mutableSetOf(TravelThemeCode.NATURE_SCENERY.value),
 				personalityType = TravelPersonalityTypeCode.HEALING_TRAVELER,
 				completionPercent = 100,
 				completedAt = LocalDateTime.now(),
