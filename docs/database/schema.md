@@ -7,6 +7,8 @@ DB 스키마와 공통 엔티티 규칙을 기록합니다.
 ## 현재 상태
 
 인증/가족/부모 프로필/여행 도메인 Entity가 도입되었습니다.
+`docs/database/schema.dbml`과 `docs/database/erd.md`는 PDF 확정 와이어프레임 기준 목표 설계를 포함하므로,
+현재 구현 Entity보다 앞서 있는 테이블과 컬럼이 있을 수 있습니다.
 
 | Entity | Table | 설명 |
 |--------|-------|------|
