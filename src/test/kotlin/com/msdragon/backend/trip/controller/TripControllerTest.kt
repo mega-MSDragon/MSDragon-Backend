@@ -15,11 +15,11 @@ import com.msdragon.backend.family.repository.FamilyCodeRepository
 import com.msdragon.backend.family.repository.FamilyCodeUsageRepository
 import com.msdragon.backend.family.repository.FamilyMemberRepository
 import com.msdragon.backend.family.repository.FamilyRepository
-import com.msdragon.backend.parentprofile.entity.ActivityLevel
 import com.msdragon.backend.parentprofile.entity.FoodPreference
 import com.msdragon.backend.parentprofile.entity.ParentProfile
 import com.msdragon.backend.parentprofile.entity.ParentProfileStatus
 import com.msdragon.backend.parentprofile.entity.TravelPersonalityTypeCode
+import com.msdragon.backend.parentprofile.entity.WalkingPace
 import com.msdragon.backend.parentprofile.repository.ParentProfileRepository
 import com.msdragon.backend.trip.repository.TripDayRepository
 import com.msdragon.backend.trip.repository.TripParticipantRepository
@@ -324,10 +324,10 @@ class TripControllerTest {
 				user = parent,
 				status = ParentProfileStatus.COMPLETED,
 				currentStep = 3,
-				activityLevel = ActivityLevel.SLOW,
-				foodPreference = FoodPreference.FAMILIAR_FOOD,
+				walkingPace = WalkingPace.SLOW,
+				foodPreference = FoodPreference.FAMILIAR,
 				needsMobilityAssistance = false,
-				personalityType = TravelPersonalityTypeCode.RELAXED_EXPLORER,
+				personalityType = TravelPersonalityTypeCode.HEALING_TRAVELER,
 				completionPercent = 100,
 				completedAt = LocalDateTime.now(),
 			),

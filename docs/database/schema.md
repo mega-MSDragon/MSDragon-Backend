@@ -19,7 +19,7 @@ DB 스키마와 공통 엔티티 규칙을 기록합니다.
 | `FamilyCode` | `family_codes` | 사용자별 고정 가족 초대 코드 |
 | `FamilyCodeUsage` | `family_code_usages` | 가족 코드 매칭 이력 |
 | `ParentProfile` | `parent_profiles` | 부모님 상세 프로필과 추천용 여행 MBTI 현재값 |
-| `ParentProfile.themeCodes` | `parent_profile_themes` | 부모님 프로필별 선호 여행 테마 enum code |
+| `ParentProfile.travelThemes` | `parent_profile_themes` | 부모님 프로필별 선호 여행 테마 enum code |
 | `Trip` | `trips` | 여행 기본 정보 |
 | `TripParticipant` | `trip_participants` | 여행 참여자 |
 | `TripDay` | `trip_days` | 여행 일자 |
@@ -89,18 +89,19 @@ DB 스키마와 공통 엔티티 규칙을 기록합니다.
 - `user_id`는 unique입니다. 부모 사용자 1명은 부모님 상세 프로필을 최대 1개만 가집니다.
 - `status`는 `draft`, `completed`를 사용합니다.
 - 단계별 저장을 위해 `current_step`, `completion_percent`를 저장합니다.
-- 체력 수준은 `activity_level`에 `slow`, `moderate`, `active` 중 하나로 저장합니다.
-- 음식 취향은 `food_preference`에 `korean_only`, `familiar_food`, `open_minded` 중 하나로 저장합니다.
+- 하루 이동 성향은 `walking_pace`에 `slow`, `normal`, `fast` 중 하나로 저장합니다.
+- 음식 취향은 `food_preference`에 `korean`, `familiar`, `adventurous` 중 하나로 저장합니다.
 - 이동 도움 필요 여부는 `needs_mobility_assistance`에 저장합니다. 코스 추천 시 무장애 정보 가중치로 사용합니다.
 - MVP 구현은 추천용 여행 MBTI 현재값 1개를 `personality_type`에 저장합니다.
+- 여행 MBTI 타입과 가중치 계산 정책은 `docs/policy/parent-travel-mbti.md`를 기준으로 합니다.
 - 상세 MBTI 이력과 점수 테이블은 DBML에 후속 설계로 남겨두고 아직 Entity로 구현하지 않았습니다.
 
 ### parent_profile_themes
 
 - `parent_profile_id`, `theme_code` 조합은 unique입니다.
-- `theme_code`는 `nature`, `history`, `activity`, `food`, `culture`, `landmark` 중 하나입니다.
+- `theme_code`는 `nature_scenery`, `history_culture`, `shopping`, `activity`, `culture_life`, `landmark`, `experience` 중 하나입니다.
 - 현재 구현은 별도 마스터 테이블 FK 대신 enum code를 직접 저장합니다.
-- 여행 테마 최대 3개 제약은 서비스에서 검증합니다.
+- 여행 테마 최소 1개, 최대 3개 제약은 프로필 완료 시 서비스에서 검증합니다.
 
 ---
 

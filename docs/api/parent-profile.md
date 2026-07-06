@@ -35,11 +35,10 @@
 ```json
 {
   "currentStep": 3,
-  "activityLevel": "moderate",
+  "walkingPace": "normal",
   "needsMobilityAssistance": true,
-  "themeCodes": ["nature", "history"],
-  "foodPreference": "korean_only",
-  "avoidSpicy": true,
+  "travelThemes": ["nature_scenery", "history_culture"],
+  "foodPreference": "korean",
   "complete": true
 }
 ```
@@ -47,15 +46,14 @@
 | Field | Type | Required | 허용 값 |
 |-------|------|----------|---------|
 | `currentStep` | number | false | `1`~`3` |
-| `activityLevel` | enum | false | `slow`, `moderate`, `active` |
-| `needsMobilityAssistance` | boolean | false | - |
-| `themeCodes` | enum array | false | `nature`, `history`, `activity`, `food`, `culture`, `landmark` |
-| `foodPreference` | enum | false | `korean_only`, `familiar_food`, `open_minded` |
-| `avoidSpicy` | boolean | false | - |
+| `walkingPace` | enum | false | `slow`, `normal`, `fast` |
+| `needsMobilityAssistance` | boolean | false | 완료 시 `true`/`false` 필수 |
+| `travelThemes` | enum array | false | `nature_scenery`, `history_culture`, `shopping`, `activity`, `culture_life`, `landmark`, `experience` |
+| `foodPreference` | enum | false | `korean`, `familiar`, `adventurous` |
 | `complete` | boolean | false | 기본값 `false` |
 
-`themeCodes`는 최대 3개까지 저장할 수 있습니다.
-`complete=true`이면 `activityLevel`, `needsMobilityAssistance`, `foodPreference`가 필요하며 추천용 여행 MBTI를 계산합니다.
+`travelThemes`는 최소 1개, 최대 3개까지 저장할 수 있습니다.
+`complete=true`이면 `walkingPace`, `needsMobilityAssistance`, `travelThemes`, `foodPreference`가 모두 필요하며 추천용 여행 MBTI를 계산합니다.
 
 ### Response
 
@@ -70,12 +68,11 @@
     "profileExists": true,
     "status": "completed",
     "currentStep": 3,
-    "activityLevel": "moderate",
+    "walkingPace": "normal",
     "needsMobilityAssistance": true,
-    "themeCodes": ["nature", "history"],
-    "foodPreference": "korean_only",
-    "avoidSpicy": true,
-    "personalityType": "history_walker",
+    "travelThemes": ["nature_scenery", "history_culture"],
+    "foodPreference": "korean",
+    "personalityType": "heritage_walker",
     "completionPercent": 100,
     "completedAt": "2026-07-01T12:00:00"
   }
@@ -111,13 +108,13 @@
 
 ## 추천용 여행 MBTI
 
-현재 구현은 부모님 프로필 완료 시 아래 enum 중 하나를 `personalityType`으로 저장합니다.
+현재 구현은 부모님 프로필 완료 시 `docs/policy/parent-travel-mbti.md`의 가중치 정책으로 아래 enum 중 하나를 `personalityType`에 저장합니다.
 
 | Value | 설명 |
 |-------|------|
-| `city_taster` | 도시형 탐험가 |
-| `sensitive_culture` | 감성 문화러형 |
-| `relaxed_explorer` | 유유자적 힐링형 |
-| `history_walker` | 역사 산책가형 |
-| `active_experiencer` | 액티비티 열정형 |
+| `urban_explorer` | 도시 취향 탐험가 |
+| `culture_stroller` | 감성 문화 산책가 |
+| `healing_traveler` | 유유자적 힐링러 |
+| `heritage_walker` | 역사 산책가 |
+| `active_adventurer` | 액티비티 열정가 |
 | `local_challenger` | 로컬 도전가형 |

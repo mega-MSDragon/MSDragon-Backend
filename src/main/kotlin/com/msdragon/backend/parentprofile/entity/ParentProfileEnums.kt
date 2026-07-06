@@ -22,19 +22,19 @@ enum class ParentProfileStatus(
 	}
 }
 
-enum class ActivityLevel(
+enum class WalkingPace(
 	@get:JsonValue
 	override val value: String,
 ) : DbEnum {
 	SLOW("slow"),
-	MODERATE("moderate"),
-	ACTIVE("active"),
+	NORMAL("normal"),
+	FAST("fast"),
 	;
 
 	companion object {
 		@JvmStatic
 		@JsonCreator(mode = JsonCreator.Mode.DELEGATING)
-		fun from(value: String): ActivityLevel = enumValueOf(value, entries)
+		fun from(value: String): WalkingPace = enumValueOf(value, entries)
 	}
 }
 
@@ -42,9 +42,9 @@ enum class FoodPreference(
 	@get:JsonValue
 	override val value: String,
 ) : DbEnum {
-	KOREAN_ONLY("korean_only"),
-	FAMILIAR_FOOD("familiar_food"),
-	OPEN_MINDED("open_minded"),
+	KOREAN("korean"),
+	FAMILIAR("familiar"),
+	ADVENTUROUS("adventurous"),
 	;
 
 	companion object {
@@ -58,12 +58,13 @@ enum class TravelThemeCode(
 	@get:JsonValue
 	override val value: String,
 ) : DbEnum {
-	NATURE("nature"),
-	HISTORY("history"),
+	NATURE_SCENERY("nature_scenery"),
+	HISTORY_CULTURE("history_culture"),
+	SHOPPING("shopping"),
 	ACTIVITY("activity"),
-	FOOD("food"),
-	CULTURE("culture"),
+	CULTURE_LIFE("culture_life"),
 	LANDMARK("landmark"),
+	EXPERIENCE("experience"),
 	;
 
 	companion object {
@@ -77,11 +78,11 @@ enum class TravelPersonalityTypeCode(
 	@get:JsonValue
 	override val value: String,
 ) : DbEnum {
-	CITY_TASTER("city_taster"),
-	SENSITIVE_CULTURE("sensitive_culture"),
-	RELAXED_EXPLORER("relaxed_explorer"),
-	HISTORY_WALKER("history_walker"),
-	ACTIVE_EXPERIENCER("active_experiencer"),
+	URBAN_EXPLORER("urban_explorer"),
+	CULTURE_STROLLER("culture_stroller"),
+	HEALING_TRAVELER("healing_traveler"),
+	HERITAGE_WALKER("heritage_walker"),
+	ACTIVE_ADVENTURER("active_adventurer"),
 	LOCAL_CHALLENGER("local_challenger"),
 	;
 
@@ -109,7 +110,7 @@ abstract class ParentProfileDbEnumConverter<T>(
 class ParentProfileStatusConverter : ParentProfileDbEnumConverter<ParentProfileStatus>(ParentProfileStatus.entries)
 
 @Converter(autoApply = true)
-class ActivityLevelConverter : ParentProfileDbEnumConverter<ActivityLevel>(ActivityLevel.entries)
+class WalkingPaceConverter : ParentProfileDbEnumConverter<WalkingPace>(WalkingPace.entries)
 
 @Converter(autoApply = true)
 class FoodPreferenceConverter : ParentProfileDbEnumConverter<FoodPreference>(FoodPreference.entries)

@@ -1,8 +1,8 @@
 package com.msdragon.backend.parentprofile.dto
 
-import com.msdragon.backend.parentprofile.entity.ActivityLevel
 import com.msdragon.backend.parentprofile.entity.FoodPreference
 import com.msdragon.backend.parentprofile.entity.TravelThemeCode
+import com.msdragon.backend.parentprofile.entity.WalkingPace
 import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.Min
@@ -15,21 +15,18 @@ data class UpsertParentProfileRequest(
 	@field:Max(3, message = "현재 작성 단계는 3 이하이어야 합니다.")
 	val currentStep: Int? = null,
 
-	@field:Schema(description = "체력 수준", example = "moderate", allowableValues = ["slow", "moderate", "active"], nullable = true)
-	val activityLevel: ActivityLevel? = null,
+	@field:Schema(description = "하루 이동 성향", example = "normal", allowableValues = ["slow", "normal", "fast"], nullable = true)
+	val walkingPace: WalkingPace? = null,
 
-	@field:Schema(description = "이동 도움 필요 여부. true이면 무장애 정보 추천 가중치로 사용합니다.", example = "true", nullable = true)
+	@field:Schema(description = "이동 도움 필요 여부. 프로필 완료 시 true 또는 false 선택이 필수입니다.", example = "true", nullable = true)
 	val needsMobilityAssistance: Boolean? = null,
 
-	@field:Schema(description = "선호 여행 테마. 최대 3개까지 선택할 수 있습니다.", example = "[\"nature\",\"history\"]", allowableValues = ["nature", "history", "activity", "food", "culture", "landmark"], nullable = true)
+	@field:Schema(description = "선호 여행 테마. 최소 1개, 최대 3개까지 선택할 수 있습니다.", example = "[\"nature_scenery\",\"history_culture\"]", allowableValues = ["nature_scenery", "history_culture", "shopping", "activity", "culture_life", "landmark", "experience"], nullable = true)
 	@field:Size(max = 3, message = "여행 테마는 최대 3개까지 선택할 수 있습니다.")
-	val themeCodes: List<TravelThemeCode>? = null,
+	val travelThemes: List<TravelThemeCode>? = null,
 
-	@field:Schema(description = "음식 취향", example = "korean_only", allowableValues = ["korean_only", "familiar_food", "open_minded"], nullable = true)
+	@field:Schema(description = "음식 취향. 한식 위주, 익숙한 음식, 새로운 음식 중 하나를 선택합니다.", example = "familiar", allowableValues = ["korean", "familiar", "adventurous"], nullable = true)
 	val foodPreference: FoodPreference? = null,
-
-	@field:Schema(description = "매운 음식 회피 여부", example = "true", nullable = true)
-	val avoidSpicy: Boolean? = null,
 
 	@field:Schema(description = "프로필 작성 완료 처리 여부. true이면 추천용 여행 MBTI를 계산합니다.", example = "true")
 	val complete: Boolean = false,

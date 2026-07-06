@@ -1,12 +1,12 @@
 package com.msdragon.backend.parentprofile.dto
 
 import com.msdragon.backend.auth.entity.User
-import com.msdragon.backend.parentprofile.entity.ActivityLevel
 import com.msdragon.backend.parentprofile.entity.FoodPreference
 import com.msdragon.backend.parentprofile.entity.ParentProfile
 import com.msdragon.backend.parentprofile.entity.ParentProfileStatus
 import com.msdragon.backend.parentprofile.entity.TravelPersonalityTypeCode
 import com.msdragon.backend.parentprofile.entity.TravelThemeCode
+import com.msdragon.backend.parentprofile.entity.WalkingPace
 import io.swagger.v3.oas.annotations.media.Schema
 import java.time.LocalDateTime
 
@@ -27,22 +27,19 @@ data class ParentProfileResponse(
 	@field:Schema(description = "현재 작성 단계", example = "3")
 	val currentStep: Int,
 
-	@field:Schema(description = "체력 수준", example = "moderate", allowableValues = ["slow", "moderate", "active"], nullable = true)
-	val activityLevel: ActivityLevel?,
+	@field:Schema(description = "하루 이동 성향", example = "normal", allowableValues = ["slow", "normal", "fast"], nullable = true)
+	val walkingPace: WalkingPace?,
 
 	@field:Schema(description = "이동 도움 필요 여부", example = "true", nullable = true)
 	val needsMobilityAssistance: Boolean?,
 
-	@field:Schema(description = "선호 여행 테마", example = "[\"nature\",\"history\"]", allowableValues = ["nature", "history", "activity", "food", "culture", "landmark"])
-	val themeCodes: List<TravelThemeCode>,
+	@field:Schema(description = "선호 여행 테마", example = "[\"nature_scenery\",\"history_culture\"]", allowableValues = ["nature_scenery", "history_culture", "shopping", "activity", "culture_life", "landmark", "experience"])
+	val travelThemes: List<TravelThemeCode>,
 
-	@field:Schema(description = "음식 취향", example = "korean_only", allowableValues = ["korean_only", "familiar_food", "open_minded"], nullable = true)
+	@field:Schema(description = "음식 취향", example = "familiar", allowableValues = ["korean", "familiar", "adventurous"], nullable = true)
 	val foodPreference: FoodPreference?,
 
-	@field:Schema(description = "매운 음식 회피 여부", example = "true")
-	val avoidSpicy: Boolean,
-
-	@field:Schema(description = "추천용 부모님 여행 MBTI", example = "relaxed_explorer", allowableValues = ["city_taster", "sensitive_culture", "relaxed_explorer", "history_walker", "active_experiencer", "local_challenger"], nullable = true)
+	@field:Schema(description = "추천용 부모님 여행 MBTI", example = "healing_traveler", allowableValues = ["urban_explorer", "culture_stroller", "healing_traveler", "heritage_walker", "active_adventurer", "local_challenger"], nullable = true)
 	val personalityType: TravelPersonalityTypeCode?,
 
 	@field:Schema(description = "프로필 작성률", example = "100")
@@ -59,11 +56,10 @@ data class ParentProfileResponse(
 				profileExists = true,
 				status = profile.status,
 				currentStep = profile.currentStep,
-				activityLevel = profile.activityLevel,
+				walkingPace = profile.walkingPace,
 				needsMobilityAssistance = profile.needsMobilityAssistance,
-				themeCodes = profile.themeCodes.map(TravelThemeCode::from),
+				travelThemes = profile.travelThemes.map(TravelThemeCode::from),
 				foodPreference = profile.foodPreference,
-				avoidSpicy = profile.avoidSpicy,
 				personalityType = profile.personalityType,
 				completionPercent = profile.completionPercent,
 				completedAt = profile.completedAt,
@@ -76,11 +72,10 @@ data class ParentProfileResponse(
 				profileExists = false,
 				status = ParentProfileStatus.DRAFT,
 				currentStep = 1,
-				activityLevel = null,
+				walkingPace = null,
 				needsMobilityAssistance = null,
-				themeCodes = emptyList(),
+				travelThemes = emptyList(),
 				foodPreference = null,
-				avoidSpicy = false,
 				personalityType = null,
 				completionPercent = 0,
 				completedAt = null,

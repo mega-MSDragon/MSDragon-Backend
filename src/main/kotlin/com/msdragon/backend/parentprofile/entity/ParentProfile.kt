@@ -34,14 +34,11 @@ class ParentProfile(
 	@Column(name = "current_step", nullable = false)
 	var currentStep: Int = 1,
 
-	@Column(name = "activity_level", length = 20)
-	var activityLevel: ActivityLevel? = null,
+	@Column(name = "walking_pace", length = 20)
+	var walkingPace: WalkingPace? = null,
 
 	@Column(name = "food_preference", length = 40)
 	var foodPreference: FoodPreference? = null,
-
-	@Column(name = "avoid_spicy", nullable = false)
-	var avoidSpicy: Boolean = false,
 
 	@Column(name = "needs_mobility_assistance")
 	var needsMobilityAssistance: Boolean? = null,
@@ -55,7 +52,7 @@ class ParentProfile(
 		],
 	)
 	@Column(name = "theme_code", nullable = false, length = 40)
-	var themeCodes: MutableSet<String> = mutableSetOf(),
+	var travelThemes: MutableSet<String> = mutableSetOf(),
 
 	@Column(name = "personality_type", length = 40)
 	var personalityType: TravelPersonalityTypeCode? = null,

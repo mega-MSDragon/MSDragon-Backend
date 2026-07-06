@@ -96,11 +96,10 @@ class ParentProfileControllerTest {
 					"""
 					{
 					  "currentStep": 3,
-					  "activityLevel": "moderate",
+					  "walkingPace": "normal",
 					  "needsMobilityAssistance": true,
-					  "themeCodes": ["nature", "history"],
-					  "foodPreference": "korean_only",
-					  "avoidSpicy": true,
+					  "travelThemes": ["nature_scenery", "history_culture"],
+					  "foodPreference": "korean",
 					  "complete": true
 					}
 					""".trimIndent(),
@@ -110,8 +109,8 @@ class ParentProfileControllerTest {
 			.andExpect(jsonPath("$.data.profileExists").value(true))
 			.andExpect(jsonPath("$.data.status").value("completed"))
 			.andExpect(jsonPath("$.data.completionPercent").value(100))
-			.andExpect(jsonPath("$.data.personalityType").value("history_walker"))
-			.andExpect(jsonPath("$.data.themeCodes.length()").value(2))
+			.andExpect(jsonPath("$.data.personalityType").value("heritage_walker"))
+			.andExpect(jsonPath("$.data.travelThemes.length()").value(2))
 	}
 
 	@Test
@@ -122,7 +121,7 @@ class ParentProfileControllerTest {
 			put("/api/v1/parent-profiles/me")
 				.header("Authorization", "Bearer ${tokenService.createAccessToken(child)}")
 				.contentType(MediaType.APPLICATION_JSON)
-				.content("""{"activityLevel":"slow"}"""),
+				.content("""{"walkingPace":"slow"}"""),
 		)
 			.andExpect(status().isBadRequest)
 			.andExpect(jsonPath("$.message").value("부모 사용자만 프로필을 작성할 수 있습니다."))
@@ -142,7 +141,7 @@ class ParentProfileControllerTest {
 			.andExpect(status().isOk)
 			.andExpect(jsonPath("$.data.parentUserId").value(requireNotNull(parent.id).toInt()))
 			.andExpect(jsonPath("$.data.status").value("completed"))
-			.andExpect(jsonPath("$.data.foodPreference").value("familiar_food"))
+			.andExpect(jsonPath("$.data.foodPreference").value("familiar"))
 	}
 
 	@Test
@@ -167,10 +166,33 @@ class ParentProfileControllerTest {
 			put("/api/v1/parent-profiles/me")
 				.header("Authorization", "Bearer ${tokenService.createAccessToken(parent)}")
 				.contentType(MediaType.APPLICATION_JSON)
-				.content("""{"themeCodes":["nature","history","activity","food"]}"""),
+				.content("""{"travelThemes":["nature_scenery","history_culture","activity","shopping"]}"""),
 		)
 			.andExpect(status().isBadRequest)
 			.andExpect(jsonPath("$.message").value("여행 테마는 최대 3개까지 선택할 수 있습니다."))
+	}
+
+	@Test
+	fun `프로필 완료 시 이동 도움 필요 여부는 필수다`() {
+		val parent = saveUser(UserRole.PARENT, "parent-1", "엄마")
+
+		mockMvc.perform(
+			put("/api/v1/parent-profiles/me")
+				.header("Authorization", "Bearer ${tokenService.createAccessToken(parent)}")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(
+					"""
+					{
+					  "walkingPace": "slow",
+					  "travelThemes": ["nature_scenery"],
+					  "foodPreference": "korean",
+					  "complete": true
+					}
+					""".trimIndent(),
+				),
+		)
+			.andExpect(status().isBadRequest)
+			.andExpect(jsonPath("$.message").value("이동 도움 필요 여부를 선택해주세요."))
 	}
 
 	private fun saveCompletedParentProfile(parent: User) {
@@ -181,10 +203,10 @@ class ParentProfileControllerTest {
 				.content(
 					"""
 					{
-					  "activityLevel": "slow",
+					  "walkingPace": "slow",
 					  "needsMobilityAssistance": false,
-					  "themeCodes": ["nature"],
-					  "foodPreference": "familiar_food",
+					  "travelThemes": ["nature_scenery"],
+					  "foodPreference": "familiar",
 					  "complete": true
 					}
 					""".trimIndent(),

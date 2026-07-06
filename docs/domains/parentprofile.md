@@ -53,4 +53,6 @@ parentprofile
 - `PUT /api/v1/parent-profiles/me`는 프로필 row가 없으면 생성하고 있으면 수정합니다.
 - 부분 저장을 위해 요청 필드는 대부분 nullable로 두고, 전달한 필드만 반영합니다.
 - 저장된 프로필이 없을 때 조회 API는 `profileExists=false`인 빈 `draft` 응답을 반환합니다.
+- 프로필 완료 시 `walkingPace`, `needsMobilityAssistance`, `travelThemes` 최소 1개, `foodPreference`를 필수로 검증합니다.
+- `personalityType`은 부모님 여행 MBTI 정책의 가중치 합산과 동점 처리 규칙으로 계산합니다.
 - 상세 MBTI 이력 테이블은 아직 구현하지 않고, 현재 추천에 사용할 결과 1개만 `parent_profiles.personality_type`에 저장합니다.

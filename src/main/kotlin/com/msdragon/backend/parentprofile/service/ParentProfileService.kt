@@ -11,12 +11,12 @@ import com.msdragon.backend.common.exception.UnAuthorizedException
 import com.msdragon.backend.family.repository.FamilyMemberRepository
 import com.msdragon.backend.parentprofile.dto.ParentProfileResponse
 import com.msdragon.backend.parentprofile.dto.UpsertParentProfileRequest
-import com.msdragon.backend.parentprofile.entity.ActivityLevel
 import com.msdragon.backend.parentprofile.entity.FoodPreference
 import com.msdragon.backend.parentprofile.entity.ParentProfile
 import com.msdragon.backend.parentprofile.entity.ParentProfileStatus
 import com.msdragon.backend.parentprofile.entity.TravelPersonalityTypeCode
 import com.msdragon.backend.parentprofile.entity.TravelThemeCode
+import com.msdragon.backend.parentprofile.entity.WalkingPace
 import com.msdragon.backend.parentprofile.repository.ParentProfileRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -81,37 +81,37 @@ class ParentProfileService(
 		if (request.currentStep != null) {
 			profile.currentStep = request.currentStep
 		}
-		if (request.activityLevel != null) {
-			profile.activityLevel = request.activityLevel
+		if (request.walkingPace != null) {
+			profile.walkingPace = request.walkingPace
 		}
 		if (request.needsMobilityAssistance != null) {
 			profile.needsMobilityAssistance = request.needsMobilityAssistance
 		}
-		if (request.themeCodes != null) {
-			val distinctThemeCodes = request.themeCodes.distinct()
-			if (distinctThemeCodes.size != request.themeCodes.size) {
+		if (request.travelThemes != null) {
+			val distinctTravelThemes = request.travelThemes.distinct()
+			if (distinctTravelThemes.size != request.travelThemes.size) {
 				throw BadRequestException("여행 테마는 중복 없이 선택해주세요.")
 			}
-			if (distinctThemeCodes.size > MAX_THEME_COUNT) {
+			if (distinctTravelThemes.size > MAX_THEME_COUNT) {
 				throw BadRequestException("여행 테마는 최대 3개까지 선택할 수 있습니다.")
 			}
-			profile.themeCodes.clear()
-			profile.themeCodes.addAll(distinctThemeCodes.map { it.value })
+			profile.travelThemes.clear()
+			profile.travelThemes.addAll(distinctTravelThemes.map { it.value })
 		}
 		if (request.foodPreference != null) {
 			profile.foodPreference = request.foodPreference
 		}
-		if (request.avoidSpicy != null) {
-			profile.avoidSpicy = request.avoidSpicy
-		}
 	}
 
 	private fun validateCompletable(profile: ParentProfile) {
-		if (profile.activityLevel == null) {
-			throw BadRequestException("체력 수준을 선택해주세요.")
+		if (profile.walkingPace == null) {
+			throw BadRequestException("하루 이동 성향을 선택해주세요.")
 		}
 		if (profile.needsMobilityAssistance == null) {
 			throw BadRequestException("이동 도움 필요 여부를 선택해주세요.")
+		}
+		if (profile.travelThemes.isEmpty()) {
+			throw BadRequestException("여행 취향을 1개 이상 선택해주세요.")
 		}
 		if (profile.foodPreference == null) {
 			throw BadRequestException("음식 취향을 선택해주세요.")
@@ -120,8 +120,8 @@ class ParentProfileService(
 
 	private fun calculateDraftCompletionPercent(profile: ParentProfile): Int {
 		val completedStepCount = listOf(
-			profile.activityLevel != null && profile.needsMobilityAssistance != null,
-			profile.themeCodes.isNotEmpty(),
+			profile.walkingPace != null && profile.needsMobilityAssistance != null,
+			profile.travelThemes.isNotEmpty(),
 			profile.foodPreference != null,
 		).count { it }
 
@@ -134,15 +134,110 @@ class ParentProfileService(
 	}
 
 	private fun resolvePersonalityType(profile: ParentProfile): TravelPersonalityTypeCode {
-		val themeCodes = profile.themeCodes.map(TravelThemeCode::from).toSet()
-		return when {
-			profile.activityLevel == ActivityLevel.ACTIVE -> TravelPersonalityTypeCode.ACTIVE_EXPERIENCER
-			TravelThemeCode.HISTORY in themeCodes -> TravelPersonalityTypeCode.HISTORY_WALKER
-			TravelThemeCode.CULTURE in themeCodes -> TravelPersonalityTypeCode.SENSITIVE_CULTURE
-			TravelThemeCode.FOOD in themeCodes || profile.foodPreference == FoodPreference.KOREAN_ONLY -> TravelPersonalityTypeCode.CITY_TASTER
-			profile.foodPreference == FoodPreference.OPEN_MINDED -> TravelPersonalityTypeCode.LOCAL_CHALLENGER
-			else -> TravelPersonalityTypeCode.RELAXED_EXPLORER
+		val scores = TravelPersonalityTypeCode.entries
+			.associateWith { PersonalityScore() }
+			.toMutableMap()
+
+		fun addScore(
+			type: TravelPersonalityTypeCode,
+			points: Int,
+			axis: ScoreAxis,
+		) {
+			scores[type] = scores.getValue(type).plus(points, axis)
 		}
+
+		when (profile.walkingPace) {
+			WalkingPace.SLOW -> {
+				addScore(TravelPersonalityTypeCode.HEALING_TRAVELER, 3, ScoreAxis.MOBILITY)
+				addScore(TravelPersonalityTypeCode.CULTURE_STROLLER, 1, ScoreAxis.MOBILITY)
+				addScore(TravelPersonalityTypeCode.HERITAGE_WALKER, 1, ScoreAxis.MOBILITY)
+			}
+			WalkingPace.NORMAL -> {
+				addScore(TravelPersonalityTypeCode.CULTURE_STROLLER, 2, ScoreAxis.MOBILITY)
+				addScore(TravelPersonalityTypeCode.HERITAGE_WALKER, 2, ScoreAxis.MOBILITY)
+				addScore(TravelPersonalityTypeCode.URBAN_EXPLORER, 1, ScoreAxis.MOBILITY)
+			}
+			WalkingPace.FAST -> {
+				addScore(TravelPersonalityTypeCode.ACTIVE_ADVENTURER, 3, ScoreAxis.MOBILITY)
+				addScore(TravelPersonalityTypeCode.LOCAL_CHALLENGER, 2, ScoreAxis.MOBILITY)
+				addScore(TravelPersonalityTypeCode.URBAN_EXPLORER, 1, ScoreAxis.MOBILITY)
+			}
+			null -> Unit
+		}
+
+		when (profile.needsMobilityAssistance) {
+			true -> {
+				addScore(TravelPersonalityTypeCode.HEALING_TRAVELER, 2, ScoreAxis.MOBILITY)
+				addScore(TravelPersonalityTypeCode.HERITAGE_WALKER, 1, ScoreAxis.MOBILITY)
+				addScore(TravelPersonalityTypeCode.CULTURE_STROLLER, 1, ScoreAxis.MOBILITY)
+			}
+			false -> {
+				addScore(TravelPersonalityTypeCode.ACTIVE_ADVENTURER, 1, ScoreAxis.MOBILITY)
+				addScore(TravelPersonalityTypeCode.LOCAL_CHALLENGER, 1, ScoreAxis.MOBILITY)
+				addScore(TravelPersonalityTypeCode.URBAN_EXPLORER, 1, ScoreAxis.MOBILITY)
+			}
+			null -> Unit
+		}
+
+		profile.travelThemes.map(TravelThemeCode::from).forEach { theme ->
+			when (theme) {
+				TravelThemeCode.NATURE_SCENERY -> {
+					addScore(TravelPersonalityTypeCode.HEALING_TRAVELER, 4, ScoreAxis.THEME)
+					addScore(TravelPersonalityTypeCode.HERITAGE_WALKER, 2, ScoreAxis.THEME)
+				}
+				TravelThemeCode.HISTORY_CULTURE -> {
+					addScore(TravelPersonalityTypeCode.HERITAGE_WALKER, 4, ScoreAxis.THEME)
+					addScore(TravelPersonalityTypeCode.HEALING_TRAVELER, 1, ScoreAxis.THEME)
+					addScore(TravelPersonalityTypeCode.CULTURE_STROLLER, 1, ScoreAxis.THEME)
+				}
+				TravelThemeCode.SHOPPING -> {
+					addScore(TravelPersonalityTypeCode.URBAN_EXPLORER, 4, ScoreAxis.THEME)
+					addScore(TravelPersonalityTypeCode.CULTURE_STROLLER, 2, ScoreAxis.THEME)
+				}
+				TravelThemeCode.ACTIVITY -> {
+					addScore(TravelPersonalityTypeCode.ACTIVE_ADVENTURER, 4, ScoreAxis.THEME)
+					addScore(TravelPersonalityTypeCode.LOCAL_CHALLENGER, 2, ScoreAxis.THEME)
+				}
+				TravelThemeCode.CULTURE_LIFE -> {
+					addScore(TravelPersonalityTypeCode.CULTURE_STROLLER, 4, ScoreAxis.THEME)
+					addScore(TravelPersonalityTypeCode.URBAN_EXPLORER, 2, ScoreAxis.THEME)
+				}
+				TravelThemeCode.LANDMARK -> {
+					addScore(TravelPersonalityTypeCode.URBAN_EXPLORER, 3, ScoreAxis.THEME)
+					addScore(TravelPersonalityTypeCode.CULTURE_STROLLER, 2, ScoreAxis.THEME)
+					addScore(TravelPersonalityTypeCode.HERITAGE_WALKER, 1, ScoreAxis.THEME)
+				}
+				TravelThemeCode.EXPERIENCE -> {
+					addScore(TravelPersonalityTypeCode.LOCAL_CHALLENGER, 4, ScoreAxis.THEME)
+					addScore(TravelPersonalityTypeCode.ACTIVE_ADVENTURER, 2, ScoreAxis.THEME)
+				}
+			}
+		}
+
+		when (profile.foodPreference) {
+			FoodPreference.KOREAN -> {
+				addScore(TravelPersonalityTypeCode.HEALING_TRAVELER, 3, ScoreAxis.FOOD)
+				addScore(TravelPersonalityTypeCode.HERITAGE_WALKER, 1, ScoreAxis.FOOD)
+			}
+			FoodPreference.FAMILIAR -> {
+				addScore(TravelPersonalityTypeCode.URBAN_EXPLORER, 2, ScoreAxis.FOOD)
+				addScore(TravelPersonalityTypeCode.CULTURE_STROLLER, 2, ScoreAxis.FOOD)
+				addScore(TravelPersonalityTypeCode.HERITAGE_WALKER, 2, ScoreAxis.FOOD)
+			}
+			FoodPreference.ADVENTUROUS -> {
+				addScore(TravelPersonalityTypeCode.LOCAL_CHALLENGER, 3, ScoreAxis.FOOD)
+				addScore(TravelPersonalityTypeCode.ACTIVE_ADVENTURER, 2, ScoreAxis.FOOD)
+			}
+			null -> Unit
+		}
+
+		return PERSONALITY_TIE_BREAKERS.maxWith(
+			compareBy<TravelPersonalityTypeCode> { scores.getValue(it).total }
+				.thenBy { scores.getValue(it).theme }
+				.thenBy { scores.getValue(it).mobility }
+				.thenBy { scores.getValue(it).food }
+				.thenBy { -PERSONALITY_TIE_BREAKERS.indexOf(it) },
+		)
 	}
 
 	private fun validateParentProfileReadable(requester: User, parent: User) {
@@ -184,5 +279,34 @@ class ParentProfileService(
 	companion object {
 		private const val COMPLETED_STEP = 3
 		private const val MAX_THEME_COUNT = 3
+
+		private val PERSONALITY_TIE_BREAKERS = listOf(
+			TravelPersonalityTypeCode.URBAN_EXPLORER,
+			TravelPersonalityTypeCode.CULTURE_STROLLER,
+			TravelPersonalityTypeCode.HEALING_TRAVELER,
+			TravelPersonalityTypeCode.HERITAGE_WALKER,
+			TravelPersonalityTypeCode.ACTIVE_ADVENTURER,
+			TravelPersonalityTypeCode.LOCAL_CHALLENGER,
+		)
 	}
+}
+
+private enum class ScoreAxis {
+	THEME,
+	MOBILITY,
+	FOOD,
+}
+
+private data class PersonalityScore(
+	val total: Int = 0,
+	val theme: Int = 0,
+	val mobility: Int = 0,
+	val food: Int = 0,
+) {
+	fun plus(points: Int, axis: ScoreAxis): PersonalityScore =
+		when (axis) {
+			ScoreAxis.THEME -> copy(total = total + points, theme = theme + points)
+			ScoreAxis.MOBILITY -> copy(total = total + points, mobility = mobility + points)
+			ScoreAxis.FOOD -> copy(total = total + points, food = food + points)
+		}
 }
