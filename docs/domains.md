@@ -16,6 +16,7 @@
 | `health` | `com.msdragon.backend.health` | health 체크 API (`controller/service/dto`) |
 | `profile` | `com.msdragon.backend.profile` | 마이페이지 내 프로필 조회와 수정 |
 | `parentprofile` | `com.msdragon.backend.parentprofile` | 부모님 상세 프로필 작성/수정/조회와 추천용 여행 MBTI 현재값 저장 |
+| `trip` | `com.msdragon.backend.trip` | 여행 대상 부모 후보, 도시 목록, 여행 생성과 가족별 여행 조회 |
 
 ---
 
@@ -40,3 +41,4 @@
 | 2026-06-30 | family 도메인 추가 |
 | 2026-06-30 | profile 도메인 추가 |
 | 2026-07-01 | parentprofile 도메인 추가 |
+| 2026-07-06 | trip 도메인 추가 |

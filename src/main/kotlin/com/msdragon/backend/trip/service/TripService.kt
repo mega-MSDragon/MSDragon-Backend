@@ -1,0 +1,214 @@
+package com.msdragon.backend.trip.service
+
+import com.msdragon.backend.auth.entity.User
+import com.msdragon.backend.auth.entity.UserRole
+import com.msdragon.backend.auth.repository.UserRepository
+import com.msdragon.backend.auth.support.AuthenticatedUser
+import com.msdragon.backend.common.exception.BadRequestException
+import com.msdragon.backend.common.exception.ForbiddenException
+import com.msdragon.backend.common.exception.NotFoundException
+import com.msdragon.backend.common.exception.UnAuthorizedException
+import com.msdragon.backend.family.entity.FamilyMember
+import com.msdragon.backend.family.repository.FamilyMemberRepository
+import com.msdragon.backend.parentprofile.entity.ParentProfileStatus
+import com.msdragon.backend.parentprofile.repository.ParentProfileRepository
+import com.msdragon.backend.trip.dto.CreateTripRequest
+import com.msdragon.backend.trip.dto.MyTripsResponse
+import com.msdragon.backend.trip.dto.TripDestinationResponse
+import com.msdragon.backend.trip.dto.TripDetailResponse
+import com.msdragon.backend.trip.dto.TripParentCandidateResponse
+import com.msdragon.backend.trip.dto.TripParentCandidatesResponse
+import com.msdragon.backend.trip.dto.TripSummaryResponse
+import com.msdragon.backend.trip.entity.Trip
+import com.msdragon.backend.trip.entity.TripDay
+import com.msdragon.backend.trip.entity.TripDestinationCode
+import com.msdragon.backend.trip.entity.TripParticipant
+import com.msdragon.backend.trip.entity.TripStatus
+import com.msdragon.backend.trip.repository.TripDayRepository
+import com.msdragon.backend.trip.repository.TripParticipantRepository
+import com.msdragon.backend.trip.repository.TripRepository
+import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.temporal.ChronoUnit
+
+@Service
+class TripService(
+	private val userRepository: UserRepository,
+	private val familyMemberRepository: FamilyMemberRepository,
+	private val parentProfileRepository: ParentProfileRepository,
+	private val tripRepository: TripRepository,
+	private val tripParticipantRepository: TripParticipantRepository,
+	private val tripDayRepository: TripDayRepository,
+) {
+	@Transactional(readOnly = true)
+	fun getParentCandidates(currentUser: AuthenticatedUser): TripParentCandidatesResponse {
+		val user = getLoginUser(currentUser.id)
+		validateChild(user)
+
+		val myMember = familyMemberRepository.findByUserId(currentUser.id)
+			?: return TripParentCandidatesResponse.empty()
+		val familyId = requireNotNull(myMember.family.id)
+		val parents = familyMemberRepository.findAllByFamilyIdOrderByJoinedAtAsc(familyId)
+			.filter { it.memberRole == UserRole.PARENT }
+			.map { TripParentCandidateResponse.of(it, parentProfileRepository.findByUserId(requireNotNull(it.user.id))) }
+
+		return TripParentCandidatesResponse(familyId = familyId, parents = parents)
+	}
+
+	@Transactional(readOnly = true)
+	fun getDestinations(): List<TripDestinationResponse> =
+		TripDestinationCode.entries
+			.sortedBy { it.displayOrder }
+			.map(TripDestinationResponse::from)
+
+	@Transactional(readOnly = true)
+	fun getMyTrips(currentUser: AuthenticatedUser): MyTripsResponse {
+		getLoginUser(currentUser.id)
+		val myMember = familyMemberRepository.findByUserId(currentUser.id)
+			?: return MyTripsResponse.empty()
+		val familyId = requireNotNull(myMember.family.id)
+		val trips = tripRepository.findAllByFamilyIdAndDeletedAtIsNullOrderByStartDateAscIdAsc(familyId)
+			.map { trip ->
+				TripSummaryResponse.of(
+					trip = trip,
+					participantCount = tripParticipantRepository.findAllByTripIdOrderByIdAsc(requireNotNull(trip.id)).size,
+				)
+			}
+
+		return MyTripsResponse(familyId = familyId, trips = trips)
+	}
+
+	@Transactional(readOnly = true)
+	fun getTrip(currentUser: AuthenticatedUser, tripId: Long): TripDetailResponse {
+		getLoginUser(currentUser.id)
+		val trip = tripRepository.findByIdAndDeletedAtIsNull(tripId)
+			?: throw NotFoundException("여행을 찾을 수 없습니다.")
+		validateTripReadable(currentUser.id, trip)
+
+		return tripDetail(trip)
+	}
+
+	@Transactional
+	fun createTrip(currentUser: AuthenticatedUser, request: CreateTripRequest): TripDetailResponse {
+		val child = getLoginUser(currentUser.id)
+		validateChild(child)
+
+		val myMember = familyMemberRepository.findByUserId(currentUser.id)
+			?: throw BadRequestException("가족 매칭 후 여행을 만들 수 있습니다.")
+		val family = myMember.family
+		val familyId = requireNotNull(family.id)
+
+		val dayCount = validateDateRange(request.startDate, request.endDate)
+		if (tripRepository.existsOverlappingTrip(familyId, request.startDate, request.endDate, TripStatus.ARCHIVED)) {
+			throw BadRequestException("선택한 날짜에 이미 등록된 여행이 있습니다.")
+		}
+
+		val selectedParents = resolveSelectedParents(familyId, request.parentUserIds)
+		validateSelectedParentProfiles(selectedParents)
+
+		val destination = request.destinationCode
+		val trip = tripRepository.save(
+			Trip(
+				family = family,
+				createdByUser = child,
+				destinationCode = destination,
+				title = request.title?.trim()?.takeIf { it.isNotBlank() } ?: "${destination.displayName} 여행",
+				startDate = request.startDate,
+				endDate = request.endDate,
+			),
+		)
+
+		tripParticipantRepository.save(TripParticipant(trip = trip, user = child))
+		selectedParents.forEach { parent ->
+			tripParticipantRepository.save(TripParticipant(trip = trip, user = parent.user))
+		}
+		repeat(dayCount) { index ->
+			tripDayRepository.save(
+				TripDay(
+					trip = trip,
+					dayNumber = index + 1,
+					travelDate = request.startDate.plusDays(index.toLong()),
+				),
+			)
+		}
+
+		return tripDetail(trip)
+	}
+
+	private fun resolveSelectedParents(familyId: Long, parentUserIds: List<Long>): List<FamilyMember> {
+		val distinctParentUserIds = parentUserIds.distinct()
+		if (distinctParentUserIds.size != parentUserIds.size) {
+			throw BadRequestException("여행 대상 부모는 중복 없이 선택해주세요.")
+		}
+		if (distinctParentUserIds.isEmpty()) {
+			throw BadRequestException("여행 대상 부모를 선택해주세요.")
+		}
+		if (distinctParentUserIds.size > MAX_PARENT_COUNT) {
+			throw BadRequestException("부모는 최대 2명까지 선택할 수 있습니다.")
+		}
+
+		val familyParents = familyMemberRepository.findAllByFamilyIdOrderByJoinedAtAsc(familyId)
+			.filter { it.memberRole == UserRole.PARENT }
+			.associateBy { requireNotNull(it.user.id) }
+
+		return distinctParentUserIds.map { parentUserId ->
+			familyParents[parentUserId]
+				?: throw BadRequestException("같은 가족에 연결된 부모만 선택할 수 있습니다.")
+		}
+	}
+
+	private fun validateSelectedParentProfiles(selectedParents: List<FamilyMember>) {
+		selectedParents.forEach { parent ->
+			val profile = parentProfileRepository.findByUserId(requireNotNull(parent.user.id))
+			if (profile?.status != ParentProfileStatus.COMPLETED) {
+				throw BadRequestException("부모님 상세 프로필 작성이 필요합니다.")
+			}
+		}
+	}
+
+	private fun validateDateRange(startDate: LocalDate, endDate: LocalDate): Int {
+		if (endDate.isBefore(startDate)) {
+			throw BadRequestException("여행 종료일은 시작일 이후여야 합니다.")
+		}
+		if (startDate.isBefore(LocalDate.now(SERVICE_ZONE_ID))) {
+			throw BadRequestException("오늘 또는 이후 날짜를 선택해주세요.")
+		}
+
+		return ChronoUnit.DAYS.between(startDate, endDate).toInt() + 1
+	}
+
+	private fun validateTripReadable(userId: Long, trip: Trip) {
+		val myMember = familyMemberRepository.findByUserId(userId)
+			?: throw ForbiddenException("여행 조회 권한이 없습니다.")
+		if (myMember.family.id != trip.family.id) {
+			throw ForbiddenException("여행 조회 권한이 없습니다.")
+		}
+	}
+
+	private fun tripDetail(trip: Trip): TripDetailResponse {
+		val tripId = requireNotNull(trip.id)
+		return TripDetailResponse.of(
+			trip = trip,
+			participants = tripParticipantRepository.findAllByTripIdOrderByIdAsc(tripId),
+			days = tripDayRepository.findAllByTripIdOrderByDayNumberAsc(tripId),
+		)
+	}
+
+	private fun validateChild(user: User) {
+		if (user.role != UserRole.CHILD) {
+			throw BadRequestException("자녀 사용자만 여행을 만들 수 있습니다.")
+		}
+	}
+
+	private fun getLoginUser(userId: Long): User =
+		userRepository.findByIdAndDeletedAtIsNull(userId)
+			?.takeIf { it.isSignupCompleted() }
+			?: throw UnAuthorizedException("로그인할 수 없는 사용자입니다.")
+
+	companion object {
+		private val SERVICE_ZONE_ID: ZoneId = ZoneId.of("Asia/Seoul")
+		private const val MAX_PARENT_COUNT = 2
+	}
+}

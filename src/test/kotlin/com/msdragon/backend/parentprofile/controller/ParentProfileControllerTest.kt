@@ -15,6 +15,9 @@ import com.msdragon.backend.family.repository.FamilyCodeUsageRepository
 import com.msdragon.backend.family.repository.FamilyMemberRepository
 import com.msdragon.backend.family.repository.FamilyRepository
 import com.msdragon.backend.parentprofile.repository.ParentProfileRepository
+import com.msdragon.backend.trip.repository.TripDayRepository
+import com.msdragon.backend.trip.repository.TripParticipantRepository
+import com.msdragon.backend.trip.repository.TripRepository
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -58,8 +61,20 @@ class ParentProfileControllerTest {
 	@Autowired
 	private lateinit var familyRepository: FamilyRepository
 
+	@Autowired
+	private lateinit var tripDayRepository: TripDayRepository
+
+	@Autowired
+	private lateinit var tripParticipantRepository: TripParticipantRepository
+
+	@Autowired
+	private lateinit var tripRepository: TripRepository
+
 	@BeforeEach
 	fun setUp() {
+		tripDayRepository.deleteAll()
+		tripParticipantRepository.deleteAll()
+		tripRepository.deleteAll()
 		parentProfileRepository.deleteAll()
 		familyCodeUsageRepository.deleteAll()
 		familyMemberRepository.deleteAll()

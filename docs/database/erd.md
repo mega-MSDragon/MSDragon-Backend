@@ -396,7 +396,7 @@ CREATE TABLE trips (
     id                 BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     family_id          BIGINT NOT NULL REFERENCES families(id),
     created_by_user_id BIGINT NOT NULL REFERENCES users(id),
-    travel_destination_id BIGINT NOT NULL REFERENCES travel_destinations(id), -- 생성 후 immutable
+    destination_code   VARCHAR(60) NOT NULL,       -- MVP: 생성 후 immutable, 서버 enum catalog code
     title              VARCHAR(80) NOT NULL,
     start_date         DATE NOT NULL,
     end_date           DATE NOT NULL,
@@ -426,7 +426,7 @@ CREATE TABLE course_generation_jobs (
     id                    BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     family_id             BIGINT NOT NULL REFERENCES families(id),
     requested_by_user_id  BIGINT NOT NULL REFERENCES users(id),
-    travel_destination_id BIGINT NOT NULL REFERENCES travel_destinations(id),
+    destination_code      VARCHAR(60) NOT NULL,
     trip_id               BIGINT UNIQUE REFERENCES trips(id),
     start_date            DATE NOT NULL,
     end_date              DATE NOT NULL,

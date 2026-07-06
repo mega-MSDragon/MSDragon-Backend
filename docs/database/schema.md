@@ -6,7 +6,7 @@ DB 스키마와 공통 엔티티 규칙을 기록합니다.
 
 ## 현재 상태
 
-인증/가족/부모 프로필 도메인 Entity가 도입되었습니다.
+인증/가족/부모 프로필/여행 도메인 Entity가 도입되었습니다.
 
 | Entity | Table | 설명 |
 |--------|-------|------|
@@ -18,6 +18,9 @@ DB 스키마와 공통 엔티티 규칙을 기록합니다.
 | `FamilyCodeUsage` | `family_code_usages` | 가족 코드 매칭 이력 |
 | `ParentProfile` | `parent_profiles` | 부모님 상세 프로필과 추천용 여행 MBTI 현재값 |
 | `ParentProfile.themeCodes` | `parent_profile_themes` | 부모님 프로필별 선호 여행 테마 enum code |
+| `Trip` | `trips` | 여행 기본 정보 |
+| `TripParticipant` | `trip_participants` | 여행 참여자 |
+| `TripDay` | `trip_days` | 여행 일자 |
 
 ---
 
@@ -96,6 +99,32 @@ DB 스키마와 공통 엔티티 규칙을 기록합니다.
 - `theme_code`는 `nature`, `history`, `activity`, `food`, `culture`, `landmark` 중 하나입니다.
 - 현재 구현은 별도 마스터 테이블 FK 대신 enum code를 직접 저장합니다.
 - 여행 테마 최대 3개 제약은 서비스에서 검증합니다.
+
+---
+
+## 여행 테이블 구현 메모
+
+### trips
+
+- `family_id`는 여행을 소유한 가족입니다.
+- `created_by_user_id`는 여행을 생성한 자녀 사용자입니다.
+- MVP 구현은 `travel_destinations` 마스터 테이블 FK 대신 `destination_code` enum 문자열을 저장합니다.
+- `destination_code`는 `daegu`, `gangneung_sokcho`, `gyeongju`, `busan`, `yeosu`, `incheon`, `jeonju`, `jeju`, `seoul`, `suwon_yongin`, `tongyeong_geoje_namhae`, `pohang_andong` 중 하나입니다.
+- 여행 생성 직후 `status`는 `planning`입니다.
+- 같은 가족에서 날짜가 겹치는 여행은 서비스에서 생성 거부합니다.
+- 여행 기간 상한은 두지 않습니다. 시작일은 오늘 또는 이후여야 하고, 종료일은 시작일과 같거나 이후여야 합니다.
+
+### trip_participants
+
+- `trip_id`, `user_id` 조합은 unique입니다.
+- 여행 생성 시 생성 자녀와 선택한 부모를 참여자로 저장합니다.
+- 부모는 최대 2명까지 선택할 수 있습니다.
+
+### trip_days
+
+- 여행 시작일과 종료일을 기준으로 날짜 수만큼 `trip_days` row를 생성합니다.
+- `trip_id`, `day_number` 조합은 unique입니다.
+- 방문지(`trip_stops`)와 경로(`trip_route_segments`)는 후속 작업에서 연결합니다.
 
 ---
 

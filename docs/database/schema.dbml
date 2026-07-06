@@ -61,6 +61,21 @@ Enum activity_level {
   active
 }
 
+Enum travel_destination_code {
+  daegu
+  gangneung_sokcho
+  gyeongju
+  busan
+  yeosu
+  incheon
+  jeonju
+  jeju
+  seoul
+  suwon_yongin
+  tongyeong_geoje_namhae
+  pohang_andong
+}
+
 Enum travel_theme_code {
   nature
   history
@@ -411,7 +426,7 @@ Table travel_destinations {
   created_at datetime [not null, default: `now()`]
   updated_at datetime [not null, default: `now()`]
 
-  Note: '도시 선택 화면에 서버에서 내려주는 여행지 옵션. 단일 도시뿐 아니라 강릉·속초, 통영·거제·남해 같은 묶음도 표현한다.'
+  Note: '후속 DB 마스터 후보. MVP 구현은 TripDestinationCode enum catalog를 서버에서 내려주고 trips.destination_code에 저장한다.'
 }
 
 Table travel_destination_regions {
@@ -545,7 +560,7 @@ Table trips {
   id bigint [pk, increment]
   family_id bigint [not null]
   created_by_user_id bigint [not null]
-  travel_destination_id bigint [not null, note: '생성 후 immutable']
+  destination_code travel_destination_code [not null, note: '생성 후 immutable. MVP 구현은 DB 마스터 FK 대신 enum code 저장']
   title varchar(80) [not null]
   start_date date [not null]
   end_date date [not null]
@@ -557,7 +572,7 @@ Table trips {
   updated_at datetime [not null, default: `now()`]
   deleted_at datetime
 
-  Note: '여행 도시는 생성 후 변경하지 않는다. 제목, 날짜, 함께 가는 사람, 코스 편집은 저장하기 버튼 시점에 서비스 트랜잭션으로 확정 반영한다. 여행모드는 start_date 00:00부터 end_date 23:59까지 노출하고 별도 여행 종료 버튼은 두지 않는다.'
+  Note: '여행 도시는 생성 후 변경하지 않는다. MVP 생성 API는 자녀만 호출 가능하며 여행 기간 상한은 두지 않는다. 여행모드는 start_date 00:00부터 end_date 23:59까지 노출하고 별도 여행 종료 버튼은 두지 않는다.'
 }
 
 Table trip_participants {
@@ -575,7 +590,7 @@ Table course_generation_jobs {
   id bigint [pk, increment]
   family_id bigint [not null]
   requested_by_user_id bigint [not null]
-  travel_destination_id bigint [not null]
+  destination_code travel_destination_code [not null]
   trip_id bigint [unique]
   start_date date [not null]
   end_date date [not null]
@@ -892,12 +907,10 @@ Ref: place_accessibility.place_id - places.id
 
 Ref: trips.family_id > families.id
 Ref: trips.created_by_user_id > users.id
-Ref: trips.travel_destination_id > travel_destinations.id
 Ref: trip_participants.trip_id > trips.id
 Ref: trip_participants.user_id > users.id
 Ref: course_generation_jobs.family_id > families.id
 Ref: course_generation_jobs.requested_by_user_id > users.id
-Ref: course_generation_jobs.travel_destination_id > travel_destinations.id
 Ref: course_generation_jobs.trip_id - trips.id
 Ref: course_generation_job_participants.course_generation_job_id > course_generation_jobs.id
 Ref: course_generation_job_participants.parent_user_id > users.id
