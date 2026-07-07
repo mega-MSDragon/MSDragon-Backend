@@ -366,9 +366,47 @@ data class TripCourseDayResponse(
 	@field:Schema(description = "날짜", example = "2026-07-10")
 	val travelDate: LocalDate,
 
+	@field:Schema(description = "일자별 경로 최적화 결과. 아직 계산 전이면 null입니다.", nullable = true)
+	val route: TripRouteSummaryResponse?,
+
 	@field:Schema(description = "방문지 목록")
 	val stops: List<TripStopResponse>,
 )
+
+@Schema(description = "여행 일자 경로 최적화 요약 응답")
+data class TripRouteSummaryResponse(
+	@field:Schema(description = "경로 원천 provider", example = "tmap", allowableValues = ["tmap"])
+	val provider: ExternalApiProvider,
+
+	@field:Schema(description = "총 이동 거리(m)", example = "6230")
+	val totalDistanceMeters: Int,
+
+	@field:Schema(description = "총 이동 시간(초)", example = "1757")
+	val totalDurationSeconds: Int,
+
+	@field:Schema(description = "경로 최적화 계산 시간", example = "2026-07-07T12:00:00")
+	val optimizedAt: LocalDateTime,
+
+	@field:Schema(description = "지도 표시용 polyline 좌표 목록. 각 항목은 longitude/latitude를 포함합니다.", nullable = true)
+	val polyline: JsonNode?,
+
+	@field:Schema(description = "Tmap 경로 최적화 원본 응답 일부", nullable = true)
+	val sourcePayload: JsonNode?,
+) {
+	companion object {
+		fun of(day: TripDay, polyline: JsonNode?, sourcePayload: JsonNode?): TripRouteSummaryResponse? {
+			val provider = day.routeProvider ?: return null
+			return TripRouteSummaryResponse(
+				provider = provider,
+				totalDistanceMeters = day.routeTotalDistanceMeters ?: return null,
+				totalDurationSeconds = day.routeTotalDurationSeconds ?: return null,
+				optimizedAt = day.routeOptimizedAt ?: return null,
+				polyline = polyline,
+				sourcePayload = sourcePayload,
+			)
+		}
+	}
+}
 
 @Schema(description = "여행 방문지 응답")
 data class TripStopResponse(

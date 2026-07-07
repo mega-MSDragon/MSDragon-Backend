@@ -27,7 +27,7 @@ class TripStop(
 	val tripDay: TripDay,
 
 	@Column(name = "sort_order", nullable = false)
-	val sortOrder: Int,
+	var sortOrder: Int,
 
 	@Column(name = "stop_type", nullable = false, length = 30)
 	val stopType: StopType = StopType.SIGHTSEEING,
@@ -69,10 +69,10 @@ class TripStop(
 	val overview: String? = null,
 
 	@Column(name = "arrival_time")
-	val arrivalTime: LocalTime? = null,
+	var arrivalTime: LocalTime? = null,
 
 	@Column(name = "dwell_minutes")
-	val dwellMinutes: Int? = null,
+	var dwellMinutes: Int? = null,
 
 	@Column(name = "note", length = 255)
 	val note: String? = null,

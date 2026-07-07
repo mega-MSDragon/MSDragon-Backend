@@ -130,16 +130,24 @@ DB 스키마와 공통 엔티티 규칙을 기록합니다.
 
 - 여행 시작일과 종료일을 기준으로 날짜 수만큼 `trip_days` row를 생성합니다.
 - `trip_id`, `day_number` 조합은 unique입니다.
+- Tmap 경로 최적화 결과를 일자 단위 캐시로 저장합니다.
+- `route_provider`는 현재 `tmap`을 사용합니다.
+- `route_total_distance_m`, `route_total_duration_seconds`는 Tmap 응답의 `totalDistance`, `totalTime`을 저장합니다.
+- `route_polyline`은 지도 표시용 좌표 목록 JSON 문자열입니다.
+- `route_source_payload`는 선택된 시작/도착/방문 순서와 Tmap 응답 properties 일부를 저장합니다.
+- `route_optimized_at`은 경로 계산 시간입니다.
+- 코스 저장이나 추천 코스 재생성으로 방문지 구성이 바뀌면 경로 캐시를 비웁니다.
 
 ### trip_stops
 
 - `trip_day_id`, `sort_order` 조합은 unique입니다.
 - 코스 저장 API는 요청 배열 순서대로 `sort_order`를 1부터 다시 부여하고 기존 방문지를 전체 덮어씁니다.
+- Tmap 경로 최적화 API는 최적화 결과 기준으로 `sort_order`를 다시 부여하고, `arrival_time`과 비어 있던 `dwell_minutes` 기본값을 갱신합니다.
 - 현재 구현은 `places` 마스터 FK 없이 장소명, 카테고리, 주소, 좌표, 대표 이미지, 소개, 외부 장소 ID 등을 스냅샷으로 저장합니다.
 - `source_provider`는 `tour_api`, `tmap`, `kakao_map`, `public_data`, `local_excel`, `internal` 중 하나입니다.
 - `stop_type`은 `sightseeing`, `meal`, `rest`, `cafe` 중 하나입니다.
 - `recommendation_tags`, `source_payload`는 JSON 문자열로 저장합니다.
-- 실제 외부 API 연동, 장소 마스터 캐시, Tmap 경로 세그먼트 계산은 후속 작업입니다.
+- 장소 마스터 캐시와 방문지 간 세그먼트 단위 상세 테이블은 후속 작업입니다. 현재 경로는 `trip_days` 일자 단위 캐시에 저장합니다.
 
 ---
 

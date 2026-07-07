@@ -22,6 +22,8 @@
 - 추천 코스 생성이 완료되면 여행 상태가 `planning`인 경우 `ready`로 변경됩니다.
 - 코스 편집 중 방문지 검색/상세 조회는 TourAPI를 조회해 후보를 내려주며, 실제 코스 반영은 클라이언트가 선택한 장소를 `PUT /api/v1/trips/{tripId}/course`로 전체 저장할 때 이루어집니다.
 - 방문지 검색/상세 조회에서도 숙박은 제외하고, TourAPI 원본 응답 일부는 코스 저장 시 `sourcePayload`로 보관할 수 있게 내려줍니다.
+- 일자별 경로 최적화는 Tmap 경유지 순서 최적화 10 API를 사용합니다. 사용자가 시작점/도착점을 입력하지 않으므로 서버가 모든 시작/도착 조합을 조회해 가장 짧은 결과를 선택합니다.
+- 코스 저장 또는 추천 코스 재생성 시 기존 경로 캐시는 무효화됩니다.
 
 ---
 
@@ -38,6 +40,7 @@
 | `GET` | `/api/v1/trips/{tripId}/places/{contentId}` | 코스 편집용 방문지 상세 조회 |
 | `POST` | `/api/v1/trips` | 여행 생성 |
 | `POST` | `/api/v1/trips/{tripId}/course/recommendation` | 여행 추천 코스 생성 |
+| `POST` | `/api/v1/trips/{tripId}/days/{dayNumber}/route-optimization` | 여행 일자 경로 최적화 |
 | `PUT` | `/api/v1/trips/{tripId}/course` | 여행 코스 전체 저장 |
 
 ---
@@ -278,6 +281,23 @@
         "tripDayId": 1,
         "dayNumber": 1,
         "travelDate": "2026-07-10",
+        "route": {
+          "provider": "tmap",
+          "totalDistanceMeters": 6230,
+          "totalDurationSeconds": 1757,
+          "optimizedAt": "2026-07-07T12:00:00",
+          "polyline": [
+            {
+              "longitude": 129.2247,
+              "latitude": 35.8562
+            }
+          ],
+          "sourcePayload": {
+            "provider": "tmap",
+            "operation": "routeOptimization10",
+            "policyVersion": "tmap-route-optimization-v1"
+          }
+        },
         "stops": [
           {
             "id": 1,
@@ -389,6 +409,89 @@
 ```
 
 TourAPI 서비스키가 서버에 설정되어 있지 않거나 TourAPI 호출이 실패하면 `500`을 반환합니다.
+
+---
+
+## POST /api/v1/trips/{tripId}/days/{dayNumber}/route-optimization
+
+같은 가족 구성원이 특정 일자의 방문지 순서를 Tmap 기준으로 최적화합니다.
+사용자가 시작점/도착점을 입력하지 않으므로 서버가 모든 시작/도착 조합을 탐색한 뒤 가장 짧은 결과를 선택합니다.
+
+최적화 결과는 아래에 반영됩니다.
+
+- `trip_stops.sort_order`
+- `trip_stops.arrival_time`
+- 비어 있던 `trip_stops.dwell_minutes` 기본값
+- `trip_days`의 일자별 route 캐시
+
+제약:
+
+- 하루 방문지 3곳 이상, 10곳 이하만 처리합니다.
+- 모든 방문지에 `latitude`, `longitude`가 있어야 합니다.
+- Tmap 앱키가 서버에 설정되어 있어야 합니다.
+
+정책 상세는 `docs/policy/route-optimization.md`를 따릅니다.
+
+### Request
+
+없음.
+
+### Response
+
+`GET /api/v1/trips/{tripId}/course`와 같은 `TripCourseResponse` 형태입니다.
+
+```json
+{
+  "status": 200,
+  "success": true,
+  "message": "여행 일자 경로 최적화 성공",
+  "data": {
+    "tripId": 1,
+    "title": "경주 여행",
+    "destination": {
+      "code": "gyeongju",
+      "displayName": "경주",
+      "displayOrder": 3,
+      "badgeLabel": "인기"
+    },
+    "status": "ready",
+    "days": [
+      {
+        "tripDayId": 1,
+        "dayNumber": 1,
+        "travelDate": "2026-07-10",
+        "route": {
+          "provider": "tmap",
+          "totalDistanceMeters": 6230,
+          "totalDurationSeconds": 1757,
+          "optimizedAt": "2026-07-07T12:00:00",
+          "polyline": [
+            {
+              "longitude": 129.2247,
+              "latitude": 35.8562
+            }
+          ],
+          "sourcePayload": {
+            "provider": "tmap",
+            "operation": "routeOptimization10",
+            "policyVersion": "tmap-route-optimization-v1",
+            "orderedStopIds": [2, 3, 1]
+          }
+        },
+        "stops": [
+          {
+            "id": 2,
+            "sortOrder": 1,
+            "name": "경주 한식당",
+            "arrivalTime": "10:00:00",
+            "dwellMinutes": 60
+          }
+        ]
+      }
+    ]
+  }
+}
+```
 
 ---
 
@@ -525,6 +628,7 @@ TourAPI 서비스키가 서버에 설정되어 있지 않거나 TourAPI 호출�
 같은 가족 구성원이 일자별 방문지 코스를 전체 저장합니다.
 요청 배열 순서가 해당 일자의 방문 순서가 됩니다.
 기존 코스는 저장 요청 기준으로 덮어쓰며, 요청에 포함하지 않은 일자는 빈 코스로 저장됩니다.
+코스를 저장하면 기존 Tmap 경로 최적화 캐시는 무효화됩니다.
 
 ### Request
 

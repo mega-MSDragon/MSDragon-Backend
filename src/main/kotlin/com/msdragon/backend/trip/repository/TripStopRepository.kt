@@ -5,4 +5,6 @@ import org.springframework.data.jpa.repository.JpaRepository
 
 interface TripStopRepository : JpaRepository<TripStop, Long> {
 	fun findAllByTripDayTripIdOrderByTripDayDayNumberAscSortOrderAsc(tripId: Long): List<TripStop>
+
+	fun findAllByTripDayIdOrderBySortOrderAsc(tripDayId: Long): List<TripStop>
 }

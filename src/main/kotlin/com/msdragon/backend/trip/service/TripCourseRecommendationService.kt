@@ -82,6 +82,7 @@ class TripCourseRecommendationService(
 			tripStopRepository.deleteAllInBatch(existingStops)
 			tripStopRepository.flush()
 		}
+		tripDays.forEach { it.clearRouteOptimization() }
 
 		selectedByDay.forEach { (day, selectedCandidates) ->
 			val stops = selectedCandidates.mapIndexed { index, candidate ->
@@ -348,8 +349,7 @@ class TripCourseRecommendationService(
 	private fun defaultDwellMinutes(contentType: TourApiContentType?): Int =
 		when (contentType) {
 			TourApiContentType.FOOD -> 60
-			TourApiContentType.SHOPPING -> 90
-			else -> 80
+			else -> 60
 		}
 
 	private fun validateTripReadable(userId: Long, trip: Trip) {

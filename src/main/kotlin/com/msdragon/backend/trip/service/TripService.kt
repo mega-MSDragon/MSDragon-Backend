@@ -25,6 +25,7 @@ import com.msdragon.backend.trip.dto.TripDetailResponse
 import com.msdragon.backend.trip.dto.TripParentCandidateResponse
 import com.msdragon.backend.trip.dto.TripParentCandidatesResponse
 import com.msdragon.backend.trip.dto.TripRecommendationSnapshotResponse
+import com.msdragon.backend.trip.dto.TripRouteSummaryResponse
 import com.msdragon.backend.trip.dto.TripStopResponse
 import com.msdragon.backend.trip.dto.TripSummaryResponse
 import com.msdragon.backend.trip.dto.relationLabelOf
@@ -192,6 +193,7 @@ class TripService(
 		if (invalidDayNumber != null) {
 			throw BadRequestException("여행에 존재하지 않는 일자입니다: ${invalidDayNumber}일차")
 		}
+		tripDays.forEach { it.clearRouteOptimization() }
 
 		val existingStops = tripStopRepository.findAllByTripDayTripIdOrderByTripDayDayNumberAscSortOrderAsc(tripId)
 		if (existingStops.isNotEmpty()) {
@@ -348,6 +350,11 @@ class TripService(
 					tripDayId = requireNotNull(day.id),
 					dayNumber = day.dayNumber,
 					travelDate = day.travelDate,
+					route = TripRouteSummaryResponse.of(
+						day = day,
+						polyline = readSourcePayload(day.routePolyline),
+						sourcePayload = readSourcePayload(day.routeSourcePayload),
+					),
 					stops = stopsByDayId[requireNotNull(day.id)]
 						.orEmpty()
 						.map { stop ->

@@ -561,12 +561,20 @@ Table trip_days {
   trip_id bigint [not null]
   day_number smallint [not null]
   travel_date date [not null]
+  route_provider external_api_provider
+  route_total_distance_m int
+  route_total_duration_seconds int
+  route_polyline jsonb
+  route_source_payload jsonb
+  route_optimized_at datetime
   created_at datetime [not null, default: `now()`]
   updated_at datetime [not null, default: `now()`]
 
   indexes {
     (trip_id, day_number) [unique]
   }
+
+  Note: '현재 구현은 Tmap 경로 최적화 결과를 일자 단위 캐시로 저장한다. 코스 저장/추천 재생성/날짜 변경 시 route_* 값을 무효화한다.'
 }
 
 Table trip_stops {

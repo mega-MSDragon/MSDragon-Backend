@@ -342,6 +342,8 @@ CREATE INDEX ix_support_facilities_type_lat_lng
 
 현재 MVP 구현은 `places` 마스터 FK 없이 `trip_stops`에 장소명, 외부 ID, 주소, 좌표, 이미지, 원본 payload 일부를 스냅샷으로 저장합니다. 실제 외부 API 캐시 전략이 확정되면 `places`와 연결할 수 있습니다.
 
+현재 경로 최적화 구현은 Tmap 경유지 순서 최적화 결과를 `trip_days.route_*` 컬럼에 일자 단위로 저장합니다. 사용자가 시작점/도착점을 입력하지 않으므로 서버가 모든 시작/끝 조합을 조회해 `totalTime`, `totalDistance` 기준으로 최적 결과를 선택합니다. `trip_route_segments`는 후속으로 방문지 간 세그먼트 상세를 분리 저장해야 할 때 사용하는 확장 후보입니다.
+
 여행모드의 근처 시설 안내는 `support_facilities`를 좌표 반경으로 조회합니다. 화장실은 엑셀 원천을 `local_excel` provider로 적재하고, 병원/약국은 공공데이터 또는 지도 API 응답을 같은 테이블에 캐시합니다.
 
 ---
@@ -428,12 +430,18 @@ CREATE INDEX ix_course_generation_api_usages_job_provider
 
 -- B4: courses 제거. 일자는 trip에 직접 매단다.
 CREATE TABLE trip_days (
-    id          BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    trip_id     BIGINT NOT NULL REFERENCES trips(id),
-    day_number  SMALLINT NOT NULL,
-    travel_date DATE NOT NULL,
-    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    id                           BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    trip_id                      BIGINT NOT NULL REFERENCES trips(id),
+    day_number                   SMALLINT NOT NULL,
+    travel_date                  DATE NOT NULL,
+    route_provider               external_api_provider,
+    route_total_distance_m       INTEGER,
+    route_total_duration_seconds INTEGER,
+    route_polyline               JSONB,
+    route_source_payload         JSONB,
+    route_optimized_at           TIMESTAMPTZ,
+    created_at                   TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at                   TIMESTAMPTZ NOT NULL DEFAULT now(),
     UNIQUE (trip_id, day_number)
 );
 

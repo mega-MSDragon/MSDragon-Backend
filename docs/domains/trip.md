@@ -16,6 +16,7 @@ Trip 도메인은 여행 생성의 기본 뼈대와 가족별 여행 조회를 �
 - 같은 가족 구성원이 일자별 방문지 코스를 조회하고 전체 저장합니다.
 - TourAPI 장소/무장애 정보를 조회해 부모 프로필 기반 추천 코스를 생성합니다.
 - 코스 편집 화면에서 TourAPI 기반 방문지 검색과 상세 조회를 제공합니다.
+- Tmap 경유지 순서 최적화로 일자별 방문 순서, 도착시간, 지도 polyline을 계산합니다.
 - 코스 방문지는 외부 장소 원본이 바뀌어도 여행 당시 코스를 유지할 수 있도록 장소 스냅샷을 저장합니다.
 
 ---
@@ -57,6 +58,7 @@ trip
 - `GET /api/v1/trips/{tripId}/places/search`
 - `GET /api/v1/trips/{tripId}/places/{contentId}`
 - `POST /api/v1/trips/{tripId}/course/recommendation`
+- `POST /api/v1/trips/{tripId}/days/{dayNumber}/route-optimization`
 - `POST /api/v1/trips`
 - `PUT /api/v1/trips/{tripId}/course`
 
@@ -75,6 +77,8 @@ trip
 - 방문지는 현재 `places` 마스터 FK 없이 `trip_stops`에 장소 스냅샷을 저장합니다. 실제 공공데이터/Tmap 연동 후 마스터 캐시가 필요해지면 `places`와 연결합니다.
 - 추천 코스 생성은 TourAPI `KorWithService2`의 `areaBasedList2`, `detailCommon2`, `detailWithTour2`를 사용합니다.
 - 코스 편집용 방문지 검색은 TourAPI `searchKeyword2`를 사용하고, 상세 조회는 `detailCommon2`, `detailWithTour2`를 사용합니다.
+- 경로 최적화는 Tmap `routeOptimization10`을 사용하며, 시작점/도착점 입력 없이 모든 시작/끝 조합을 조회해 최단 결과를 선택합니다.
 - 추천 생성은 기존 코스를 삭제하고 새 추천 결과를 `trip_stops`에 저장합니다.
 - 추천 생성이 완료되면 여행 상태가 `planning`인 경우 `ready`로 변경합니다.
-- 현재 추천 생성은 장소 선정까지만 수행하며, Tmap 경로/거리/소요시간 계산은 후속 작업에서 붙입니다.
+- 현재 추천 생성은 장소 선정까지만 수행합니다. 경로/거리/소요시간은 별도 경로 최적화 API 호출로 계산합니다.
+- 코스 저장 또는 추천 생성으로 방문지 구성이 바뀌면 `trip_days`의 경로 캐시를 무효화합니다.

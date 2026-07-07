@@ -15,6 +15,7 @@ import com.msdragon.backend.trip.dto.TripPlaceDetailResponse
 import com.msdragon.backend.trip.dto.TripPlaceSearchResponse
 import com.msdragon.backend.trip.service.TripCourseRecommendationService
 import com.msdragon.backend.trip.service.TripPlaceService
+import com.msdragon.backend.trip.service.TripRouteOptimizationService
 import com.msdragon.backend.trip.service.TripService
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
@@ -43,6 +44,7 @@ class TripController(
 	private val tripService: TripService,
 	private val tripCourseRecommendationService: TripCourseRecommendationService,
 	private val tripPlaceService: TripPlaceService,
+	private val tripRouteOptimizationService: TripRouteOptimizationService,
 ) {
 	@Operation(
 		summary = "여행 대상 부모 후보 조회",
@@ -171,6 +173,33 @@ class TripController(
 		ApiResponse.success(
 			message = "여행 추천 코스 생성 성공",
 			data = tripCourseRecommendationService.recommendCourse(currentUser, tripId),
+		)
+
+	@Operation(
+		summary = "여행 일자 경로 최적화",
+		description = "저장된 일자별 방문지 좌표를 기준으로 모든 시작/도착 조합을 Tmap 경유지 순서 최적화 API에 조회하고, 가장 짧은 경로로 방문 순서와 경로 캐시를 갱신합니다.",
+	)
+	@ApiResponses(
+		value = [
+			SwaggerApiResponse(responseCode = "200", description = "여행 일자 경로 최적화 성공"),
+			SwaggerApiResponse(responseCode = "400", description = "최적화할 방문지 상태가 올바르지 않음"),
+			SwaggerApiResponse(responseCode = "401", description = "인증 실패"),
+			SwaggerApiResponse(responseCode = "403", description = "최적화 권한 없음"),
+			SwaggerApiResponse(responseCode = "404", description = "여행 또는 여행 일자를 찾을 수 없음"),
+			SwaggerApiResponse(responseCode = "500", description = "Tmap 설정 또는 호출 실패"),
+		],
+	)
+	@PostMapping("/{tripId}/days/{dayNumber}/route-optimization")
+	fun optimizeTripDayRoute(
+		@CurrentUser currentUser: AuthenticatedUser,
+		@Parameter(description = "여행 ID", example = "1")
+		@PathVariable tripId: Long,
+		@Parameter(description = "여행 며칠차", example = "1")
+		@PathVariable dayNumber: Int,
+	): ApiResponse<TripCourseResponse> =
+		ApiResponse.success(
+			message = "여행 일자 경로 최적화 성공",
+			data = tripRouteOptimizationService.optimizeDayRoute(currentUser, tripId, dayNumber),
 		)
 
 	@Operation(

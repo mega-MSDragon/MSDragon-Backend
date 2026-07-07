@@ -68,11 +68,17 @@ Compose로 실행하면 PostgreSQL도 host port로 publish됩니다. 기본 포�
 
 여행 추천 코스 생성 API를 호출하려면 한국관광공사 TourAPI 서비스키가 필요합니다.
 서비스키가 비어 있으면 애플리케이션은 실행되지만, 추천 코스 생성 API는 설정 오류로 실패합니다.
+여행 경로 최적화 API를 호출하려면 Tmap 앱키가 필요합니다.
+Tmap 앱키가 비어 있으면 애플리케이션은 실행되지만, 경로 최적화 API는 설정 오류로 실패합니다.
 
 | Name | 설명 |
 |------|------|
 | `TOUR_API_SERVICE_KEY` | 한국관광공사 TourAPI 서비스키 |
 | `TOUR_API_MOBILE_APP` | TourAPI `MobileApp` 파라미터. 기본값 `MSDragon` |
+| `TMAP_APP_KEY` | Tmap API 앱키 |
+| `TMAP_SEARCH_OPTION` | Tmap 경로 탐색 옵션. 기본값 `0` |
+| `TMAP_CAR_TYPE` | Tmap 차량 타입. 기본값 `1` |
+| `TMAP_DEFAULT_START_TIME` | 일자별 경로 최적화 기본 출발 시간. 기본값 `10:00` |
 
 ---
 

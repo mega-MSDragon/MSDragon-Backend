@@ -32,6 +32,10 @@ import com.msdragon.backend.trip.tourapi.TourApiKeywordSearch
 import com.msdragon.backend.trip.tourapi.TourApiPlaceDetail
 import com.msdragon.backend.trip.tourapi.TourApiPlaceSearch
 import com.msdragon.backend.trip.tourapi.TourApiPlaceSummary
+import com.msdragon.backend.trip.tmap.TmapRouteClient
+import com.msdragon.backend.trip.tmap.TmapRouteCoordinate
+import com.msdragon.backend.trip.tmap.TmapRouteOptimizationRequest
+import com.msdragon.backend.trip.tmap.TmapRouteOptimizationResult
 import org.springframework.boot.test.context.TestConfiguration
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -50,6 +54,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPat
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.LocalTime
 import java.time.ZoneId
 
 @SpringBootTest
@@ -98,9 +103,13 @@ class TripControllerTest {
 	@Autowired
 	private lateinit var fakeTourApiClient: FakeTourApiClient
 
+	@Autowired
+	private lateinit var fakeTmapRouteClient: FakeTmapRouteClient
+
 	@BeforeEach
 	fun setUp() {
 		fakeTourApiClient.reset()
+		fakeTmapRouteClient.reset()
 		tripStopRepository.deleteAll()
 		tripDayRepository.deleteAll()
 		tripParticipantRepository.deleteAll()
@@ -420,6 +429,75 @@ class TripControllerTest {
 	}
 
 	@Test
+	fun `여행 일자 방문지의 시작과 끝 조합을 탐색해 경로를 최적화한다`() {
+		val child = saveUser(UserRole.CHILD, "child-1", "혜린")
+		val mother = saveUser(UserRole.PARENT, "parent-1", "엄마", GenderType.FEMALE)
+		connectFamily(child, mother)
+		saveCompletedParentProfile(mother)
+		val tripId = createTrip(child, mother, futureDate(10), futureDate(10))
+
+		mockMvc.perform(
+			put("/api/v1/trips/$tripId/course")
+				.header("Authorization", "Bearer ${tokenService.createAccessToken(child)}")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(
+					"""
+					{
+					  "days": [
+					    {
+					      "dayNumber": 1,
+					      "stops": [
+					        {
+					          "stopType": "sightseeing",
+					          "name": "오도리 공원",
+					          "latitude": 35.8562,
+					          "longitude": 129.2247
+					        },
+					        {
+					          "stopType": "meal",
+					          "name": "경주 한식당",
+					          "latitude": 35.8500,
+					          "longitude": 129.2100
+					        },
+					        {
+					          "stopType": "cafe",
+					          "name": "조용한 카페",
+					          "latitude": 35.8420,
+					          "longitude": 129.2050
+					        }
+					      ]
+					    }
+					  ]
+					}
+					""".trimIndent(),
+				),
+		)
+			.andExpect(status().isOk)
+
+		mockMvc.perform(
+			post("/api/v1/trips/$tripId/days/1/route-optimization")
+				.header("Authorization", "Bearer ${tokenService.createAccessToken(child)}"),
+		)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.data.days[0].route.provider").value("tmap"))
+			.andExpect(jsonPath("$.data.days[0].route.totalDistanceMeters").value(1200))
+			.andExpect(jsonPath("$.data.days[0].route.totalDurationSeconds").value(600))
+			.andExpect(jsonPath("$.data.days[0].route.polyline[0].longitude").value(129.2100))
+			.andExpect(jsonPath("$.data.days[0].route.sourcePayload.policyVersion").value("tmap-route-optimization-v1"))
+			.andExpect(jsonPath("$.data.days[0].stops[0].name").value("경주 한식당"))
+			.andExpect(jsonPath("$.data.days[0].stops[0].arrivalTime").value("10:00:00"))
+			.andExpect(jsonPath("$.data.days[0].stops[0].dwellMinutes").value(60))
+			.andExpect(jsonPath("$.data.days[0].stops[1].name").value("조용한 카페"))
+			.andExpect(jsonPath("$.data.days[0].stops[1].arrivalTime").value("10:30:00"))
+			.andExpect(jsonPath("$.data.days[0].stops[1].dwellMinutes").value(40))
+			.andExpect(jsonPath("$.data.days[0].stops[2].name").value("오도리 공원"))
+
+		check(fakeTmapRouteClient.requests.size == 6)
+		check(fakeTmapRouteClient.requests.any { it.start.name == "경주 한식당" && it.end.name == "오도리 공원" })
+		check(fakeTmapRouteClient.requests.all { it.startTime.toLocalTime() == LocalTime.of(10, 0) })
+	}
+
+	@Test
 	fun `여행 추천 코스를 생성하면 부모 프로필 기준으로 일자별 방문지를 저장한다`() {
 		val child = saveUser(UserRole.CHILD, "child-1", "혜린")
 		val mother = saveUser(UserRole.PARENT, "parent-1", "엄마", GenderType.FEMALE)
@@ -676,6 +754,10 @@ class TripControllerTest {
 		@Bean
 		@Primary
 		fun fakeTourApiClient(): FakeTourApiClient = FakeTourApiClient()
+
+		@Bean
+		@Primary
+		fun fakeTmapRouteClient(): FakeTmapRouteClient = FakeTmapRouteClient()
 	}
 
 	class FakeTourApiClient : TourApiClient {
@@ -705,6 +787,38 @@ class TripControllerTest {
 			detailsByContentId.clear()
 			accessibilityByContentId.clear()
 			keywordPlaces = emptyList()
+		}
+	}
+
+	class FakeTmapRouteClient : TmapRouteClient {
+		val requests: MutableList<TmapRouteOptimizationRequest> = mutableListOf()
+
+		override fun optimizeRoute(request: TmapRouteOptimizationRequest): TmapRouteOptimizationResult {
+			requests.add(request)
+			val orderedStopIds = listOf(request.start.stopId) + request.viaPoints.map { it.stopId } + request.end.stopId
+			val isBestRoute = request.start.name == "경주 한식당" && request.end.name == "오도리 공원"
+			return TmapRouteOptimizationResult(
+				totalDistanceMeters = if (isBestRoute) 1200 else 9000,
+				totalDurationSeconds = if (isBestRoute) 600 else 9000,
+				totalFare = 0,
+				orderedStopIds = orderedStopIds,
+				arrivalTimes = orderedStopIds.mapIndexed { index, stopId ->
+					stopId to LocalTime.of(10, 0).plusMinutes(index * 30L)
+				}.toMap(),
+				polyline = listOf(
+					TmapRouteCoordinate(request.start.longitude, request.start.latitude),
+					TmapRouteCoordinate(request.end.longitude, request.end.latitude),
+				),
+				rawProperties = mapOf(
+					"totalDistance" to if (isBestRoute) "1200" else "9000",
+					"totalTime" to if (isBestRoute) "600" else "9000",
+					"totalFare" to "0",
+				),
+			)
+		}
+
+		fun reset() {
+			requests.clear()
 		}
 	}
 }
