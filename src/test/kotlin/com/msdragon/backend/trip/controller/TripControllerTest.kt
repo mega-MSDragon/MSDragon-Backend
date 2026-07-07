@@ -28,6 +28,7 @@ import com.msdragon.backend.trip.repository.TripRepository
 import com.msdragon.backend.trip.repository.TripStopRepository
 import com.msdragon.backend.trip.tourapi.TourApiAccessibility
 import com.msdragon.backend.trip.tourapi.TourApiClient
+import com.msdragon.backend.trip.tourapi.TourApiKeywordSearch
 import com.msdragon.backend.trip.tourapi.TourApiPlaceDetail
 import com.msdragon.backend.trip.tourapi.TourApiPlaceSearch
 import com.msdragon.backend.trip.tourapi.TourApiPlaceSummary
@@ -460,6 +461,85 @@ class TripControllerTest {
 	}
 
 	@Test
+	fun `여행 도시 범위에서 방문지를 검색한다`() {
+		val child = saveUser(UserRole.CHILD, "child-1", "혜린")
+		val mother = saveUser(UserRole.PARENT, "parent-1", "엄마", GenderType.FEMALE)
+		connectFamily(child, mother)
+		saveCompletedParentProfile(mother)
+		val tripId = createTrip(child, mother, futureDate(10), futureDate(10))
+		fakeTourApiClient.keywordPlaces = listOf(
+			tourPlace("food-1", "39", "경주 한식당", "FD"),
+			tourPlace("nature-1", "12", "경주 산책 공원", "NA"),
+		)
+
+		mockMvc.perform(
+			get("/api/v1/trips/$tripId/places/search")
+				.header("Authorization", "Bearer ${tokenService.createAccessToken(child)}")
+				.param("keyword", "경주")
+				.param("contentTypeId", "39")
+				.param("page", "1")
+				.param("size", "10"),
+		)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.data.tripId").value(tripId))
+			.andExpect(jsonPath("$.data.keyword").value("경주"))
+			.andExpect(jsonPath("$.data.contentTypeId").value("39"))
+			.andExpect(jsonPath("$.data.places.length()").value(1))
+			.andExpect(jsonPath("$.data.places[0].externalPlaceId").value("food-1"))
+			.andExpect(jsonPath("$.data.places[0].contentTypeName").value("음식점"))
+			.andExpect(jsonPath("$.data.places[0].stopType").value("meal"))
+	}
+
+	@Test
+	fun `방문지 상세와 무장애 정보를 조회한다`() {
+		val child = saveUser(UserRole.CHILD, "child-1", "혜린")
+		val mother = saveUser(UserRole.PARENT, "parent-1", "엄마", GenderType.FEMALE)
+		connectFamily(child, mother)
+		saveCompletedParentProfile(mother)
+		val tripId = createTrip(child, mother, futureDate(10), futureDate(10))
+		fakeTourApiClient.detailsByContentId["nature-1"] = TourApiPlaceDetail(
+			homepage = "https://example.com/nature-1",
+			overview = "산책하기 좋은 공원입니다.",
+			raw = mapOf("contentid" to "nature-1", "title" to "경주 산책 공원"),
+			contentId = "nature-1",
+			contentTypeId = "12",
+			title = "경주 산책 공원",
+			address = "경상북도 경주시",
+			latitude = "35.8562".toBigDecimal(),
+			longitude = "129.2247".toBigDecimal(),
+			tel = "054-000-0000",
+			firstImage = "https://example.com/nature-1.jpg",
+			lclsSystm1 = "NA",
+		)
+		fakeTourApiClient.accessibilityByContentId["nature-1"] = TourApiAccessibility(
+			parking = "장애인 주차장 있음",
+			publicTransport = "",
+			route = "출입구까지 경사로 있음",
+			wheelchair = "",
+			exit = "휠체어 접근 가능",
+			elevator = "",
+			restroom = "장애인 화장실 있음",
+			raw = mapOf("contentid" to "nature-1", "route" to "출입구까지 경사로 있음"),
+		)
+
+		mockMvc.perform(
+			get("/api/v1/trips/$tripId/places/nature-1")
+				.header("Authorization", "Bearer ${tokenService.createAccessToken(child)}")
+				.param("contentTypeId", "12"),
+		)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.data.externalPlaceId").value("nature-1"))
+			.andExpect(jsonPath("$.data.contentTypeName").value("관광지"))
+			.andExpect(jsonPath("$.data.stopType").value("sightseeing"))
+			.andExpect(jsonPath("$.data.homepageUrl").value("https://example.com/nature-1"))
+			.andExpect(jsonPath("$.data.accessibility.route").value("출입구까지 경사로 있음"))
+			.andExpect(jsonPath("$.data.accessibility.restroom").value("장애인 화장실 있음"))
+			.andExpect(jsonPath("$.data.recommendationTags[0]").value("tour_api"))
+			.andExpect(jsonPath("$.data.recommendationTags[3]").value("mobility_info"))
+			.andExpect(jsonPath("$.data.sourcePayload.provider").value("tour_api"))
+	}
+
+	@Test
 	fun `부모는 여행을 생성할 수 없다`() {
 		val parent = saveUser(UserRole.PARENT, "parent-1", "엄마", GenderType.FEMALE)
 
@@ -602,9 +682,13 @@ class TripControllerTest {
 		val placesByContentType: MutableMap<String, List<TourApiPlaceSummary>> = mutableMapOf()
 		val detailsByContentId: MutableMap<String, TourApiPlaceDetail> = mutableMapOf()
 		val accessibilityByContentId: MutableMap<String, TourApiAccessibility> = mutableMapOf()
+		var keywordPlaces: List<TourApiPlaceSummary> = emptyList()
 
 		override fun findPlaces(search: TourApiPlaceSearch): List<TourApiPlaceSummary> =
 			placesByContentType[search.contentTypeId].orEmpty()
+
+		override fun searchPlaces(search: TourApiKeywordSearch): List<TourApiPlaceSummary> =
+			keywordPlaces
 
 		override fun getPlaceDetail(contentId: String): TourApiPlaceDetail? =
 			detailsByContentId[contentId] ?: TourApiPlaceDetail(
@@ -620,6 +704,7 @@ class TripControllerTest {
 			placesByContentType.clear()
 			detailsByContentId.clear()
 			accessibilityByContentId.clear()
+			keywordPlaces = emptyList()
 		}
 	}
 }

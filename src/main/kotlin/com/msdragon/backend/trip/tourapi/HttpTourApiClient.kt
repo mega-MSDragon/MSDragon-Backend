@@ -30,28 +30,22 @@ class HttpTourApiClient(
 			) + search.region.lDongSignguCd?.let { mapOf("lDongSignguCd" to it) }.orEmpty(),
 		)
 
-		return items.mapNotNull { item ->
-			val contentId = item.string("contentid") ?: return@mapNotNull null
-			val contentTypeId = item.string("contenttypeid") ?: search.contentTypeId
-			val title = item.string("title") ?: return@mapNotNull null
-			TourApiPlaceSummary(
-				contentId = contentId,
-				contentTypeId = contentTypeId,
-				title = title,
-				address = listOfNotNull(item.string("addr1"), item.string("addr2"))
-					.joinToString(" ")
-					.trimToNull(),
-				latitude = item.decimal("mapy"),
-				longitude = item.decimal("mapx"),
-				tel = item.string("tel"),
-				firstImage = item.string("firstimage"),
-				firstImageThumbnail = item.string("firstimage2"),
-				lclsSystm1 = item.string("lclsSystm1"),
-				lclsSystm2 = item.string("lclsSystm2"),
-				lclsSystm3 = item.string("lclsSystm3"),
-				raw = item,
-			)
-		}
+		return items.mapNotNull { item -> item.toPlaceSummary(defaultContentTypeId = search.contentTypeId) }
+	}
+
+	override fun searchPlaces(search: TourApiKeywordSearch): List<TourApiPlaceSummary> {
+		val items = requestItems(
+			operation = "searchKeyword2",
+			params = mapOf(
+				"numOfRows" to search.numOfRows.toString(),
+				"pageNo" to search.pageNo.toString(),
+				"arrange" to "Q",
+				"keyword" to search.keyword,
+				"lDongRegnCd" to search.region.lDongRegnCd,
+			) + search.region.lDongSignguCd?.let { mapOf("lDongSignguCd" to it) }.orEmpty(),
+		)
+
+		return items.mapNotNull { item -> item.toPlaceSummary() }
 	}
 
 	override fun getPlaceDetail(contentId: String): TourApiPlaceDetail? {
@@ -68,6 +62,20 @@ class HttpTourApiClient(
 			homepage = item.string("homepage"),
 			overview = item.string("overview"),
 			raw = item,
+			contentId = item.string("contentid") ?: contentId,
+			contentTypeId = item.string("contenttypeid"),
+			title = item.string("title"),
+			address = listOfNotNull(item.string("addr1"), item.string("addr2"))
+				.joinToString(" ")
+				.trimToNull(),
+			latitude = item.decimal("mapy"),
+			longitude = item.decimal("mapx"),
+			tel = item.string("tel"),
+			firstImage = item.string("firstimage"),
+			firstImageThumbnail = item.string("firstimage2"),
+			lclsSystm1 = item.string("lclsSystm1"),
+			lclsSystm2 = item.string("lclsSystm2"),
+			lclsSystm3 = item.string("lclsSystm3"),
 		)
 	}
 
@@ -158,6 +166,29 @@ private fun Map<String, Any?>.decimal(key: String): BigDecimal? =
 	string(key)?.let { value ->
 		runCatching { value.toBigDecimal() }.getOrNull()
 	}
+
+private fun Map<String, Any?>.toPlaceSummary(defaultContentTypeId: String? = null): TourApiPlaceSummary? {
+	val contentId = string("contentid") ?: return null
+	val contentTypeId = string("contenttypeid") ?: defaultContentTypeId ?: return null
+	val title = string("title") ?: return null
+	return TourApiPlaceSummary(
+		contentId = contentId,
+		contentTypeId = contentTypeId,
+		title = title,
+		address = listOfNotNull(string("addr1"), string("addr2"))
+			.joinToString(" ")
+			.trimToNull(),
+		latitude = decimal("mapy"),
+		longitude = decimal("mapx"),
+		tel = string("tel"),
+		firstImage = string("firstimage"),
+		firstImageThumbnail = string("firstimage2"),
+		lclsSystm1 = string("lclsSystm1"),
+		lclsSystm2 = string("lclsSystm2"),
+		lclsSystm3 = string("lclsSystm3"),
+		raw = this,
+	)
+}
 
 private fun String?.trimToNull(): String? =
 	this?.trim()?.takeIf { it.isNotEmpty() }

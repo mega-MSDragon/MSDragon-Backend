@@ -20,6 +20,8 @@
 - 추천 코스 생성은 한국관광공사 TourAPI 무장애여행 서비스로 장소 후보를 조회하고, 부모 프로필 스냅샷으로 점수를 계산해 `trip_stops`에 저장합니다.
 - 추천 코스 생성은 장소 추천까지만 수행합니다. Tmap 경로/거리/소요시간 계산은 후속 작업입니다.
 - 추천 코스 생성이 완료되면 여행 상태가 `planning`인 경우 `ready`로 변경됩니다.
+- 코스 편집 중 방문지 검색/상세 조회는 TourAPI를 조회해 후보를 내려주며, 실제 코스 반영은 클라이언트가 선택한 장소를 `PUT /api/v1/trips/{tripId}/course`로 전체 저장할 때 이루어집니다.
+- 방문지 검색/상세 조회에서도 숙박은 제외하고, TourAPI 원본 응답 일부는 코스 저장 시 `sourcePayload`로 보관할 수 있게 내려줍니다.
 
 ---
 
@@ -32,6 +34,8 @@
 | `GET` | `/api/v1/trips` | 내 가족 여행 목록 조회 |
 | `GET` | `/api/v1/trips/{tripId}` | 여행 상세 조회 |
 | `GET` | `/api/v1/trips/{tripId}/course` | 여행 코스 조회 |
+| `GET` | `/api/v1/trips/{tripId}/places/search` | 코스 편집용 방문지 검색 |
+| `GET` | `/api/v1/trips/{tripId}/places/{contentId}` | 코스 편집용 방문지 상세 조회 |
 | `POST` | `/api/v1/trips` | 여행 생성 |
 | `POST` | `/api/v1/trips/{tripId}/course/recommendation` | 여행 추천 코스 생성 |
 | `PUT` | `/api/v1/trips/{tripId}/course` | 여행 코스 전체 저장 |
@@ -385,6 +389,134 @@
 ```
 
 TourAPI 서비스키가 서버에 설정되어 있지 않거나 TourAPI 호출이 실패하면 `500`을 반환합니다.
+
+---
+
+## GET /api/v1/trips/{tripId}/places/search
+
+코스 편집 화면에서 여행 도시 범위 안의 TourAPI 방문지를 키워드로 검색합니다.
+검색 결과는 추천 후보 목록으로만 사용하며, 사용자가 선택한 장소를 코스에 반영하려면 `PUT /api/v1/trips/{tripId}/course`로 저장해야 합니다.
+
+숙박은 검색 결과에서 제외합니다.
+
+### Query Parameters
+
+| Parameter | Type | Required | 설명 |
+|-----------|------|----------|------|
+| `keyword` | string | true | 검색어. 공백 제거 후 1자 이상, 50자 이하 |
+| `contentTypeId` | string | false | TourAPI 콘텐츠 타입 필터. 생략하면 숙박을 제외한 지원 타입 전체 |
+| `page` | number | false | 페이지 번호. 기본값 `1` |
+| `size` | number | false | 페이지 크기. 기본값 `20`, 최대 `50` |
+
+지원 `contentTypeId`:
+
+| contentTypeId | 의미 | 저장 시 기본 stopType |
+|---------------|------|----------------------|
+| `12` | 관광지 | `sightseeing` |
+| `14` | 문화시설 | `sightseeing` |
+| `15` | 행사/공연/축제 | `sightseeing` |
+| `28` | 레포츠 | `sightseeing` |
+| `38` | 쇼핑 | `sightseeing` |
+| `39` | 음식점 | `meal` |
+
+### Response
+
+```json
+{
+  "status": 200,
+  "success": true,
+  "message": "방문지 검색 성공",
+  "data": {
+    "tripId": 1,
+    "destination": {
+      "code": "gyeongju",
+      "displayName": "경주",
+      "displayOrder": 3,
+      "badgeLabel": "인기"
+    },
+    "keyword": "경주 맛집",
+    "contentTypeId": "39",
+    "page": 1,
+    "size": 20,
+    "places": [
+      {
+        "sourceProvider": "tour_api",
+        "externalPlaceId": "988449",
+        "contentTypeId": "39",
+        "contentTypeName": "음식점",
+        "stopType": "meal",
+        "name": "경주 한식당",
+        "category": "음식점",
+        "address": "경상북도 경주시",
+        "latitude": 35.8562,
+        "longitude": 129.2247,
+        "phone": "054-000-0000",
+        "imageUrl": "https://example.com/place.jpg",
+        "lclsSystm1": "FD"
+      }
+    ]
+  }
+}
+```
+
+---
+
+## GET /api/v1/trips/{tripId}/places/{contentId}
+
+코스 편집 화면에서 TourAPI 방문지 상세와 무장애 주요 정보를 조회합니다.
+장소 상세 화면 표시와, 선택 장소를 코스 저장 API에 넣기 전 스냅샷 데이터를 구성하는 데 사용합니다.
+
+### Query Parameters
+
+| Parameter | Type | Required | 설명 |
+|-----------|------|----------|------|
+| `contentTypeId` | string | false | 검색 목록에서 알고 있는 TourAPI 콘텐츠 타입 ID. 상세 응답에 타입이 없을 때 보조값으로 사용 |
+
+### Response
+
+```json
+{
+  "status": 200,
+  "success": true,
+  "message": "방문지 상세 조회 성공",
+  "data": {
+    "sourceProvider": "tour_api",
+    "externalPlaceId": "988449",
+    "contentTypeId": "12",
+    "contentTypeName": "관광지",
+    "stopType": "sightseeing",
+    "name": "오도리 공원",
+    "category": "관광지",
+    "address": "경상북도 경주시",
+    "latitude": 35.8562,
+    "longitude": 129.2247,
+    "phone": "054-000-0000",
+    "homepageUrl": "https://example.com",
+    "imageUrl": "https://example.com/place.jpg",
+    "overview": "산책하기 좋은 공원입니다.",
+    "lclsSystm1": "NA",
+    "accessibility": {
+      "parking": "장애인 주차장 있음",
+      "publicTransport": null,
+      "route": "출입구까지 경사로 있음",
+      "wheelchair": null,
+      "exit": "휠체어 접근 가능",
+      "elevator": null,
+      "restroom": "장애인 화장실 있음"
+    },
+    "recommendationTags": ["tour_api", "type:12", "na", "mobility_info"],
+    "sourcePayload": {
+      "provider": "tour_api",
+      "detailCommon": {
+        "contentid": "988449"
+      },
+      "accessibility": {
+        "route": "출입구까지 경사로 있음"
+      }
+    }
+  }
+}
+```
 
 ---
 

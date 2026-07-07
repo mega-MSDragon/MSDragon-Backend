@@ -18,6 +18,10 @@ import com.msdragon.backend.trip.entity.TripDestinationCode
 import com.msdragon.backend.trip.entity.TripParticipant
 import com.msdragon.backend.trip.entity.TripStatus
 import com.msdragon.backend.trip.entity.TripStop
+import com.msdragon.backend.trip.tourapi.TourApiAccessibility
+import com.msdragon.backend.trip.tourapi.TourApiContentType
+import com.msdragon.backend.trip.tourapi.TourApiPlaceDetail
+import com.msdragon.backend.trip.tourapi.TourApiPlaceSummary
 import io.swagger.v3.oas.annotations.media.Schema
 import tools.jackson.databind.JsonNode
 import java.math.BigDecimal
@@ -463,6 +467,242 @@ data class TripStopResponse(
 				recommendationTags = recommendationTags,
 				sourcePayload = sourcePayload,
 				isManualAdded = stop.isManualAdded,
+			)
+	}
+}
+
+@Schema(description = "방문지 검색 응답")
+data class TripPlaceSearchResponse(
+	@field:Schema(description = "여행 ID", example = "1")
+	val tripId: Long,
+
+	@field:Schema(description = "여행 도시")
+	val destination: TripDestinationResponse,
+
+	@field:Schema(description = "검색 키워드", example = "경주 맛집")
+	val keyword: String,
+
+	@field:Schema(
+		description = "필터링한 TourAPI 콘텐츠 타입 ID",
+		example = "39",
+		nullable = true,
+		allowableValues = ["12", "14", "15", "28", "38", "39"],
+	)
+	val contentTypeId: String?,
+
+	@field:Schema(description = "페이지 번호", example = "1")
+	val page: Int,
+
+	@field:Schema(description = "페이지 크기", example = "20")
+	val size: Int,
+
+	@field:Schema(description = "검색된 방문지 목록")
+	val places: List<TripPlaceSummaryResponse>,
+)
+
+@Schema(description = "방문지 검색 요약 응답")
+data class TripPlaceSummaryResponse(
+	@field:Schema(description = "장소 원천 provider", example = "tour_api")
+	val sourceProvider: ExternalApiProvider,
+
+	@field:Schema(description = "외부 장소 ID. TourAPI contentId입니다.", example = "988449")
+	val externalPlaceId: String,
+
+	@field:Schema(
+		description = "TourAPI contentTypeId",
+		example = "12",
+		allowableValues = ["12", "14", "15", "28", "38", "39"],
+	)
+	val contentTypeId: String,
+
+	@field:Schema(description = "콘텐츠 타입 표시명", example = "관광지", nullable = true)
+	val contentTypeName: String?,
+
+	@field:Schema(description = "저장 시 기본 방문지 유형", example = "sightseeing")
+	val stopType: StopType,
+
+	@field:Schema(description = "장소명", example = "오도리 공원")
+	val name: String,
+
+	@field:Schema(description = "장소 카테고리", example = "관광지", nullable = true)
+	val category: String?,
+
+	@field:Schema(description = "주소", example = "경상북도 경주시", nullable = true)
+	val address: String?,
+
+	@field:Schema(description = "위도", example = "35.8562", nullable = true)
+	val latitude: BigDecimal?,
+
+	@field:Schema(description = "경도", example = "129.2247", nullable = true)
+	val longitude: BigDecimal?,
+
+	@field:Schema(description = "전화번호", example = "054-000-0000", nullable = true)
+	val phone: String?,
+
+	@field:Schema(description = "대표 이미지 URL", example = "https://example.com/image.jpg", nullable = true)
+	val imageUrl: String?,
+
+	@field:Schema(description = "TourAPI 분류체계 대분류", example = "NA", nullable = true)
+	val lclsSystm1: String?,
+) {
+	companion object {
+		fun of(place: TourApiPlaceSummary): TripPlaceSummaryResponse {
+			val contentType = TourApiContentType.fromId(place.contentTypeId)
+			return TripPlaceSummaryResponse(
+				sourceProvider = ExternalApiProvider.TOUR_API,
+				externalPlaceId = place.contentId,
+				contentTypeId = place.contentTypeId,
+				contentTypeName = contentType?.displayName,
+				stopType = contentType?.stopType ?: StopType.SIGHTSEEING,
+				name = place.title,
+				category = contentType?.displayName,
+				address = place.address,
+				latitude = place.latitude,
+				longitude = place.longitude,
+				phone = place.tel,
+				imageUrl = place.firstImage ?: place.firstImageThumbnail,
+				lclsSystm1 = place.lclsSystm1,
+			)
+		}
+	}
+}
+
+@Schema(description = "방문지 상세 응답")
+data class TripPlaceDetailResponse(
+	@field:Schema(description = "장소 원천 provider", example = "tour_api")
+	val sourceProvider: ExternalApiProvider,
+
+	@field:Schema(description = "외부 장소 ID. TourAPI contentId입니다.", example = "988449")
+	val externalPlaceId: String,
+
+	@field:Schema(
+		description = "TourAPI contentTypeId",
+		example = "12",
+		nullable = true,
+		allowableValues = ["12", "14", "15", "28", "38", "39"],
+	)
+	val contentTypeId: String?,
+
+	@field:Schema(description = "콘텐츠 타입 표시명", example = "관광지", nullable = true)
+	val contentTypeName: String?,
+
+	@field:Schema(description = "저장 시 기본 방문지 유형", example = "sightseeing")
+	val stopType: StopType,
+
+	@field:Schema(description = "장소명", example = "오도리 공원")
+	val name: String,
+
+	@field:Schema(description = "장소 카테고리", example = "관광지", nullable = true)
+	val category: String?,
+
+	@field:Schema(description = "주소", example = "경상북도 경주시", nullable = true)
+	val address: String?,
+
+	@field:Schema(description = "위도", example = "35.8562", nullable = true)
+	val latitude: BigDecimal?,
+
+	@field:Schema(description = "경도", example = "129.2247", nullable = true)
+	val longitude: BigDecimal?,
+
+	@field:Schema(description = "전화번호", example = "054-000-0000", nullable = true)
+	val phone: String?,
+
+	@field:Schema(description = "홈페이지 URL", example = "https://example.com", nullable = true)
+	val homepageUrl: String?,
+
+	@field:Schema(description = "대표 이미지 URL", example = "https://example.com/image.jpg", nullable = true)
+	val imageUrl: String?,
+
+	@field:Schema(description = "장소 소개", example = "짧은 산책을 즐기기 좋은 공원입니다.", nullable = true)
+	val overview: String?,
+
+	@field:Schema(description = "TourAPI 분류체계 대분류", example = "NA", nullable = true)
+	val lclsSystm1: String?,
+
+	@field:Schema(description = "무장애 주요 정보")
+	val accessibility: TripPlaceAccessibilityResponse,
+
+	@field:Schema(description = "기존 코스 저장 API에 넣기 위한 추천 태그")
+	val recommendationTags: List<String>,
+
+	@field:Schema(description = "외부 API 원본 응답 일부")
+	val sourcePayload: Map<String, Any?>,
+) {
+	companion object {
+		fun of(
+			contentId: String,
+			detail: TourApiPlaceDetail,
+			accessibility: TourApiAccessibility?,
+			requestedContentTypeId: String?,
+		): TripPlaceDetailResponse {
+			val contentTypeId = detail.contentTypeId ?: requestedContentTypeId
+			val contentType = contentTypeId?.let(TourApiContentType::fromId)
+			return TripPlaceDetailResponse(
+				sourceProvider = ExternalApiProvider.TOUR_API,
+				externalPlaceId = detail.contentId ?: contentId,
+				contentTypeId = contentTypeId,
+				contentTypeName = contentType?.displayName,
+				stopType = contentType?.stopType ?: StopType.SIGHTSEEING,
+				name = detail.title ?: contentId,
+				category = contentType?.displayName,
+				address = detail.address,
+				latitude = detail.latitude,
+				longitude = detail.longitude,
+				phone = detail.tel,
+				homepageUrl = detail.homepage,
+				imageUrl = detail.firstImage ?: detail.firstImageThumbnail,
+				overview = detail.overview,
+				lclsSystm1 = detail.lclsSystm1,
+				accessibility = TripPlaceAccessibilityResponse.from(accessibility),
+				recommendationTags = listOfNotNull(
+					"tour_api",
+					contentTypeId?.let { "type:$it" },
+					detail.lclsSystm1?.lowercase(),
+					if (accessibility?.hasAnyPriorityInfo() == true) "mobility_info" else null,
+				),
+				sourcePayload = mapOf(
+					"provider" to "tour_api",
+					"detailCommon" to detail.raw,
+					"accessibility" to accessibility?.raw,
+				),
+			)
+		}
+	}
+}
+
+@Schema(description = "방문지 무장애 주요 정보")
+data class TripPlaceAccessibilityResponse(
+	@field:Schema(description = "주차 여부", nullable = true)
+	val parking: String?,
+
+	@field:Schema(description = "대중교통", nullable = true)
+	val publicTransport: String?,
+
+	@field:Schema(description = "접근로", nullable = true)
+	val route: String?,
+
+	@field:Schema(description = "휠체어", nullable = true)
+	val wheelchair: String?,
+
+	@field:Schema(description = "출입통로", nullable = true)
+	val exit: String?,
+
+	@field:Schema(description = "엘리베이터", nullable = true)
+	val elevator: String?,
+
+	@field:Schema(description = "화장실", nullable = true)
+	val restroom: String?,
+) {
+	companion object {
+		fun from(accessibility: TourApiAccessibility?): TripPlaceAccessibilityResponse =
+			TripPlaceAccessibilityResponse(
+				parking = accessibility?.parking,
+				publicTransport = accessibility?.publicTransport,
+				route = accessibility?.route,
+				wheelchair = accessibility?.wheelchair,
+				exit = accessibility?.exit,
+				elevator = accessibility?.elevator,
+				restroom = accessibility?.restroom,
 			)
 	}
 }

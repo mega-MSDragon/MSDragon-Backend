@@ -11,10 +11,14 @@ import com.msdragon.backend.trip.dto.TripCourseResponse
 import com.msdragon.backend.trip.dto.TripDestinationResponse
 import com.msdragon.backend.trip.dto.TripDetailResponse
 import com.msdragon.backend.trip.dto.TripParentCandidatesResponse
+import com.msdragon.backend.trip.dto.TripPlaceDetailResponse
+import com.msdragon.backend.trip.dto.TripPlaceSearchResponse
 import com.msdragon.backend.trip.service.TripCourseRecommendationService
+import com.msdragon.backend.trip.service.TripPlaceService
 import com.msdragon.backend.trip.service.TripService
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
+import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.responses.ApiResponse as SwaggerApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
@@ -27,6 +31,7 @@ import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 
@@ -37,6 +42,7 @@ import org.springframework.web.bind.annotation.RestController
 class TripController(
 	private val tripService: TripService,
 	private val tripCourseRecommendationService: TripCourseRecommendationService,
+	private val tripPlaceService: TripPlaceService,
 ) {
 	@Operation(
 		summary = "여행 대상 부모 후보 조회",
@@ -165,6 +171,76 @@ class TripController(
 		ApiResponse.success(
 			message = "여행 추천 코스 생성 성공",
 			data = tripCourseRecommendationService.recommendCourse(currentUser, tripId),
+		)
+
+	@Operation(
+		summary = "방문지 검색",
+		description = "코스 편집 화면에서 여행 도시 범위 안의 TourAPI 방문지를 키워드로 검색합니다. 숙박은 검색 결과에서 제외합니다.",
+	)
+	@ApiResponses(
+		value = [
+			SwaggerApiResponse(responseCode = "200", description = "방문지 검색 성공"),
+			SwaggerApiResponse(responseCode = "400", description = "검색 요청 값이 올바르지 않음"),
+			SwaggerApiResponse(responseCode = "401", description = "인증 실패"),
+			SwaggerApiResponse(responseCode = "403", description = "검색 권한 없음"),
+			SwaggerApiResponse(responseCode = "404", description = "여행을 찾을 수 없음"),
+			SwaggerApiResponse(responseCode = "500", description = "TourAPI 설정 또는 호출 실패"),
+		],
+	)
+	@GetMapping("/{tripId}/places/search")
+	fun searchTripPlaces(
+		@CurrentUser currentUser: AuthenticatedUser,
+		@Parameter(description = "여행 ID", example = "1")
+		@PathVariable tripId: Long,
+		@Parameter(description = "검색어", example = "경주 맛집")
+		@RequestParam keyword: String,
+		@Parameter(
+			description = "TourAPI 콘텐츠 타입 ID. 생략하면 숙박을 제외한 지원 타입 전체를 검색합니다.",
+			example = "39",
+			schema = Schema(allowableValues = ["12", "14", "15", "28", "38", "39"]),
+		)
+		@RequestParam(required = false) contentTypeId: String?,
+		@Parameter(description = "페이지 번호", example = "1")
+		@RequestParam(defaultValue = "1") page: Int,
+		@Parameter(description = "페이지 크기. 최대 50", example = "20")
+		@RequestParam(defaultValue = "20") size: Int,
+	): ApiResponse<TripPlaceSearchResponse> =
+		ApiResponse.success(
+			message = "방문지 검색 성공",
+			data = tripPlaceService.searchPlaces(currentUser, tripId, keyword, contentTypeId, page, size),
+		)
+
+	@Operation(
+		summary = "방문지 상세 조회",
+		description = "코스 편집 화면에서 TourAPI 방문지 상세와 무장애 주요 정보를 조회합니다.",
+	)
+	@ApiResponses(
+		value = [
+			SwaggerApiResponse(responseCode = "200", description = "방문지 상세 조회 성공"),
+			SwaggerApiResponse(responseCode = "400", description = "상세 조회 요청 값이 올바르지 않음"),
+			SwaggerApiResponse(responseCode = "401", description = "인증 실패"),
+			SwaggerApiResponse(responseCode = "403", description = "조회 권한 없음"),
+			SwaggerApiResponse(responseCode = "404", description = "여행 또는 방문지를 찾을 수 없음"),
+			SwaggerApiResponse(responseCode = "500", description = "TourAPI 설정 또는 호출 실패"),
+		],
+	)
+	@GetMapping("/{tripId}/places/{contentId}")
+	fun getTripPlaceDetail(
+		@CurrentUser currentUser: AuthenticatedUser,
+		@Parameter(description = "여행 ID", example = "1")
+		@PathVariable tripId: Long,
+		@Parameter(description = "TourAPI contentId", example = "988449")
+		@PathVariable contentId: String,
+		@Parameter(
+			description = "TourAPI 콘텐츠 타입 ID. 알고 있는 경우 전달합니다.",
+			example = "12",
+			schema = Schema(allowableValues = ["12", "14", "15", "28", "38", "39"]),
+		)
+		@RequestParam(required = false) contentTypeId: String?,
+	): ApiResponse<TripPlaceDetailResponse> =
+		ApiResponse.success(
+			message = "방문지 상세 조회 성공",
+			data = tripPlaceService.getPlaceDetail(currentUser, tripId, contentId, contentTypeId),
 		)
 
 	@Operation(

@@ -20,6 +20,13 @@ data class TourApiPlaceSearch(
 	val pageNo: Int = 1,
 )
 
+data class TourApiKeywordSearch(
+	val region: TourApiRegion,
+	val keyword: String,
+	val numOfRows: Int = 20,
+	val pageNo: Int = 1,
+)
+
 data class TourApiPlaceSummary(
 	val contentId: String,
 	val contentTypeId: String,
@@ -40,6 +47,18 @@ data class TourApiPlaceDetail(
 	val homepage: String?,
 	val overview: String?,
 	val raw: Map<String, Any?>,
+	val contentId: String? = null,
+	val contentTypeId: String? = null,
+	val title: String? = null,
+	val address: String? = null,
+	val latitude: BigDecimal? = null,
+	val longitude: BigDecimal? = null,
+	val tel: String? = null,
+	val firstImage: String? = null,
+	val firstImageThumbnail: String? = null,
+	val lclsSystm1: String? = null,
+	val lclsSystm2: String? = null,
+	val lclsSystm3: String? = null,
 )
 
 data class TourApiAccessibility(

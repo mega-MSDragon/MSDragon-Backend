@@ -10,6 +10,7 @@
 | 목적 | Operation | URL | 사용 시점 |
 |------|-----------|-----|-----------|
 | 지역별 장소 후보 조회 | `areaBasedList2` | `https://apis.data.go.kr/B551011/KorWithService2/areaBasedList2` | 추천 코스 생성 시 도시, 콘텐츠 타입별 후보 수집 |
+| 키워드 장소 검색 | `searchKeyword2` | `https://apis.data.go.kr/B551011/KorWithService2/searchKeyword2` | 코스 편집 화면에서 도시 범위 안의 방문지 후보 검색 |
 | 장소 공통 상세 조회 | `detailCommon2` | `https://apis.data.go.kr/B551011/KorWithService2/detailCommon2` | 최종 선택된 장소의 홈페이지, 소개 문구 보강 |
 | 무장애 정보 조회 | `detailWithTour2` | `https://apis.data.go.kr/B551011/KorWithService2/detailWithTour2` | 이동 도움 필요 부모가 있으면 후보 점수 계산에 반영하고, 최종 선택 장소 스냅샷에 저장 |
 | 법정동 코드 확인 | `ldongCode2` | `https://apis.data.go.kr/B551011/KorWithService2/ldongCode2` | 여행 도시 catalog를 TourAPI 법정동 코드로 매핑할 때 기준으로 사용 |
@@ -27,6 +28,7 @@
 ## 후보 콘텐츠 타입
 
 숙박은 부모 프로필 기반 추천 장소에서 제외합니다.
+코스 편집용 키워드 검색도 같은 콘텐츠 타입만 허용하며, 사용자가 콘텐츠 타입을 지정하지 않으면 아래 타입 전체를 대상으로 후처리 필터링합니다.
 
 | contentTypeId | 의미 | 저장 stopType |
 |---------------|------|---------------|
@@ -127,3 +129,11 @@ TourAPI 분류체계 대분류 기준으로 부모 프로필 신호를 매핑합
 - `sourcePayload`에는 TourAPI 목록 응답, 상세 응답, 무장애 응답, 추천 점수를 저장합니다.
 - 추천 생성이 완료되면 여행 상태가 `planning`인 경우 `ready`로 변경합니다.
 - 도착시간, 이동거리, 경로 순서 최적화는 저장하지 않습니다. 해당 값은 Tmap 연동 작업에서 보강합니다.
+
+## 코스 편집 검색 규칙
+
+- 방문지 검색 API는 여행의 `destinationCode`를 TourAPI 법정동 코드로 변환한 뒤 `searchKeyword2`를 호출합니다.
+- 여러 지역을 묶은 destination은 각 지역을 조회한 뒤 `contentId` 기준으로 중복 제거합니다.
+- 검색 결과는 `contentTypeId`가 지원 타입인 장소만 내려줍니다. 숙박은 제외합니다.
+- 검색 상세 API는 `detailCommon2`와 `detailWithTour2`를 조회해 장소 표시 정보, 무장애 주요 문자열, 원본 응답 일부를 내려줍니다.
+- 검색/상세 API는 `trip_stops`를 직접 수정하지 않습니다. 실제 반영은 클라이언트가 선택한 장소들을 `PUT /api/v1/trips/{tripId}/course`로 저장할 때 이루어집니다.
