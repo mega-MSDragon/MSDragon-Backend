@@ -17,7 +17,9 @@
 - 여행 생성 시 선택한 부모의 추천 입력값을 `recommendationSnapshot`으로 저장합니다. 이후 부모 프로필이 수정되어도 생성 당시 추천 기준은 유지됩니다.
 - 여행 코스는 일자별 방문지 목록을 전체 저장합니다. 요청 배열 순서가 방문 순서가 되며, 포함하지 않은 일자는 빈 코스로 저장됩니다.
 - 저장된 방문지는 외부 API 원본이 바뀌어도 기존 코스를 유지할 수 있도록 `trip_stops`에 장소 스냅샷을 저장합니다.
-- 실제 공공데이터/Tmap 연동과 추천 코스 생성은 후속 작업입니다.
+- 추천 코스 생성은 한국관광공사 TourAPI 무장애여행 서비스로 장소 후보를 조회하고, 부모 프로필 스냅샷으로 점수를 계산해 `trip_stops`에 저장합니다.
+- 추천 코스 생성은 장소 추천까지만 수행합니다. Tmap 경로/거리/소요시간 계산은 후속 작업입니다.
+- 추천 코스 생성이 완료되면 여행 상태가 `planning`인 경우 `ready`로 변경됩니다.
 
 ---
 
@@ -31,6 +33,7 @@
 | `GET` | `/api/v1/trips/{tripId}` | 여행 상세 조회 |
 | `GET` | `/api/v1/trips/{tripId}/course` | 여행 코스 조회 |
 | `POST` | `/api/v1/trips` | 여행 생성 |
+| `POST` | `/api/v1/trips/{tripId}/course/recommendation` | 여행 추천 코스 생성 |
 | `PUT` | `/api/v1/trips/{tripId}/course` | 여행 코스 전체 저장 |
 
 ---
@@ -192,7 +195,7 @@
 }
 ```
 
-생성 직후 `status`는 `planning`입니다. 추천 코스 자동 생성과 여행 모드가 붙으면 `ready`, `in_progress`, `completed` 전환을 별도 정책으로 확정합니다.
+생성 직후 `status`는 `planning`입니다. 추천 코스 생성이 완료되면 `ready`가 되며, `in_progress`, `completed` 전환은 여행 모드 작업에서 확정합니다.
 `recommendationSnapshot.policyVersion`은 부모 여행 MBTI 정책 버전을 의미합니다.
 
 ---
@@ -305,6 +308,83 @@
   }
 }
 ```
+
+---
+
+## POST /api/v1/trips/{tripId}/course/recommendation
+
+같은 가족 구성원이 여행 추천 코스를 생성합니다.
+요청 본문은 받지 않습니다. 서버는 여행 생성 시 저장한 `recommendationSnapshot`, 여행 도시, 여행 일자를 기준으로 TourAPI 장소 후보를 조회합니다.
+
+생성 규칙:
+
+- 숙박을 제외한 TourAPI 콘텐츠 타입을 후보로 사용합니다.
+- 부모 프로필의 `walkingPace` 기준으로 하루 장소 수를 정합니다.
+- 부모가 2명인 경우 더 천천히 걷는 부모 기준을 사용합니다.
+- 음식점 후보가 있으면 각 일자에 식사 장소 1곳을 포함합니다.
+- 이동 도움이 필요한 부모가 있으면 TourAPI 무장애 정보 문자열 존재 여부를 점수에 반영합니다.
+- 기존 코스가 있으면 추천 결과로 덮어씁니다.
+- 추천 생성이 완료되면 여행 상태가 `planning`인 경우 `ready`가 됩니다.
+
+추천 정책 상세는 `docs/policy/course-recommendation.md`를 따릅니다.
+
+### Request
+
+없음.
+
+### Response
+
+`GET /api/v1/trips/{tripId}/course`와 같은 `TripCourseResponse` 형태입니다.
+
+```json
+{
+  "status": 200,
+  "success": true,
+  "message": "여행 추천 코스 생성 성공",
+  "data": {
+    "tripId": 1,
+    "title": "경주 여행",
+    "destination": {
+      "code": "gyeongju",
+      "displayName": "경주",
+      "displayOrder": 3,
+      "badgeLabel": "인기"
+    },
+    "status": "ready",
+    "days": [
+      {
+        "tripDayId": 1,
+        "dayNumber": 1,
+        "travelDate": "2026-07-10",
+        "stops": [
+          {
+            "id": 1,
+            "sortOrder": 1,
+            "stopType": "sightseeing",
+            "sourceProvider": "tour_api",
+            "externalPlaceId": "988449",
+            "contentTypeId": "12",
+            "name": "오도리 공원",
+            "category": "관광지",
+            "recommendationReason": "부모님 선호 테마와 무장애 정보를 함께 반영한 추천 장소입니다.",
+            "recommendationTags": ["tour_api", "type:12", "na", "mobility_info"],
+            "sourcePayload": {
+              "provider": "tour_api",
+              "recommendation": {
+                "policyVersion": "tour-api-course-recommendation-v1",
+                "score": 51
+              }
+            },
+            "isManualAdded": false
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+TourAPI 서비스키가 서버에 설정되어 있지 않거나 TourAPI 호출이 실패하면 `500`을 반환합니다.
 
 ---
 

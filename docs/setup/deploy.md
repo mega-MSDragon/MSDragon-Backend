@@ -78,10 +78,13 @@ curl -k https://localhost/health
 ```env
 APP_AUTH_JWT_SECRET=<openssl rand -base64 48 결과값>
 APP_AUTH_APPLE_CLIENT_ID=com.msdragon.ios
+TOUR_API_SERVICE_KEY=<한국관광공사 TourAPI 서비스키>
+TOUR_API_MOBILE_APP=MSDragon
 ```
 
 `APP_AUTH_JWT_SECRET`은 의미 있는 단어가 아니라 충분히 긴 랜덤 문자열이어야 합니다. 이 값을 변경하면 기존 로그인 토큰은 모두 무효화됩니다.
 `POSTGRES_HOST_PORT`는 EC2 host에서 publish할 PostgreSQL 포트입니다. DBeaver에서 직접 접속하려면 기본값 `5432`를 사용하고, 보안 그룹에서도 같은 포트를 허용합니다.
+`TOUR_API_SERVICE_KEY`가 비어 있으면 서버는 실행되지만 추천 코스 생성 API는 설정 오류로 실패합니다.
 
 ---
 
@@ -110,6 +113,7 @@ docker compose up -d --build
 - 해당 디렉터리에 Git repository clone 완료
 - `.env` 파일 존재
 - `.env`에 `APP_AUTH_JWT_SECRET`, `APP_AUTH_APPLE_CLIENT_ID` 설정 완료
+- 추천 코스 생성 API를 사용할 경우 `.env`에 `TOUR_API_SERVICE_KEY` 설정 완료
 - `deploy/nginx/certs/origin.pem` 존재
 - `deploy/nginx/certs/origin.key` 존재
 

@@ -11,6 +11,7 @@ import com.msdragon.backend.trip.dto.TripCourseResponse
 import com.msdragon.backend.trip.dto.TripDestinationResponse
 import com.msdragon.backend.trip.dto.TripDetailResponse
 import com.msdragon.backend.trip.dto.TripParentCandidatesResponse
+import com.msdragon.backend.trip.service.TripCourseRecommendationService
 import com.msdragon.backend.trip.service.TripService
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
@@ -35,6 +36,7 @@ import org.springframework.web.bind.annotation.RestController
 @SecurityRequirement(name = BEARER_AUTH_SCHEME)
 class TripController(
 	private val tripService: TripService,
+	private val tripCourseRecommendationService: TripCourseRecommendationService,
 ) {
 	@Operation(
 		summary = "여행 대상 부모 후보 조회",
@@ -141,8 +143,33 @@ class TripController(
 		)
 
 	@Operation(
+		summary = "여행 추천 코스 생성",
+		description = "여행 생성 시 저장한 부모님 프로필 스냅샷과 TourAPI 장소/무장애 정보를 기반으로 일자별 추천 코스를 생성해 저장합니다. 기존 코스가 있으면 추천 결과로 덮어씁니다.",
+	)
+	@ApiResponses(
+		value = [
+			SwaggerApiResponse(responseCode = "200", description = "여행 추천 코스 생성 성공"),
+			SwaggerApiResponse(responseCode = "400", description = "추천 코스 생성 요청 상태가 올바르지 않음"),
+			SwaggerApiResponse(responseCode = "401", description = "인증 실패"),
+			SwaggerApiResponse(responseCode = "403", description = "생성 권한 없음"),
+			SwaggerApiResponse(responseCode = "404", description = "여행을 찾을 수 없음"),
+			SwaggerApiResponse(responseCode = "500", description = "TourAPI 설정 또는 호출 실패"),
+		],
+	)
+	@PostMapping("/{tripId}/course/recommendation")
+	fun recommendTripCourse(
+		@CurrentUser currentUser: AuthenticatedUser,
+		@Parameter(description = "여행 ID", example = "1")
+		@PathVariable tripId: Long,
+	): ApiResponse<TripCourseResponse> =
+		ApiResponse.success(
+			message = "여행 추천 코스 생성 성공",
+			data = tripCourseRecommendationService.recommendCourse(currentUser, tripId),
+		)
+
+	@Operation(
 		summary = "여행 생성",
-		description = "자녀 사용자가 여행 대상 부모, 도시, 날짜를 선택해 여행 기본 정보를 생성합니다. 실제 추천 코스 생성은 후속 작업입니다.",
+		description = "자녀 사용자가 여행 대상 부모, 도시, 날짜를 선택해 여행 기본 정보를 생성합니다. 추천 코스는 별도 추천 생성 API에서 생성합니다.",
 	)
 	@ApiResponses(
 		value = [

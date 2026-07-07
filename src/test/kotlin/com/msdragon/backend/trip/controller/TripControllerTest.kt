@@ -26,11 +26,20 @@ import com.msdragon.backend.trip.repository.TripDayRepository
 import com.msdragon.backend.trip.repository.TripParticipantRepository
 import com.msdragon.backend.trip.repository.TripRepository
 import com.msdragon.backend.trip.repository.TripStopRepository
+import com.msdragon.backend.trip.tourapi.TourApiAccessibility
+import com.msdragon.backend.trip.tourapi.TourApiClient
+import com.msdragon.backend.trip.tourapi.TourApiPlaceDetail
+import com.msdragon.backend.trip.tourapi.TourApiPlaceSearch
+import com.msdragon.backend.trip.tourapi.TourApiPlaceSummary
+import org.springframework.boot.test.context.TestConfiguration
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
+import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.Import
+import org.springframework.context.annotation.Primary
 import org.springframework.http.MediaType
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
@@ -44,6 +53,7 @@ import java.time.ZoneId
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@Import(TripControllerTest.TourApiTestConfig::class)
 class TripControllerTest {
 	@Autowired
 	private lateinit var mockMvc: MockMvc
@@ -84,8 +94,12 @@ class TripControllerTest {
 	@Autowired
 	private lateinit var tripRepository: TripRepository
 
+	@Autowired
+	private lateinit var fakeTourApiClient: FakeTourApiClient
+
 	@BeforeEach
 	fun setUp() {
+		fakeTourApiClient.reset()
 		tripStopRepository.deleteAll()
 		tripDayRepository.deleteAll()
 		tripParticipantRepository.deleteAll()
@@ -405,6 +419,47 @@ class TripControllerTest {
 	}
 
 	@Test
+	fun `여행 추천 코스를 생성하면 부모 프로필 기준으로 일자별 방문지를 저장한다`() {
+		val child = saveUser(UserRole.CHILD, "child-1", "혜린")
+		val mother = saveUser(UserRole.PARENT, "parent-1", "엄마", GenderType.FEMALE)
+		connectFamily(child, mother)
+		saveCompletedParentProfile(mother)
+		val startDate = futureDate(10)
+		val tripId = createTrip(child, mother, startDate, startDate.plusDays(1))
+		fakeTourApiClient.placesByContentType["12"] = listOf(
+			tourPlace("nature-1", "12", "경주 산책 공원", "NA"),
+			tourPlace("nature-2", "12", "보문 호수길", "NA"),
+			tourPlace("nature-3", "12", "불국사 숲길", "NA"),
+			tourPlace("nature-4", "12", "월정교 산책길", "NA"),
+		)
+		fakeTourApiClient.placesByContentType["14"] = listOf(
+			tourPlace("culture-1", "14", "경주 문화관", "VE"),
+			tourPlace("culture-2", "14", "신라 전시관", "VE"),
+		)
+		fakeTourApiClient.placesByContentType["39"] = listOf(
+			tourPlace("food-1", "39", "경주 한식당", "FD"),
+			tourPlace("food-2", "39", "황리단길 밥집", "FD"),
+		)
+
+		mockMvc.perform(
+			post("/api/v1/trips/$tripId/course/recommendation")
+				.header("Authorization", "Bearer ${tokenService.createAccessToken(child)}"),
+		)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.data.tripId").value(tripId))
+			.andExpect(jsonPath("$.data.status").value("ready"))
+			.andExpect(jsonPath("$.data.days.length()").value(2))
+			.andExpect(jsonPath("$.data.days[0].stops.length()").value(3))
+			.andExpect(jsonPath("$.data.days[1].stops.length()").value(3))
+			.andExpect(jsonPath("$.data.days[0].stops[0].sourceProvider").value("tour_api"))
+			.andExpect(jsonPath("$.data.days[0].stops[0].isManualAdded").value(false))
+			.andExpect(jsonPath("$.data.days[0].stops[0].sourcePayload.recommendation.policyVersion").value("tour-api-course-recommendation-v1"))
+			.andExpect(jsonPath("$.data.days[0].stops[1].stopType").value("meal"))
+			.andExpect(jsonPath("$.data.days[0].stops[1].recommendationTags[2]").value("fd"))
+			.andExpect(jsonPath("$.data.days[1].stops[1].stopType").value("meal"))
+	}
+
+	@Test
 	fun `부모는 여행을 생성할 수 없다`() {
 		val parent = saveUser(UserRole.PARENT, "parent-1", "엄마", GenderType.FEMALE)
 
@@ -508,4 +563,63 @@ class TripControllerTest {
 
 	private fun futureDate(daysFromToday: Long): LocalDate =
 		LocalDate.now(ZoneId.of("Asia/Seoul")).plusDays(daysFromToday)
+
+	private fun tourPlace(
+		contentId: String,
+		contentTypeId: String,
+		title: String,
+		lclsSystm1: String,
+	): TourApiPlaceSummary =
+		TourApiPlaceSummary(
+			contentId = contentId,
+			contentTypeId = contentTypeId,
+			title = title,
+			address = "경상북도 경주시",
+			latitude = "35.8562".toBigDecimal(),
+			longitude = "129.2247".toBigDecimal(),
+			tel = "054-000-0000",
+			firstImage = "https://example.com/$contentId.jpg",
+			firstImageThumbnail = "https://example.com/$contentId-thumb.jpg",
+			lclsSystm1 = lclsSystm1,
+			lclsSystm2 = null,
+			lclsSystm3 = null,
+			raw = mapOf(
+				"contentid" to contentId,
+				"contenttypeid" to contentTypeId,
+				"title" to title,
+				"lclsSystm1" to lclsSystm1,
+			),
+		)
+
+	@TestConfiguration
+	class TourApiTestConfig {
+		@Bean
+		@Primary
+		fun fakeTourApiClient(): FakeTourApiClient = FakeTourApiClient()
+	}
+
+	class FakeTourApiClient : TourApiClient {
+		val placesByContentType: MutableMap<String, List<TourApiPlaceSummary>> = mutableMapOf()
+		val detailsByContentId: MutableMap<String, TourApiPlaceDetail> = mutableMapOf()
+		val accessibilityByContentId: MutableMap<String, TourApiAccessibility> = mutableMapOf()
+
+		override fun findPlaces(search: TourApiPlaceSearch): List<TourApiPlaceSummary> =
+			placesByContentType[search.contentTypeId].orEmpty()
+
+		override fun getPlaceDetail(contentId: String): TourApiPlaceDetail? =
+			detailsByContentId[contentId] ?: TourApiPlaceDetail(
+				homepage = "https://example.com/$contentId",
+				overview = "$contentId 소개",
+				raw = mapOf("contentid" to contentId),
+			)
+
+		override fun getAccessibility(contentId: String): TourApiAccessibility? =
+			accessibilityByContentId[contentId]
+
+		fun reset() {
+			placesByContentType.clear()
+			detailsByContentId.clear()
+			accessibilityByContentId.clear()
+		}
+	}
 }

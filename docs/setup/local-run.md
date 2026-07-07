@@ -64,6 +64,18 @@ Compose로 실행하면 PostgreSQL도 host port로 publish됩니다. 기본 포�
 
 ---
 
+## 외부 API 환경 변수
+
+여행 추천 코스 생성 API를 호출하려면 한국관광공사 TourAPI 서비스키가 필요합니다.
+서비스키가 비어 있으면 애플리케이션은 실행되지만, 추천 코스 생성 API는 설정 오류로 실패합니다.
+
+| Name | 설명 |
+|------|------|
+| `TOUR_API_SERVICE_KEY` | 한국관광공사 TourAPI 서비스키 |
+| `TOUR_API_MOBILE_APP` | TourAPI `MobileApp` 파라미터. 기본값 `MSDragon` |
+
+---
+
 ## DB 설정
 
 `local` profile은 H2 인메모리 DB를 사용합니다.

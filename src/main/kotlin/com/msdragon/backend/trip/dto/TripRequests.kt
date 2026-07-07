@@ -63,7 +63,6 @@ data class CreateTripRequest(
 data class SaveTripCourseRequest(
 	@field:Schema(description = "저장할 일자별 코스. 포함하지 않은 일자는 빈 코스로 저장됩니다.")
 	@field:Valid
-	@field:Size(max = 60, message = "여행 일자는 최대 60개까지 저장할 수 있습니다.")
 	val days: List<SaveTripCourseDayRequest> = emptyList(),
 )
 

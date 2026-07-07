@@ -9,3 +9,4 @@
 | 문서 | 설명 |
 |------|------|
 | [parent-travel-mbti.md](./parent-travel-mbti.md) | 부모님 여행 MBTI 타입과 가중치 계산 정책 |
+| [course-recommendation.md](./course-recommendation.md) | TourAPI 기반 여행 코스 추천 API 사용처와 가중치 정책 |
