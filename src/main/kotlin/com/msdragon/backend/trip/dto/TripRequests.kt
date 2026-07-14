@@ -59,6 +59,54 @@ data class CreateTripRequest(
 	val title: String? = null,
 )
 
+@Schema(description = "여행 기본정보 수정 요청")
+data class UpdateTripRequest(
+	@field:Schema(description = "여행 제목", example = "경주 가족 여행")
+	@field:NotBlank(message = "여행 제목을 입력해주세요.")
+	@field:Size(max = 80, message = "여행 제목은 80자 이하로 입력해주세요.")
+	val title: String,
+
+	@field:Schema(
+		description = "여행 도시 코드",
+		example = "gyeongju",
+		allowableValues = [
+			"daegu",
+			"gangneung_sokcho",
+			"gyeongju",
+			"busan",
+			"yeosu",
+			"incheon",
+			"jeonju",
+			"jeju",
+			"seoul",
+			"suwon_yongin",
+			"tongyeong_geoje_namhae",
+			"pohang_andong",
+		],
+	)
+	@field:NotNull(message = "여행 도시를 선택해주세요.")
+	val destinationCode: TripDestinationCode,
+
+	@field:Schema(description = "여행 시작일", example = "2026-07-10")
+	@field:NotNull(message = "여행 시작일을 선택해주세요.")
+	val startDate: LocalDate,
+
+	@field:Schema(description = "여행 종료일. 시작일과 같거나 이후 날짜를 선택할 수 있습니다.", example = "2026-07-11")
+	@field:NotNull(message = "여행 종료일을 선택해주세요.")
+	val endDate: LocalDate,
+
+	@field:Schema(description = "함께 여행할 부모 사용자 ID 목록. 같은 가족에 연결된 부모만 선택할 수 있습니다.", example = "[2,3]")
+	@field:NotEmpty(message = "여행 대상 부모를 선택해주세요.")
+	@field:Size(max = 2, message = "부모는 최대 2명까지 선택할 수 있습니다.")
+	val parentUserIds: List<Long>,
+
+	@field:Schema(
+		description = "도시, 날짜 또는 참여 부모 변경으로 기존 코스가 삭제되는 것에 동의했는지 여부. 기존 코스가 있을 때만 true가 필요합니다.",
+		example = "false",
+	)
+	val courseResetConfirmed: Boolean = false,
+)
+
 @Schema(description = "여행 코스 전체 저장 요청")
 data class SaveTripCourseRequest(
 	@field:Schema(description = "저장할 일자별 코스. 포함하지 않은 일자는 빈 코스로 저장됩니다.")

@@ -26,6 +26,7 @@ import com.msdragon.backend.trip.repository.TripDayRepository
 import com.msdragon.backend.trip.repository.TripParticipantRepository
 import com.msdragon.backend.trip.repository.TripRepository
 import com.msdragon.backend.trip.repository.TripStopRepository
+import com.msdragon.backend.trip.entity.TripStatus
 import com.msdragon.backend.trip.tourapi.TourApiAccessibility
 import com.msdragon.backend.trip.tourapi.TourApiClient
 import com.msdragon.backend.trip.tourapi.TourApiKeywordSearch
@@ -396,6 +397,195 @@ class TripControllerTest {
 	}
 
 	@Test
+	fun `여행 제목만 수정하면 기존 코스를 유지한다`() {
+		val child = saveUser(UserRole.CHILD, "child-1", "혜린")
+		val mother = saveUser(UserRole.PARENT, "parent-1", "엄마", GenderType.FEMALE)
+		connectFamily(child, mother)
+		saveCompletedParentProfile(mother)
+		val startDate = futureDate(10)
+		val tripId = createTrip(child, mother, startDate, startDate)
+		saveSingleStopCourse(child, tripId)
+
+		mockMvc.perform(
+			put("/api/v1/trips/$tripId")
+				.header("Authorization", "Bearer ${tokenService.createAccessToken(child)}")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(
+					"""
+					{
+					  "title": "엄마와 경주 여행",
+					  "destinationCode": "gyeongju",
+					  "startDate": "$startDate",
+					  "endDate": "$startDate",
+					  "parentUserIds": [${requireNotNull(mother.id)}]
+					}
+					""".trimIndent(),
+				),
+		)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.data.title").value("엄마와 경주 여행"))
+
+		mockMvc.perform(
+			get("/api/v1/trips/$tripId/course")
+				.header("Authorization", "Bearer ${tokenService.createAccessToken(child)}"),
+		)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.data.days[0].stops.length()").value(1))
+			.andExpect(jsonPath("$.data.days[0].stops[0].name").value("경주 산책 공원"))
+	}
+
+	@Test
+	fun `코스가 있는 여행의 추천 입력 변경은 초기화 동의가 필요하다`() {
+		val child = saveUser(UserRole.CHILD, "child-1", "혜린")
+		val mother = saveUser(UserRole.PARENT, "parent-1", "엄마", GenderType.FEMALE)
+		connectFamily(child, mother)
+		saveCompletedParentProfile(mother)
+		val startDate = futureDate(10)
+		val tripId = createTrip(child, mother, startDate, startDate)
+		saveSingleStopCourse(child, tripId)
+
+		mockMvc.perform(
+			put("/api/v1/trips/$tripId")
+				.header("Authorization", "Bearer ${tokenService.createAccessToken(child)}")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(
+					"""
+					{
+					  "title": "부산 여행",
+					  "destinationCode": "busan",
+					  "startDate": "$startDate",
+					  "endDate": "$startDate",
+					  "parentUserIds": [${requireNotNull(mother.id)}]
+					}
+					""".trimIndent(),
+				),
+		)
+			.andExpect(status().isBadRequest)
+			.andExpect(
+				jsonPath("$.message")
+					.value("도시, 날짜 또는 참여 부모를 변경하면 기존 코스가 삭제됩니다. 코스 초기화에 동의해주세요."),
+			)
+	}
+
+	@Test
+	fun `여행 추천 입력 변경에 동의하면 코스와 경로를 초기화하고 일자와 부모를 갱신한다`() {
+		val child = saveUser(UserRole.CHILD, "child-1", "혜린")
+		val mother = saveUser(UserRole.PARENT, "parent-1", "엄마", GenderType.FEMALE)
+		val father = saveUser(UserRole.PARENT, "parent-2", "아빠", GenderType.MALE)
+		connectFamily(child, mother, father)
+		saveCompletedParentProfile(mother)
+		saveCompletedParentProfile(father)
+		val startDate = futureDate(10)
+		val tripId = createTrip(child, mother, startDate, startDate)
+		saveSingleStopCourse(child, tripId)
+		val trip = tripRepository.findById(tripId.toLong()).orElseThrow()
+		trip.status = TripStatus.READY
+		tripRepository.saveAndFlush(trip)
+		val changedStartDate = startDate.plusDays(5)
+		val changedEndDate = changedStartDate.plusDays(2)
+
+		mockMvc.perform(
+			put("/api/v1/trips/$tripId")
+				.header("Authorization", "Bearer ${tokenService.createAccessToken(child)}")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(
+					"""
+					{
+					  "title": "아빠와 부산 여행",
+					  "destinationCode": "busan",
+					  "startDate": "$changedStartDate",
+					  "endDate": "$changedEndDate",
+					  "parentUserIds": [${requireNotNull(father.id)}],
+					  "courseResetConfirmed": true
+					}
+					""".trimIndent(),
+				),
+		)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.data.title").value("아빠와 부산 여행"))
+			.andExpect(jsonPath("$.data.destination.code").value("busan"))
+			.andExpect(jsonPath("$.data.startDate").value(changedStartDate.toString()))
+			.andExpect(jsonPath("$.data.endDate").value(changedEndDate.toString()))
+			.andExpect(jsonPath("$.data.status").value("planning"))
+			.andExpect(jsonPath("$.data.participants.length()").value(2))
+			.andExpect(jsonPath("$.data.participants[1].userId").value(requireNotNull(father.id)))
+			.andExpect(jsonPath("$.data.recommendationSnapshot.destinationCode").value("busan"))
+			.andExpect(jsonPath("$.data.recommendationSnapshot.parents[0].parentUserId").value(requireNotNull(father.id)))
+			.andExpect(jsonPath("$.data.days.length()").value(3))
+			.andExpect(jsonPath("$.data.days[0].travelDate").value(changedStartDate.toString()))
+			.andExpect(jsonPath("$.data.days[2].travelDate").value(changedEndDate.toString()))
+
+		mockMvc.perform(
+			get("/api/v1/trips/$tripId/course")
+				.header("Authorization", "Bearer ${tokenService.createAccessToken(child)}"),
+		)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.data.days.length()").value(3))
+			.andExpect(jsonPath("$.data.days[0].route").doesNotExist())
+			.andExpect(jsonPath("$.data.days[0].stops.length()").value(0))
+	}
+
+	@Test
+	fun `여행을 만든 자녀가 아니면 여행 정보를 수정할 수 없다`() {
+		val child = saveUser(UserRole.CHILD, "child-1", "혜린")
+		val mother = saveUser(UserRole.PARENT, "parent-1", "엄마", GenderType.FEMALE)
+		connectFamily(child, mother)
+		saveCompletedParentProfile(mother)
+		val startDate = futureDate(10)
+		val tripId = createTrip(child, mother, startDate, startDate)
+
+		mockMvc.perform(
+			put("/api/v1/trips/$tripId")
+				.header("Authorization", "Bearer ${tokenService.createAccessToken(mother)}")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(
+					"""
+					{
+					  "title": "부모가 바꾼 여행",
+					  "destinationCode": "gyeongju",
+					  "startDate": "$startDate",
+					  "endDate": "$startDate",
+					  "parentUserIds": [${requireNotNull(mother.id)}]
+					}
+					""".trimIndent(),
+				),
+		)
+			.andExpect(status().isForbidden)
+			.andExpect(jsonPath("$.message").value("여행을 만든 자녀만 여행 정보를 수정할 수 있습니다."))
+	}
+
+	@Test
+	fun `다른 여행과 겹치는 날짜로 여행 정보를 수정할 수 없다`() {
+		val child = saveUser(UserRole.CHILD, "child-1", "혜린")
+		val mother = saveUser(UserRole.PARENT, "parent-1", "엄마", GenderType.FEMALE)
+		connectFamily(child, mother)
+		saveCompletedParentProfile(mother)
+		val firstStartDate = futureDate(10)
+		createTrip(child, mother, firstStartDate, firstStartDate.plusDays(1))
+		val secondStartDate = futureDate(20)
+		val secondTripId = createTrip(child, mother, secondStartDate, secondStartDate)
+
+		mockMvc.perform(
+			put("/api/v1/trips/$secondTripId")
+				.header("Authorization", "Bearer ${tokenService.createAccessToken(child)}")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(
+					"""
+					{
+					  "title": "겹치는 여행",
+					  "destinationCode": "gyeongju",
+					  "startDate": "${firstStartDate.plusDays(1)}",
+					  "endDate": "${firstStartDate.plusDays(1)}",
+					  "parentUserIds": [${requireNotNull(mother.id)}]
+					}
+					""".trimIndent(),
+				),
+		)
+			.andExpect(status().isBadRequest)
+			.andExpect(jsonPath("$.message").value("선택한 날짜에 이미 등록된 여행이 있습니다."))
+	}
+
+	@Test
 	fun `존재하지 않는 여행 일자에 코스를 저장할 수 없다`() {
 		val child = saveUser(UserRole.CHILD, "child-1", "혜린")
 		val mother = saveUser(UserRole.PARENT, "parent-1", "엄마", GenderType.FEMALE)
@@ -638,6 +828,37 @@ class TripControllerTest {
 		)
 			.andExpect(status().isBadRequest)
 			.andExpect(jsonPath("$.message").value("자녀 사용자만 여행을 만들 수 있습니다."))
+	}
+
+	private fun saveSingleStopCourse(user: User, tripId: Int) {
+		mockMvc.perform(
+			put("/api/v1/trips/$tripId/course")
+				.header("Authorization", "Bearer ${tokenService.createAccessToken(user)}")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(
+					"""
+					{
+					  "days": [
+					    {
+					      "dayNumber": 1,
+					      "stops": [
+					        {
+					          "stopType": "sightseeing",
+					          "sourceProvider": "tour_api",
+					          "externalPlaceId": "nature-1",
+					          "contentTypeId": "12",
+					          "name": "경주 산책 공원",
+					          "latitude": 35.8562,
+					          "longitude": 129.2247
+					        }
+					      ]
+					    }
+					  ]
+					}
+					""".trimIndent(),
+				),
+		)
+			.andExpect(status().isOk)
 	}
 
 	private fun createTrip(child: User, parent: User, startDate: LocalDate, endDate: LocalDate): Int {

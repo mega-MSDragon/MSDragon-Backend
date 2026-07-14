@@ -27,16 +27,16 @@ class Trip(
 	val createdByUser: User,
 
 	@Column(name = "destination_code", nullable = false, length = 60)
-	val destinationCode: TripDestinationCode,
+	var destinationCode: TripDestinationCode,
 
 	@Column(name = "title", nullable = false, length = 80)
 	var title: String,
 
 	@Column(name = "start_date", nullable = false)
-	val startDate: LocalDate,
+	var startDate: LocalDate,
 
 	@Column(name = "end_date", nullable = false)
-	val endDate: LocalDate,
+	var endDate: LocalDate,
 
 	@Column(name = "status", nullable = false, length = 30)
 	var status: TripStatus = TripStatus.PLANNING,
@@ -51,4 +51,22 @@ class Trip(
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	var id: Long? = null
 		protected set
+
+	fun updateInfo(
+		title: String,
+		destinationCode: TripDestinationCode,
+		startDate: LocalDate,
+		endDate: LocalDate,
+		recommendationSnapshot: String?,
+		resetToPlanning: Boolean,
+	) {
+		this.title = title
+		this.destinationCode = destinationCode
+		this.startDate = startDate
+		this.endDate = endDate
+		this.recommendationSnapshot = recommendationSnapshot
+		if (resetToPlanning) {
+			status = TripStatus.PLANNING
+		}
+	}
 }

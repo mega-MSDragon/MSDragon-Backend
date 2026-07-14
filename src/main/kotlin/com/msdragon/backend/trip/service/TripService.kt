@@ -28,6 +28,7 @@ import com.msdragon.backend.trip.dto.TripRecommendationSnapshotResponse
 import com.msdragon.backend.trip.dto.TripRouteSummaryResponse
 import com.msdragon.backend.trip.dto.TripStopResponse
 import com.msdragon.backend.trip.dto.TripSummaryResponse
+import com.msdragon.backend.trip.dto.UpdateTripRequest
 import com.msdragon.backend.trip.dto.relationLabelOf
 import com.msdragon.backend.trip.entity.Trip
 import com.msdragon.backend.trip.entity.TripDay
@@ -173,6 +174,91 @@ class TripService(
 	}
 
 	@Transactional
+	fun updateTrip(
+		currentUser: AuthenticatedUser,
+		tripId: Long,
+		request: UpdateTripRequest,
+	): TripDetailResponse {
+		val child = getLoginUser(currentUser.id)
+		val trip = tripRepository.findByIdAndDeletedAtIsNull(tripId)
+			?: throw NotFoundException("여행을 찾을 수 없습니다.")
+		validateTripEditable(child, trip)
+
+		val familyId = requireNotNull(trip.family.id)
+		val selectedParents = resolveSelectedParents(familyId, request.parentUserIds)
+		val existingParticipants = tripParticipantRepository.findAllByTripIdOrderByIdAsc(tripId)
+		val existingParentIds = existingParticipants
+			.filter { it.user.role == UserRole.PARENT }
+			.map { requireNotNull(it.user.id) }
+			.toSet()
+		val requestedParentIds = request.parentUserIds.toSet()
+		val destinationChanged = trip.destinationCode != request.destinationCode
+		val datesChanged = trip.startDate != request.startDate || trip.endDate != request.endDate
+		val participantsChanged = existingParentIds != requestedParentIds
+		val recommendationInputsChanged = destinationChanged || datesChanged || participantsChanged
+
+		val dayCount = if (datesChanged) {
+			validateDateRange(request.startDate, request.endDate).also {
+				if (
+					tripRepository.existsOverlappingTripExcludingId(
+						familyId = familyId,
+						tripId = tripId,
+						startDate = request.startDate,
+						endDate = request.endDate,
+						excludedStatus = TripStatus.ARCHIVED,
+					)
+				) {
+					throw BadRequestException("선택한 날짜에 이미 등록된 여행이 있습니다.")
+				}
+			}
+		} else {
+			0
+		}
+
+		val tripDays = tripDayRepository.findAllByTripIdOrderByDayNumberAsc(tripId)
+		val existingStops = tripStopRepository.findAllByTripDayTripIdOrderByTripDayDayNumberAscSortOrderAsc(tripId)
+		val hasSavedCourse = existingStops.isNotEmpty() || tripDays.any { it.routeOptimizedAt != null }
+		if (recommendationInputsChanged && hasSavedCourse && !request.courseResetConfirmed) {
+			throw BadRequestException("도시, 날짜 또는 참여 부모를 변경하면 기존 코스가 삭제됩니다. 코스 초기화에 동의해주세요.")
+		}
+
+		if (recommendationInputsChanged) {
+			resetCourse(existingStops, tripDays)
+			if (datesChanged) {
+				replaceTripDays(trip, tripDays, request.startDate, dayCount)
+			}
+			if (participantsChanged) {
+				replaceTripParticipants(trip, existingParticipants, selectedParents)
+			}
+		}
+
+		val recommendationSnapshot = if (recommendationInputsChanged) {
+			val selectedParentProfiles = resolveSelectedParentProfiles(selectedParents)
+			objectMapper.writeValueAsString(
+				buildRecommendationSnapshot(
+					destination = request.destinationCode,
+					startDate = request.startDate,
+					endDate = request.endDate,
+					selectedParents = selectedParents,
+					selectedParentProfiles = selectedParentProfiles,
+				),
+			)
+		} else {
+			trip.recommendationSnapshot
+		}
+		trip.updateInfo(
+			title = request.title.trim(),
+			destinationCode = request.destinationCode,
+			startDate = request.startDate,
+			endDate = request.endDate,
+			recommendationSnapshot = recommendationSnapshot,
+			resetToPlanning = recommendationInputsChanged,
+		)
+
+		return tripDetail(trip)
+	}
+
+	@Transactional
 	fun saveTripCourse(
 		currentUser: AuthenticatedUser,
 		tripId: Long,
@@ -257,6 +343,43 @@ class TripService(
 		}
 	}
 
+	private fun resetCourse(existingStops: List<TripStop>, tripDays: List<TripDay>) {
+		if (existingStops.isNotEmpty()) {
+			tripStopRepository.deleteAllInBatch(existingStops)
+			tripStopRepository.flush()
+		}
+		tripDays.forEach { it.clearRouteOptimization() }
+	}
+
+	private fun replaceTripDays(trip: Trip, existingDays: List<TripDay>, startDate: LocalDate, dayCount: Int) {
+		if (existingDays.isNotEmpty()) {
+			tripDayRepository.deleteAllInBatch(existingDays)
+			tripDayRepository.flush()
+		}
+		tripDayRepository.saveAll(
+			(0 until dayCount).map { index ->
+				TripDay(
+					trip = trip,
+					dayNumber = index + 1,
+					travelDate = startDate.plusDays(index.toLong()),
+				)
+			},
+		)
+	}
+
+	private fun replaceTripParticipants(
+		trip: Trip,
+		existingParticipants: List<TripParticipant>,
+		selectedParents: List<FamilyMember>,
+	) {
+		if (existingParticipants.isNotEmpty()) {
+			tripParticipantRepository.deleteAllInBatch(existingParticipants)
+			tripParticipantRepository.flush()
+		}
+		tripParticipantRepository.save(TripParticipant(trip = trip, user = trip.createdByUser))
+		tripParticipantRepository.saveAll(selectedParents.map { TripParticipant(trip = trip, user = it.user) })
+	}
+
 	private fun resolveSelectedParentProfiles(selectedParents: List<FamilyMember>): List<ParentProfile> =
 		selectedParents.map { parent ->
 			val profile = parentProfileRepository.findByUserId(requireNotNull(parent.user.id))
@@ -319,6 +442,15 @@ class TripService(
 			?: throw ForbiddenException("여행 조회 권한이 없습니다.")
 		if (myMember.family.id != trip.family.id) {
 			throw ForbiddenException("여행 조회 권한이 없습니다.")
+		}
+	}
+
+	private fun validateTripEditable(user: User, trip: Trip) {
+		if (user.role != UserRole.CHILD || trip.createdByUser.id != user.id) {
+			throw ForbiddenException("여행을 만든 자녀만 여행 정보를 수정할 수 있습니다.")
+		}
+		if (trip.status !in setOf(TripStatus.PLANNING, TripStatus.READY)) {
+			throw BadRequestException("여행 준비 중에만 여행 정보를 수정할 수 있습니다.")
 		}
 	}
 

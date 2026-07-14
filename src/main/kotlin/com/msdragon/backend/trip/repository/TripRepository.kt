@@ -29,4 +29,24 @@ interface TripRepository : JpaRepository<Trip, Long> {
 		@Param("endDate") endDate: LocalDate,
 		@Param("excludedStatus") excludedStatus: TripStatus,
 	): Boolean
+
+	@Query(
+		"""
+		select count(t) > 0
+		from Trip t
+		where t.family.id = :familyId
+		  and t.id <> :tripId
+		  and t.deletedAt is null
+		  and t.status <> :excludedStatus
+		  and t.startDate <= :endDate
+		  and t.endDate >= :startDate
+		""",
+	)
+	fun existsOverlappingTripExcludingId(
+		@Param("familyId") familyId: Long,
+		@Param("tripId") tripId: Long,
+		@Param("startDate") startDate: LocalDate,
+		@Param("endDate") endDate: LocalDate,
+		@Param("excludedStatus") excludedStatus: TripStatus,
+	): Boolean
 }

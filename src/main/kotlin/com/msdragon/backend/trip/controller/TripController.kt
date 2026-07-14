@@ -13,6 +13,7 @@ import com.msdragon.backend.trip.dto.TripDetailResponse
 import com.msdragon.backend.trip.dto.TripParentCandidatesResponse
 import com.msdragon.backend.trip.dto.TripPlaceDetailResponse
 import com.msdragon.backend.trip.dto.TripPlaceSearchResponse
+import com.msdragon.backend.trip.dto.UpdateTripRequest
 import com.msdragon.backend.trip.service.TripCourseRecommendationService
 import com.msdragon.backend.trip.service.TripPlaceService
 import com.msdragon.backend.trip.service.TripRouteOptimizationService
@@ -293,6 +294,31 @@ class TripController(
 			status = HttpStatus.CREATED.value(),
 			message = "여행 생성 성공",
 			data = tripService.createTrip(currentUser, request),
+		)
+
+	@Operation(
+		summary = "여행 기본정보 수정",
+		description = "여행을 만든 자녀가 준비 중인 여행의 제목, 도시, 날짜, 참여 부모를 전체 수정합니다. 도시, 날짜 또는 참여 부모가 바뀌면 기존 코스와 경로를 초기화합니다.",
+	)
+	@ApiResponses(
+		value = [
+			SwaggerApiResponse(responseCode = "200", description = "여행 기본정보 수정 성공"),
+			SwaggerApiResponse(responseCode = "400", description = "수정 요청 값, 여행 상태 또는 코스 초기화 확인이 올바르지 않음"),
+			SwaggerApiResponse(responseCode = "401", description = "인증 실패"),
+			SwaggerApiResponse(responseCode = "403", description = "수정 권한 없음"),
+			SwaggerApiResponse(responseCode = "404", description = "여행을 찾을 수 없음"),
+		],
+	)
+	@PutMapping("/{tripId}")
+	fun updateTrip(
+		@CurrentUser currentUser: AuthenticatedUser,
+		@Parameter(description = "여행 ID", example = "1")
+		@PathVariable tripId: Long,
+		@Valid @RequestBody request: UpdateTripRequest,
+	): ApiResponse<TripDetailResponse> =
+		ApiResponse.success(
+			message = "여행 기본정보 수정 성공",
+			data = tripService.updateTrip(currentUser, tripId, request),
 		)
 
 	@Operation(

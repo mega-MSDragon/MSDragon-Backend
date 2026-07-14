@@ -119,12 +119,15 @@ DB 스키마와 공통 엔티티 규칙을 기록합니다.
   현재 스냅샷에는 정책 버전, 도시/날짜, 부모별 `walkingPace`, `needsMobilityAssistance`, `travelThemes`, `foodPreference`, `personalityType`을 포함합니다.
 - 같은 가족에서 날짜가 겹치는 여행은 서비스에서 생성 거부합니다.
 - 여행 기간 상한은 두지 않습니다. 시작일은 오늘 또는 이후여야 하고, 종료일은 시작일과 같거나 이후여야 합니다.
+- 여행을 만든 자녀는 `planning`, `ready` 상태에서 제목, 도시, 날짜, 참여 부모를 수정할 수 있습니다.
+- 제목만 수정하면 `recommendation_snapshot`을 유지합니다. 도시, 날짜 또는 참여 부모가 바뀌면 현재 부모 프로필 기준으로 스냅샷을 다시 저장하고 상태를 `planning`으로 되돌립니다.
 
 ### trip_participants
 
 - `trip_id`, `user_id` 조합은 unique입니다.
 - 여행 생성 시 생성 자녀와 선택한 부모를 참여자로 저장합니다.
 - 부모는 최대 2명까지 선택할 수 있습니다.
+- 참여 부모 변경 시 생성 자녀는 유지하고 선택한 부모 목록으로 기존 참여자를 교체합니다.
 
 ### trip_days
 
@@ -137,6 +140,7 @@ DB 스키마와 공통 엔티티 규칙을 기록합니다.
 - `route_source_payload`는 선택된 시작/도착/방문 순서와 Tmap 응답 properties 일부를 저장합니다.
 - `route_optimized_at`은 경로 계산 시간입니다.
 - 코스 저장이나 추천 코스 재생성으로 방문지 구성이 바뀌면 경로 캐시를 비웁니다.
+- 여행 날짜 변경 시 기존 `trip_stops`를 먼저 삭제한 뒤 `trip_days`를 새 기간에 맞춰 재생성합니다.
 
 ### trip_stops
 

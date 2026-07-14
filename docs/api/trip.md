@@ -15,10 +15,13 @@
 - 같은 가족에서 날짜가 겹치는 여행은 생성할 수 없습니다.
 - 도시 목록은 현재 서버 고정 catalog로 내려주고, 여행에는 `destinationCode` 문자열을 저장합니다.
 - 여행 생성 시 선택한 부모의 추천 입력값을 `recommendationSnapshot`으로 저장합니다. 이후 부모 프로필이 수정되어도 생성 당시 추천 기준은 유지됩니다.
+- 여행 기본정보 수정은 여행을 만든 자녀만 `planning`, `ready` 상태에서 할 수 있습니다.
+- 제목만 수정하면 기존 추천 스냅샷과 코스를 유지합니다. 도시, 날짜 또는 참여 부모를 수정하면 현재 부모 프로필로 추천 스냅샷을 다시 만들고 기존 코스와 경로를 초기화합니다.
+- 기존 코스나 경로가 있는 상태에서 추천 입력을 바꾸려면 `courseResetConfirmed=true`를 전달해야 합니다.
 - 여행 코스는 일자별 방문지 목록을 전체 저장합니다. 요청 배열 순서가 방문 순서가 되며, 포함하지 않은 일자는 빈 코스로 저장됩니다.
 - 저장된 방문지는 외부 API 원본이 바뀌어도 기존 코스를 유지할 수 있도록 `trip_stops`에 장소 스냅샷을 저장합니다.
 - 추천 코스 생성은 한국관광공사 TourAPI 무장애여행 서비스로 장소 후보를 조회하고, 부모 프로필 스냅샷으로 점수를 계산해 `trip_stops`에 저장합니다.
-- 추천 코스 생성은 장소 추천까지만 수행합니다. Tmap 경로/거리/소요시간 계산은 후속 작업입니다.
+- 추천 코스 생성은 장소 추천까지만 수행합니다. Tmap 경로/거리/소요시간은 별도 경로 최적화 API를 호출해 계산합니다.
 - 추천 코스 생성이 완료되면 여행 상태가 `planning`인 경우 `ready`로 변경됩니다.
 - 코스 편집 중 방문지 검색/상세 조회는 TourAPI를 조회해 후보를 내려주며, 실제 코스 반영은 클라이언트가 선택한 장소를 `PUT /api/v1/trips/{tripId}/course`로 전체 저장할 때 이루어집니다.
 - 방문지 검색/상세 조회에서도 숙박은 제외하고, TourAPI 원본 응답 일부는 코스 저장 시 `sourcePayload`로 보관할 수 있게 내려줍니다.
@@ -41,6 +44,7 @@
 | `POST` | `/api/v1/trips` | 여행 생성 |
 | `POST` | `/api/v1/trips/{tripId}/course/recommendation` | 여행 추천 코스 생성 |
 | `POST` | `/api/v1/trips/{tripId}/days/{dayNumber}/route-optimization` | 여행 일자 경로 최적화 |
+| `PUT` | `/api/v1/trips/{tripId}` | 여행 기본정보 수정 |
 | `PUT` | `/api/v1/trips/{tripId}/course` | 여행 코스 전체 저장 |
 
 ---
@@ -204,6 +208,53 @@
 
 생성 직후 `status`는 `planning`입니다. 추천 코스 생성이 완료되면 `ready`가 되며, `in_progress`, `completed` 전환은 여행 모드 작업에서 확정합니다.
 `recommendationSnapshot.policyVersion`은 부모 여행 MBTI 정책 버전을 의미합니다.
+
+---
+
+## PUT /api/v1/trips/{tripId}
+
+여행을 만든 자녀가 여행 정보 편집 화면의 제목, 도시, 날짜, 참여 부모를 한 번에 저장합니다.
+`planning`, `ready` 상태에서만 수정할 수 있습니다.
+
+### Request
+
+```json
+{
+  "title": "부산 가족 여행",
+  "destinationCode": "busan",
+  "startDate": "2026-07-15",
+  "endDate": "2026-07-17",
+  "parentUserIds": [2, 3],
+  "courseResetConfirmed": true
+}
+```
+
+| Field | Type | Required | 설명 |
+|-------|------|----------|------|
+| `title` | string | true | 여행 제목. 최대 80자 |
+| `destinationCode` | enum | true | 여행 도시 코드 |
+| `startDate` | date | true | 여행 시작일 |
+| `endDate` | date | true | 여행 종료일. 시작일과 같거나 이후 |
+| `parentUserIds` | number array | true | 같은 가족의 프로필 작성 완료 부모. 1명 이상, 최대 2명 |
+| `courseResetConfirmed` | boolean | false | 기존 코스가 있는 상태에서 도시, 날짜 또는 참여 부모를 바꿀 때 `true`. 기본값 `false` |
+
+변경 영향:
+
+| 변경 항목 | 기존 코스 | 추천 스냅샷 | 상태 |
+|-----------|-----------|-----------------|------|
+| 제목만 변경 | 유지 | 유지 | 유지 |
+| 도시 변경 | 삭제 | 현재 부모 프로필로 재생성 | `planning` |
+| 날짜 변경 | 삭제 후 여행 일자 재생성 | 현재 부모 프로필로 재생성 | `planning` |
+| 참여 부모 변경 | 삭제 후 참여자 갱신 | 현재 부모 프로필로 재생성 | `planning` |
+
+기존 코스나 경로가 있는데 영향 항목을 바꾸면서 `courseResetConfirmed=false`이면 `400 Bad Request`를 반환합니다.
+다른 여행과 날짜가 겹치거나, 같은 가족의 작성 완료 부모가 아니면 수정할 수 없습니다.
+
+### Response
+
+`GET /api/v1/trips/{tripId}`와 같은 `TripDetailResponse` 형태입니다.
+
+상세 정책은 `docs/policy/trip-edit.md`를 따릅니다.
 
 ---
 
