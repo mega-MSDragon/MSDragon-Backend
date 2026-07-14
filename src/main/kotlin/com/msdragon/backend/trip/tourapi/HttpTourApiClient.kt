@@ -16,7 +16,9 @@ import java.nio.charset.StandardCharsets
 class HttpTourApiClient(
 	private val tourApiProperties: TourApiProperties,
 ) : TourApiClient {
-	private val httpClient: HttpClient = HttpClient.newHttpClient()
+	private val httpClient: HttpClient = HttpClient.newBuilder()
+		.connectTimeout(tourApiProperties.connectTimeout)
+		.build()
 
 	override fun findPlaces(search: TourApiPlaceSearch): List<TourApiPlaceSummary> {
 		val items = requestItems(
@@ -103,9 +105,17 @@ class HttpTourApiClient(
 
 	private fun requestItems(operation: String, params: Map<String, String>): List<Map<String, Any?>> {
 		val request = HttpRequest.newBuilder(URI.create(url(operation, params)))
+			.timeout(tourApiProperties.requestTimeout)
 			.GET()
 			.build()
-		val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+		val response = try {
+			httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+		} catch (exception: InterruptedException) {
+			Thread.currentThread().interrupt()
+			throw InternalServerException("TourAPI 호출이 중단되었습니다.")
+		} catch (_: Exception) {
+			throw InternalServerException("TourAPI 호출 중 오류가 발생했습니다.")
+		}
 		if (response.statusCode() !in 200..299) {
 			throw InternalServerException("TourAPI 호출에 실패했습니다.")
 		}

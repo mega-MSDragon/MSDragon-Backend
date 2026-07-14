@@ -80,11 +80,21 @@ APP_AUTH_JWT_SECRET=<openssl rand -base64 48 결과값>
 APP_AUTH_APPLE_CLIENT_ID=com.msdragon.ios
 TOUR_API_SERVICE_KEY=<한국관광공사 TourAPI 서비스키>
 TOUR_API_MOBILE_APP=MSDragon
+TOUR_API_CONNECT_TIMEOUT=PT5S
+TOUR_API_REQUEST_TIMEOUT=PT10S
+TMAP_APP_KEY=<Tmap API 앱키>
+TMAP_SEARCH_OPTION=0
+TMAP_CAR_TYPE=1
+TMAP_DEFAULT_START_TIME=10:00
+TMAP_CONNECT_TIMEOUT=PT5S
+TMAP_REQUEST_TIMEOUT=PT15S
 ```
 
 `APP_AUTH_JWT_SECRET`은 의미 있는 단어가 아니라 충분히 긴 랜덤 문자열이어야 합니다. 이 값을 변경하면 기존 로그인 토큰은 모두 무효화됩니다.
 `POSTGRES_HOST_PORT`는 EC2 host에서 publish할 PostgreSQL 포트입니다. DBeaver에서 직접 접속하려면 기본값 `5432`를 사용하고, 보안 그룹에서도 같은 포트를 허용합니다.
 `TOUR_API_SERVICE_KEY`가 비어 있으면 서버는 실행되지만 추천 코스 생성 API는 설정 오류로 실패합니다.
+`TMAP_APP_KEY`가 비어 있으면 서버는 실행되지만 경로 최적화 API는 설정 오류로 실패합니다.
+timeout 값은 Spring Boot가 읽을 수 있는 ISO-8601 Duration 형식으로 작성합니다. 예: `PT10S`.
 
 ---
 
@@ -114,6 +124,7 @@ docker compose up -d --build
 - `.env` 파일 존재
 - `.env`에 `APP_AUTH_JWT_SECRET`, `APP_AUTH_APPLE_CLIENT_ID` 설정 완료
 - 추천 코스 생성 API를 사용할 경우 `.env`에 `TOUR_API_SERVICE_KEY` 설정 완료
+- 경로 최적화 API를 사용할 경우 `.env`에 `TMAP_APP_KEY` 설정 완료
 - `deploy/nginx/certs/origin.pem` 존재
 - `deploy/nginx/certs/origin.key` 존재
 

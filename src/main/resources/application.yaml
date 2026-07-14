@@ -22,9 +22,13 @@ app:
     service-key: ${TOUR_API_SERVICE_KEY:}
     mobile-os: ETC
     mobile-app: ${TOUR_API_MOBILE_APP:MSDragon}
+    connect-timeout: ${TOUR_API_CONNECT_TIMEOUT:PT5S}
+    request-timeout: ${TOUR_API_REQUEST_TIMEOUT:PT10S}
   tmap:
     base-uri: https://apis.openapi.sk.com/tmap
     app-key: ${TMAP_APP_KEY:}
     search-option: ${TMAP_SEARCH_OPTION:0}
     car-type: ${TMAP_CAR_TYPE:1}
     default-start-time: "${TMAP_DEFAULT_START_TIME:10:00}"
+    connect-timeout: ${TMAP_CONNECT_TIMEOUT:PT5S}
+    request-timeout: ${TMAP_REQUEST_TIMEOUT:PT15S}

@@ -75,10 +75,14 @@ Tmap 앱키가 비어 있으면 애플리케이션은 실행되지만, 경로 �
 |------|------|
 | `TOUR_API_SERVICE_KEY` | 한국관광공사 TourAPI 서비스키 |
 | `TOUR_API_MOBILE_APP` | TourAPI `MobileApp` 파라미터. 기본값 `MSDragon` |
+| `TOUR_API_CONNECT_TIMEOUT` | TourAPI 연결 timeout. ISO-8601 Duration, 기본값 `PT5S` |
+| `TOUR_API_REQUEST_TIMEOUT` | TourAPI 요청 timeout. ISO-8601 Duration, 기본값 `PT10S` |
 | `TMAP_APP_KEY` | Tmap API 앱키 |
 | `TMAP_SEARCH_OPTION` | Tmap 경로 탐색 옵션. 기본값 `0` |
 | `TMAP_CAR_TYPE` | Tmap 차량 타입. 기본값 `1` |
 | `TMAP_DEFAULT_START_TIME` | 일자별 경로 최적화 기본 출발 시간. 기본값 `10:00` |
+| `TMAP_CONNECT_TIMEOUT` | Tmap 연결 timeout. ISO-8601 Duration, 기본값 `PT5S` |
+| `TMAP_REQUEST_TIMEOUT` | Tmap 요청 timeout. ISO-8601 Duration, 기본값 `PT15S` |
 
 ---
 

@@ -19,18 +19,28 @@ class HttpTmapRouteClient(
 	private val tmapProperties: TmapProperties,
 	private val objectMapper: ObjectMapper,
 ) : TmapRouteClient {
-	private val httpClient: HttpClient = HttpClient.newHttpClient()
+	private val httpClient: HttpClient = HttpClient.newBuilder()
+		.connectTimeout(tmapProperties.connectTimeout)
+		.build()
 
 	override fun optimizeRoute(request: TmapRouteOptimizationRequest): TmapRouteOptimizationResult {
 		val appKey = tmapProperties.appKey.trimToNull()
 			?: throw InternalServerException("Tmap 앱키 설정이 완료되지 않았습니다.")
 		val httpRequest = HttpRequest.newBuilder(URI.create(url()))
+			.timeout(tmapProperties.requestTimeout)
 			.header("Accept", "application/json")
 			.header("Content-Type", "application/json")
 			.header("appKey", appKey)
 			.POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(requestBody(request))))
 			.build()
-		val response = httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofString())
+		val response = try {
+			httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofString())
+		} catch (exception: InterruptedException) {
+			Thread.currentThread().interrupt()
+			throw InternalServerException("Tmap 경로 최적화 호출이 중단되었습니다.")
+		} catch (_: Exception) {
+			throw InternalServerException("Tmap 경로 최적화 호출 중 오류가 발생했습니다.")
+		}
 		if (response.statusCode() !in 200..299) {
 			throw InternalServerException("Tmap 경로 최적화 호출에 실패했습니다.")
 		}

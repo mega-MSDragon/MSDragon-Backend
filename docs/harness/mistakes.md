@@ -107,3 +107,25 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse as SwaggerApiResponse
   - `docs/setup/local-run.md`
   - 배포/운영 환경변수 문서가 있다면 해당 문서
 - 추적 파일에는 실제 키나 시크릿을 넣지 않고 빈 값 또는 안전한 placeholder만 기록합니다.
+
+### 2026-07-14: Docker Compose 환경변수 전달 누락
+
+**상황**
+
+- TMAP 설정을 `application.yaml`과 `.env.example`에는 추가했지만, `docker-compose.yml`의 app container environment에 전달하지 않았습니다.
+- 운영 서버 `.env`에 값이 있어도 컨테이너가 값을 받지 못해 경로 최적화 API가 "Tmap 앱키 설정이 완료되지 않았습니다." 오류로 실패했습니다.
+
+**원인**
+
+- Spring 설정 바인딩과 env 템플릿만 확인했고, Docker Compose가 명시적으로 컨테이너에 넘기는 환경변수 목록을 완료 조건에 포함하지 않았습니다.
+
+**재발 방지 규칙**
+
+- 새 환경변수를 추가하거나 이름을 바꿀 때는 반드시 아래 항목을 한 세트로 확인합니다.
+  - `application*.yaml` 또는 설정 클래스
+  - `.env.example`
+  - `docker-compose.yml`의 app `environment`
+  - `docs/setup/local-run.md`
+  - `docs/setup/deploy.md`
+  - 운영 서버 `.env`
+- 실제 secret 값은 Git, 문서, 대화 요약에 남기지 않고 placeholder로만 기록합니다.
