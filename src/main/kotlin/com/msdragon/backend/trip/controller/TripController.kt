@@ -13,6 +13,7 @@ import com.msdragon.backend.trip.dto.TripDetailResponse
 import com.msdragon.backend.trip.dto.TripParentCandidatesResponse
 import com.msdragon.backend.trip.dto.TripPlaceDetailResponse
 import com.msdragon.backend.trip.dto.TripPlaceSearchResponse
+import com.msdragon.backend.trip.dto.TripTravelModeResponse
 import com.msdragon.backend.trip.dto.UpdateTripRequest
 import com.msdragon.backend.trip.service.TripCourseRecommendationService
 import com.msdragon.backend.trip.service.TripPlaceService
@@ -149,6 +150,30 @@ class TripController(
 		ApiResponse.success(
 			message = "여행 코스 조회 성공",
 			data = tripService.getTripCourse(currentUser, tripId),
+		)
+
+	@Operation(
+		summary = "여행 모드 조회",
+		description = "같은 가족 구성원이 여행 시작일부터 종료일까지 현재 일차와 전체 일자별 코스를 조회합니다. 조회 시 서울 날짜를 기준으로 여행 상태를 진행 중으로 동기화합니다.",
+	)
+	@ApiResponses(
+		value = [
+			SwaggerApiResponse(responseCode = "200", description = "여행 모드 조회 성공"),
+			SwaggerApiResponse(responseCode = "400", description = "여행 모드 이용 기간이 아님"),
+			SwaggerApiResponse(responseCode = "401", description = "인증 실패"),
+			SwaggerApiResponse(responseCode = "403", description = "조회 권한 없음"),
+			SwaggerApiResponse(responseCode = "404", description = "여행 또는 현재 일자를 찾을 수 없음"),
+		],
+	)
+	@GetMapping("/{tripId}/travel-mode")
+	fun getTravelMode(
+		@CurrentUser currentUser: AuthenticatedUser,
+		@Parameter(description = "여행 ID", example = "1")
+		@PathVariable tripId: Long,
+	): ApiResponse<TripTravelModeResponse> =
+		ApiResponse.success(
+			message = "여행 모드 조회 성공",
+			data = tripService.getTravelMode(currentUser, tripId),
 		)
 
 	@Operation(

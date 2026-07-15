@@ -113,6 +113,10 @@ class TripPledgeService(
 		)
 	}
 
+	@Transactional(readOnly = true)
+	fun isCompleted(tripId: Long): Boolean =
+		tripPledgeRepository.findByTripId(tripId)?.status == TripPledgeStatus.COMPLETED
+
 	@Transactional
 	fun saveReviewedPledge(
 		currentUser: AuthenticatedUser,

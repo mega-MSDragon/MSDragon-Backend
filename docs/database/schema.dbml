@@ -485,7 +485,7 @@ Table trips {
   updated_at datetime [not null, default: `now()`]
   deleted_at datetime
 
-  Note: 'PDF 확정 기준으로 여행 도시는 여행 정보 편집에서 변경 가능하다. 도시, 날짜, 함께 가는 가족, 추천 기준을 바꾸면 저장 후 코스 재추천/덮어쓰기 확인 플로우를 거친다. 여행 기간 상한은 두지 않으며 여행모드는 start_date 00:00부터 end_date 23:59까지 노출한다.'
+  Note: 'PDF 확정 기준으로 여행 도시는 여행 정보 편집에서 변경 가능하다. 도시, 날짜, 함께 가는 가족, 추천 기준을 바꾸면 저장 후 코스 재추천/덮어쓰기 확인 플로우를 거친다. 여행 기간 상한은 두지 않는다. 서울 날짜 기준 start_date부터 in_progress, end_date 다음 날부터 completed로 동기화하며 여행모드는 start_date 00:00부터 end_date 23:59까지 같은 가족 구성원에게 노출한다.'
 }
 
 Table trip_participants {

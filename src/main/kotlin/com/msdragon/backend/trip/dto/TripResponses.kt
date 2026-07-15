@@ -355,6 +355,46 @@ data class TripCourseResponse(
 	val days: List<TripCourseDayResponse>,
 )
 
+@Schema(description = "여행 모드 응답")
+data class TripTravelModeResponse(
+	@field:Schema(description = "여행 ID", example = "1")
+	val tripId: Long,
+
+	@field:Schema(description = "여행 제목", example = "경주 여행")
+	val title: String,
+
+	@field:Schema(description = "여행 도시")
+	val destination: TripDestinationResponse,
+
+	@field:Schema(description = "여행 시작일", example = "2026-07-10")
+	val startDate: LocalDate,
+
+	@field:Schema(description = "여행 종료일", example = "2026-07-11")
+	val endDate: LocalDate,
+
+	@field:Schema(
+		description = "여행 상태. 여행 모드에서는 in_progress입니다.",
+		example = "in_progress",
+		allowableValues = ["in_progress"],
+	)
+	val status: TripStatus,
+
+	@field:Schema(description = "현재 여행 며칠차", example = "1")
+	val currentDayNumber: Int,
+
+	@field:Schema(description = "현재 여행 일자 ID", example = "1")
+	val currentTripDayId: Long,
+
+	@field:Schema(description = "여행 마지막 날 여부", example = "false")
+	val isLastDay: Boolean,
+
+	@field:Schema(description = "자녀와 참여 부모 최소 1명의 여행 10계명 서명 완료 여부", example = "true")
+	val pledgeCompleted: Boolean,
+
+	@field:Schema(description = "날짜 탭과 지도·일정 표시에 사용하는 전체 일자별 코스")
+	val days: List<TripCourseDayResponse>,
+)
+
 @Schema(description = "여행 일자별 코스 응답")
 data class TripCourseDayResponse(
 	@field:Schema(description = "여행 일자 ID", example = "1")

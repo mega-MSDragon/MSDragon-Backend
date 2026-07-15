@@ -69,4 +69,15 @@ class Trip(
 			status = TripStatus.PLANNING
 		}
 	}
+
+	fun synchronizeStatus(today: LocalDate) {
+		if (status == TripStatus.ARCHIVED) {
+			return
+		}
+		status = when {
+			today.isAfter(endDate) -> TripStatus.COMPLETED
+			!today.isBefore(startDate) -> TripStatus.IN_PROGRESS
+			else -> status
+		}
+	}
 }

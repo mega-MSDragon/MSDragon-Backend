@@ -29,6 +29,7 @@ import com.msdragon.backend.trip.dto.TripRecommendationSnapshotResponse
 import com.msdragon.backend.trip.dto.TripRouteSummaryResponse
 import com.msdragon.backend.trip.dto.TripStopResponse
 import com.msdragon.backend.trip.dto.TripSummaryResponse
+import com.msdragon.backend.trip.dto.TripTravelModeResponse
 import com.msdragon.backend.trip.dto.UpdateTripRequest
 import com.msdragon.backend.trip.dto.relationLabelOf
 import com.msdragon.backend.trip.entity.Trip
@@ -83,14 +84,16 @@ class TripService(
 			.sortedBy { it.displayOrder }
 			.map(TripDestinationResponse::from)
 
-	@Transactional(readOnly = true)
+	@Transactional
 	fun getMyTrips(currentUser: AuthenticatedUser): MyTripsResponse {
 		getLoginUser(currentUser.id)
 		val myMember = familyMemberRepository.findByUserId(currentUser.id)
 			?: return MyTripsResponse.empty()
 		val familyId = requireNotNull(myMember.family.id)
+		val today = currentDate()
 		val trips = tripRepository.findAllByFamilyIdAndDeletedAtIsNullOrderByStartDateAscIdAsc(familyId)
 			.map { trip ->
+				trip.synchronizeStatus(today)
 				TripSummaryResponse.of(
 					trip = trip,
 					participantCount = tripParticipantRepository.findAllByTripIdOrderByIdAsc(requireNotNull(trip.id)).size,
@@ -100,24 +103,59 @@ class TripService(
 		return MyTripsResponse(familyId = familyId, trips = trips)
 	}
 
-	@Transactional(readOnly = true)
+	@Transactional
 	fun getTrip(currentUser: AuthenticatedUser, tripId: Long): TripDetailResponse {
 		getLoginUser(currentUser.id)
 		val trip = tripRepository.findByIdAndDeletedAtIsNull(tripId)
 			?: throw NotFoundException("여행을 찾을 수 없습니다.")
 		validateTripReadable(currentUser.id, trip)
+		trip.synchronizeStatus(currentDate())
 
 		return tripDetail(trip)
 	}
 
-	@Transactional(readOnly = true)
+	@Transactional
 	fun getTripCourse(currentUser: AuthenticatedUser, tripId: Long): TripCourseResponse {
 		getLoginUser(currentUser.id)
 		val trip = tripRepository.findByIdAndDeletedAtIsNull(tripId)
 			?: throw NotFoundException("여행을 찾을 수 없습니다.")
 		validateTripReadable(currentUser.id, trip)
+		trip.synchronizeStatus(currentDate())
 
 		return tripCourse(trip)
+	}
+
+	@Transactional(noRollbackFor = [BadRequestException::class])
+	fun getTravelMode(currentUser: AuthenticatedUser, tripId: Long): TripTravelModeResponse {
+		getLoginUser(currentUser.id)
+		val trip = tripRepository.findByIdAndDeletedAtIsNull(tripId)
+			?: throw NotFoundException("여행을 찾을 수 없습니다.")
+		validateTripReadable(currentUser.id, trip)
+
+		val today = currentDate()
+		trip.synchronizeStatus(today)
+		when {
+			trip.status == TripStatus.ARCHIVED -> throw BadRequestException("보관된 여행은 여행 모드를 이용할 수 없습니다.")
+			today.isBefore(trip.startDate) -> throw BadRequestException("여행 시작일부터 여행 모드를 이용할 수 있습니다.")
+			today.isAfter(trip.endDate) -> throw BadRequestException("종료된 여행은 여행 모드를 이용할 수 없습니다.")
+		}
+
+		val course = tripCourse(trip)
+		val currentDay = course.days.firstOrNull { it.travelDate == today }
+			?: throw NotFoundException("현재 일자의 여행 코스를 찾을 수 없습니다.")
+		return TripTravelModeResponse(
+			tripId = tripId,
+			title = trip.title,
+			destination = TripDestinationResponse.from(trip.destinationCode),
+			startDate = trip.startDate,
+			endDate = trip.endDate,
+			status = trip.status,
+			currentDayNumber = currentDay.dayNumber,
+			currentTripDayId = currentDay.tripDayId,
+			isLastDay = today == trip.endDate,
+			pledgeCompleted = tripPledgeService.isCompleted(tripId),
+			days = course.days,
+		)
 	}
 
 	@Transactional
@@ -171,6 +209,7 @@ class TripService(
 				),
 			)
 		}
+		trip.synchronizeStatus(currentDate())
 
 		return tripDetail(trip)
 	}
@@ -271,6 +310,7 @@ class TripService(
 		val trip = tripRepository.findByIdAndDeletedAtIsNull(tripId)
 			?: throw NotFoundException("여행을 찾을 수 없습니다.")
 		validateTripReadable(currentUser.id, trip)
+		trip.synchronizeStatus(currentDate())
 
 		val tripDays = tripDayRepository.findAllByTripIdOrderByDayNumberAsc(tripId)
 		val tripDaysByNumber = tripDays.associateBy { it.dayNumber }
@@ -526,6 +566,8 @@ class TripService(
 		userRepository.findByIdAndDeletedAtIsNull(userId)
 			?.takeIf { it.isSignupCompleted() }
 			?: throw UnAuthorizedException("로그인할 수 없는 사용자입니다.")
+
+	private fun currentDate(): LocalDate = LocalDate.now(SERVICE_ZONE_ID)
 
 	companion object {
 		private val SERVICE_ZONE_ID: ZoneId = ZoneId.of("Asia/Seoul")

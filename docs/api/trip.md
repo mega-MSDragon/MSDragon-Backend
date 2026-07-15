@@ -28,6 +28,8 @@
 - 방문지 검색/상세 조회에서도 숙박은 제외하고, TourAPI 원본 응답 일부는 코스 저장 시 `sourcePayload`로 보관할 수 있게 내려줍니다.
 - 일자별 경로 최적화는 Tmap 경유지 순서 최적화 10 API를 사용합니다. 사용자가 시작점/도착점을 입력하지 않으므로 서버가 모든 시작/도착 조합을 조회해 가장 짧은 결과를 선택합니다.
 - 코스 저장 또는 추천 코스 재생성 시 기존 경로 캐시는 무효화됩니다.
+- 서울 날짜 기준 시작일이 되면 준비 여부와 관계없이 여행 상태를 `in_progress`, 종료일 다음 날부터 `completed`로 자동 동기화합니다.
+- 여행 모드는 시작일 00:00부터 종료일 23:59까지 같은 가족 구성원 모두가 이용할 수 있습니다. 여행 참여자로 선택되지 않은 가족 구성원도 포함합니다.
 
 ---
 
@@ -40,6 +42,7 @@
 | `GET` | `/api/v1/trips` | 내 가족 여행 목록 조회 |
 | `GET` | `/api/v1/trips/{tripId}` | 여행 상세 조회 |
 | `GET` | `/api/v1/trips/{tripId}/course` | 여행 코스 조회 |
+| `GET` | `/api/v1/trips/{tripId}/travel-mode` | 현재 일차와 전체 코스를 포함한 여행 모드 조회 |
 | `GET` | `/api/v1/trips/{tripId}/places/search` | 코스 편집용 방문지 검색 |
 | `GET` | `/api/v1/trips/{tripId}/places/{contentId}` | 코스 편집용 방문지 상세 조회 |
 | `POST` | `/api/v1/trips` | 여행 생성 |
@@ -207,7 +210,8 @@
 }
 ```
 
-생성 직후 `status`는 `planning`입니다. 추천 코스 생성이 완료되면 `ready`가 되며, `in_progress`, `completed` 전환은 여행 모드 작업에서 확정합니다.
+미래 여행은 생성 직후 `status=planning`입니다. 시작일이 오늘이면 생성 응답부터 `in_progress`이며, 추천 코스 생성이 완료된 미래 여행은 `ready`가 됩니다.
+서울 날짜 기준 시작일부터 `in_progress`, 종료일 다음 날부터 `completed`로 자동 전환합니다.
 `recommendationSnapshot.policyVersion`은 부모 여행 MBTI 정책 버전을 의미합니다.
 
 ---
@@ -264,6 +268,7 @@
 
 로그인 사용자가 속한 가족의 여행 목록을 조회합니다.
 가족 매칭 전이면 빈 목록을 반환합니다.
+조회 시 서울 날짜를 기준으로 시작한 여행은 `in_progress`, 종료된 여행은 `completed`로 상태를 동기화합니다.
 
 ### Response
 
@@ -300,6 +305,7 @@
 
 같은 가족 구성원이 여행 상세를 조회합니다.
 다른 가족 여행이면 `403 Forbidden`을 반환합니다.
+응답 전 여행 상태를 현재 서울 날짜에 맞춰 동기화합니다.
 
 ### Response
 
@@ -311,6 +317,7 @@
 
 같은 가족 구성원이 여행 코스를 조회합니다.
 저장된 방문지가 없으면 여행 일자별로 `stops=[]`를 반환합니다.
+응답 전 여행 상태를 현재 서울 날짜에 맞춰 동기화합니다.
 
 ### Response
 
@@ -385,6 +392,57 @@
   }
 }
 ```
+
+---
+
+## GET /api/v1/trips/{tripId}/travel-mode
+
+같은 가족 구성원이 여행 기간 중 현재 일차와 전체 일자별 코스를 조회합니다.
+여행 참여자로 선택되지 않은 같은 가족 구성원도 접근할 수 있습니다.
+
+- 시작일 전: `400 Bad Request`
+- 시작일 00:00부터 종료일 23:59까지: `200 OK`, 상태 `in_progress`
+- 종료일 다음 날부터: 상태를 `completed`로 동기화한 뒤 `400 Bad Request`
+- 다른 가족 사용자: `403 Forbidden`
+
+### Response
+
+```json
+{
+  "status": 200,
+  "success": true,
+  "message": "여행 모드 조회 성공",
+  "data": {
+    "tripId": 1,
+    "title": "경주 여행",
+    "destination": {
+      "code": "gyeongju",
+      "displayName": "경주",
+      "displayOrder": 3,
+      "badgeLabel": "인기"
+    },
+    "startDate": "2026-07-10",
+    "endDate": "2026-07-11",
+    "status": "in_progress",
+    "currentDayNumber": 1,
+    "currentTripDayId": 1,
+    "isLastDay": false,
+    "pledgeCompleted": true,
+    "days": [
+      {
+        "tripDayId": 1,
+        "dayNumber": 1,
+        "travelDate": "2026-07-10",
+        "route": null,
+        "stops": []
+      }
+    ]
+  }
+}
+```
+
+`pledgeCompleted=true`는 자녀와 참여 부모 최소 1명의 서명이 완료되었다는 뜻입니다.
+상세 정책은 `docs/policy/travel-mode.md`를 따릅니다.
 
 ---
 

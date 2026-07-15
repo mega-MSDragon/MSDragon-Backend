@@ -371,6 +371,8 @@ CREATE TABLE trips (
 -- 도시/날짜/함께 가는 가족/추천 기준 변경은 저장 후 코스 재추천과 기존 일정 덮어쓰기 확인 플로우를 거친다.
 -- 제목, 날짜, 함께 가는 사람, 코스 편집은 저장하기 버튼 시점에 서비스 트랜잭션으로 확정 반영한다.
 -- 여행모드는 start_date 00:00부터 end_date 23:59까지 노출하고 별도 여행 종료 버튼은 두지 않는다.
+-- 서울 날짜 기준 start_date부터 status=in_progress, end_date 다음 날부터 status=completed로 동기화한다.
+-- 여행 참여자 선택 여부와 관계없이 같은 family_id의 구성원은 여행모드에 접근할 수 있다.
 
 CREATE TABLE trip_participants (
     id         BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,

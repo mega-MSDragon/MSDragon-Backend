@@ -17,7 +17,7 @@
 | `profile` | `com.msdragon.backend.profile` | 마이페이지 내 프로필 조회와 수정 |
 | `parentprofile` | `com.msdragon.backend.parentprofile` | 부모님 상세 프로필 작성/수정/조회와 추천용 여행 MBTI 현재값 저장 |
 | `pledge` | `com.msdragon.backend.pledge` | 여행 10계명 후보 제공과 여행별 확정 문구 저장 |
-| `trip` | `com.msdragon.backend.trip` | 여행 대상 부모 후보, 도시 목록, 여행 생성, 가족별 여행 조회, TourAPI 기반 추천 코스 생성, Tmap 경로 최적화 |
+| `trip` | `com.msdragon.backend.trip` | 여행 생성·조회, 날짜 기반 여행 모드, TourAPI 추천 코스, Tmap 경로 최적화 |
 
 ---
 

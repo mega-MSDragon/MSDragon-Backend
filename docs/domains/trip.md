@@ -15,6 +15,8 @@ Trip 도메인은 여행 생성의 기본 뼈대와 가족별 여행 조회를 �
 - 같은 가족 구성원이 여행 목록과 상세를 조회합니다.
 - 같은 가족의 날짜가 겹치는 여행 생성을 막습니다.
 - 같은 가족 구성원이 일자별 방문지 코스를 조회하고 전체 저장합니다.
+- 같은 가족 구성원에게 현재 일차와 전체 코스를 포함한 여행 모드를 제공합니다.
+- 서울 날짜 기준으로 시작한 여행을 `in_progress`, 종료된 여행을 `completed`로 동기화합니다.
 - TourAPI 장소/무장애 정보를 조회해 부모 프로필 기반 추천 코스를 생성합니다.
 - 코스 편집 화면에서 TourAPI 기반 방문지 검색과 상세 조회를 제공합니다.
 - Tmap 경유지 순서 최적화로 일자별 방문 순서, 도착시간, 지도 polyline을 계산합니다.
@@ -56,6 +58,7 @@ trip
 - `GET /api/v1/trips`
 - `GET /api/v1/trips/{tripId}`
 - `GET /api/v1/trips/{tripId}/course`
+- `GET /api/v1/trips/{tripId}/travel-mode`
 - `GET /api/v1/trips/{tripId}/places/search`
 - `GET /api/v1/trips/{tripId}/places/{contentId}`
 - `POST /api/v1/trips/{tripId}/course/recommendation`
@@ -73,7 +76,10 @@ trip
 - 도시 목록은 DB 마스터 테이블 없이 `TripDestinationCode` enum catalog로 제공합니다.
 - 부모 프로필 스냅샷은 `trips.recommendation_snapshot`에 JSON 문자열로 저장하고 상세 응답에서 구조화해 내려줍니다.
 - 여행 기간 상한은 두지 않습니다. 시작일은 오늘 또는 이후여야 하고, 종료일은 시작일과 같거나 이후여야 합니다.
-- 여행 생성 직후 상태는 `planning`입니다.
+- 미래 여행의 생성 직후 상태는 `planning`입니다.
+- 시작일이 오늘인 여행은 생성 응답부터 `in_progress`이며, 미래 여행도 시작일이 되면 준비 여부와 관계없이 `in_progress`로 변경합니다.
+- 종료일 다음 날부터 `completed`로 변경합니다. 상태 전환은 서울 날짜를 기준으로 여행 상태를 사용하는 요청에서 수행하며 별도 스케줄러를 두지 않습니다.
+- 여행 모드는 시작일 00:00부터 종료일 23:59까지 같은 가족 구성원 모두가 접근할 수 있습니다. 여행 참여자로 선택되지 않은 가족 구성원도 포함합니다.
 - 여행 기본정보 수정은 생성한 자녀만 `planning`, `ready` 상태에서 할 수 있습니다.
 - 제목만 바꾸면 기존 코스와 추천 스냅샷을 유지합니다.
 - 도시, 날짜 또는 참여 부모를 바꾸면 현재 부모 프로필로 추천 스냅샷을 다시 만들고 기존 코스와 경로를 비웁니다. 저장된 코스가 있으면 `courseResetConfirmed=true`가 필요합니다.

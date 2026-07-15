@@ -25,11 +25,12 @@ import com.msdragon.backend.parentprofile.repository.ParentProfileRepository
 import com.msdragon.backend.pledge.repository.PledgeItemRepository
 import com.msdragon.backend.pledge.repository.PledgeSignatureRepository
 import com.msdragon.backend.pledge.repository.TripPledgeRepository
+import com.msdragon.backend.trip.entity.TripDay
+import com.msdragon.backend.trip.entity.TripStatus
 import com.msdragon.backend.trip.repository.TripDayRepository
 import com.msdragon.backend.trip.repository.TripParticipantRepository
 import com.msdragon.backend.trip.repository.TripRepository
 import com.msdragon.backend.trip.repository.TripStopRepository
-import com.msdragon.backend.trip.entity.TripStatus
 import com.msdragon.backend.trip.tourapi.TourApiAccessibility
 import com.msdragon.backend.trip.tourapi.TourApiClient
 import com.msdragon.backend.trip.tourapi.TourApiKeywordSearch
@@ -335,6 +336,119 @@ class TripControllerTest {
 			.andExpect(status().isOk)
 			.andExpect(jsonPath("$.data.trips.length()").value(1))
 			.andExpect(jsonPath("$.data.trips[0].id").value(tripId))
+	}
+
+	@Test
+	fun `오늘 시작한 여행은 여행 모드에서 진행 중으로 자동 전환된다`() {
+		val child = saveUser(UserRole.CHILD, "child-1", "혜린")
+		val mother = saveUser(UserRole.PARENT, "parent-1", "엄마", GenderType.FEMALE)
+		connectFamily(child, mother)
+		saveCompletedParentProfile(mother)
+		val today = futureDate(0)
+		val tripId = createTrip(child, mother, today, today.plusDays(1))
+
+		mockMvc.perform(
+			get("/api/v1/trips/$tripId/travel-mode")
+				.header("Authorization", "Bearer ${tokenService.createAccessToken(mother)}"),
+		)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.data.status").value("in_progress"))
+			.andExpect(jsonPath("$.data.currentDayNumber").value(1))
+			.andExpect(jsonPath("$.data.currentTripDayId").isNumber)
+			.andExpect(jsonPath("$.data.isLastDay").value(false))
+			.andExpect(jsonPath("$.data.pledgeCompleted").value(false))
+			.andExpect(jsonPath("$.data.days.length()").value(2))
+
+		mockMvc.perform(
+			get("/api/v1/trips")
+				.header("Authorization", "Bearer ${tokenService.createAccessToken(child)}"),
+		)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.data.trips[0].status").value("in_progress"))
+	}
+
+	@Test
+	fun `선택되지 않은 같은 가족도 마지막 날 여행 모드와 10계명 완료 여부를 조회한다`() {
+		val child = saveUser(UserRole.CHILD, "child-1", "혜린")
+		val mother = saveUser(UserRole.PARENT, "parent-1", "엄마", GenderType.FEMALE)
+		val father = saveUser(UserRole.PARENT, "parent-2", "아빠", GenderType.MALE)
+		connectFamily(child, mother, father)
+		saveCompletedParentProfile(mother)
+		val tripId = createTrip(child, mother, futureDate(10), futureDate(10))
+		saveReviewedPledge(child, tripId)
+		savePledgeSignature(child, tripId)
+		savePledgeSignature(mother, tripId)
+		moveTripToDates(tripId, futureDate(0), futureDate(0))
+
+		mockMvc.perform(
+			get("/api/v1/trips/$tripId/travel-mode")
+				.header("Authorization", "Bearer ${tokenService.createAccessToken(father)}"),
+		)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.data.status").value("in_progress"))
+			.andExpect(jsonPath("$.data.currentDayNumber").value(1))
+			.andExpect(jsonPath("$.data.isLastDay").value(true))
+			.andExpect(jsonPath("$.data.pledgeCompleted").value(true))
+	}
+
+	@Test
+	fun `다른 가족은 여행 모드에 접근할 수 없다`() {
+		val child = saveUser(UserRole.CHILD, "child-1", "혜린")
+		val mother = saveUser(UserRole.PARENT, "parent-1", "엄마", GenderType.FEMALE)
+		val otherChild = saveUser(UserRole.CHILD, "child-2", "다른 자녀")
+		connectFamily(child, mother)
+		connectFamily(otherChild)
+		saveCompletedParentProfile(mother)
+		val tripId = createTrip(child, mother, futureDate(0), futureDate(0))
+
+		mockMvc.perform(
+			get("/api/v1/trips/$tripId/travel-mode")
+				.header("Authorization", "Bearer ${tokenService.createAccessToken(otherChild)}"),
+		)
+			.andExpect(status().isForbidden)
+			.andExpect(jsonPath("$.message").value("여행 조회 권한이 없습니다."))
+	}
+
+	@Test
+	fun `여행 시작 전에는 여행 모드에 진입할 수 없다`() {
+		val child = saveUser(UserRole.CHILD, "child-1", "혜린")
+		val mother = saveUser(UserRole.PARENT, "parent-1", "엄마", GenderType.FEMALE)
+		connectFamily(child, mother)
+		saveCompletedParentProfile(mother)
+		val tripId = createTrip(child, mother, futureDate(1), futureDate(2))
+
+		mockMvc.perform(
+			get("/api/v1/trips/$tripId/travel-mode")
+				.header("Authorization", "Bearer ${tokenService.createAccessToken(child)}"),
+		)
+			.andExpect(status().isBadRequest)
+			.andExpect(jsonPath("$.message").value("여행 시작일부터 여행 모드를 이용할 수 있습니다."))
+	}
+
+	@Test
+	fun `여행 종료 후에는 완료 상태로 전환되고 여행 모드에 진입할 수 없다`() {
+		val child = saveUser(UserRole.CHILD, "child-1", "혜린")
+		val mother = saveUser(UserRole.PARENT, "parent-1", "엄마", GenderType.FEMALE)
+		connectFamily(child, mother)
+		saveCompletedParentProfile(mother)
+		val tripId = createTrip(child, mother, futureDate(10), futureDate(10))
+		moveTripToDates(tripId, futureDate(-1), futureDate(-1))
+
+		mockMvc.perform(
+			get("/api/v1/trips/$tripId/travel-mode")
+				.header("Authorization", "Bearer ${tokenService.createAccessToken(child)}"),
+		)
+			.andExpect(status().isBadRequest)
+			.andExpect(jsonPath("$.message").value("종료된 여행은 여행 모드를 이용할 수 없습니다."))
+
+		check(tripRepository.findById(tripId.toLong()).orElseThrow().status == TripStatus.COMPLETED)
+
+		mockMvc.perform(
+			get("/api/v1/trips")
+				.header("Authorization", "Bearer ${tokenService.createAccessToken(child)}"),
+		)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.data.trips[0].status").value("completed"))
 	}
 
 	@Test
@@ -947,6 +1061,29 @@ class TripControllerTest {
 			.contentAsString
 
 		return JsonPath.read(response, "$.data.id")
+	}
+
+	private fun moveTripToDates(tripId: Int, startDate: LocalDate, endDate: LocalDate) {
+		val trip = tripRepository.findById(tripId.toLong()).orElseThrow()
+		trip.startDate = startDate
+		trip.endDate = endDate
+		trip.status = TripStatus.READY
+		tripRepository.saveAndFlush(trip)
+
+		val existingDays = tripDayRepository.findAllByTripIdOrderByDayNumberAsc(tripId.toLong())
+		tripDayRepository.deleteAllInBatch(existingDays)
+		tripDayRepository.flush()
+		val dayCount = (endDate.toEpochDay() - startDate.toEpochDay() + 1).toInt()
+		tripDayRepository.saveAll(
+			(0 until dayCount).map { index ->
+				TripDay(
+					trip = trip,
+					dayNumber = index + 1,
+					travelDate = startDate.plusDays(index.toLong()),
+				)
+			},
+		)
+		tripDayRepository.flush()
 	}
 
 	private fun saveCompletedParentProfile(parent: User) {

@@ -12,3 +12,4 @@
 | [course-recommendation.md](./course-recommendation.md) | TourAPI 기반 여행 코스 추천 API 사용처와 가중치 정책 |
 | [trip-edit.md](./trip-edit.md) | 여행 기본정보 수정 권한과 코스 초기화 정책 |
 | [trip-pledge.md](./trip-pledge.md) | 여행 10계명 후보, 확정본, 서명 완료 기준 정책 |
+| [travel-mode.md](./travel-mode.md) | 여행 기간 기반 상태 전환과 여행 모드 진입 정책 |
