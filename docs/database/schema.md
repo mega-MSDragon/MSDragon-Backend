@@ -6,7 +6,7 @@ DB 스키마와 공통 엔티티 규칙을 기록합니다.
 
 ## 현재 상태
 
-인증/가족/부모 프로필/여행 도메인 Entity가 도입되었습니다.
+인증/가족/부모 프로필/여행/여행 10계명 도메인 Entity가 도입되었습니다.
 `docs/database/schema.dbml`과 `docs/database/erd.md`는 PDF 확정 와이어프레임 기준 목표 설계를 포함하므로,
 현재 구현 Entity보다 앞서 있는 테이블과 컬럼이 있을 수 있습니다.
 
@@ -27,6 +27,7 @@ DB 스키마와 공통 엔티티 규칙을 기록합니다.
 | `PledgeTemplate` | `pledge_templates` | 여행 10계명 서버 후보 문구 |
 | `TripPledge` | `trip_pledges` | 여행별 10계명 확정본과 진행 상태 |
 | `PledgeItem` | `pledge_items` | 여행별 확정 문구 10개 |
+| `PledgeSignature` | `pledge_signatures` | 참여자별 여행 10계명 PNG 서명 바이트 |
 
 ---
 
@@ -169,9 +170,10 @@ DB 스키마와 공통 엔티티 규칙을 기록합니다.
 ### trip_pledges
 
 - `trip_id`는 unique이며 여행당 확정본을 하나만 저장합니다.
-- 이번 구현은 내용 확인 완료 상태인 `reviewed`까지 사용합니다.
 - 상태는 `draft`, `reviewed`, `signature_requested`, `completed` 순서로 진행합니다.
-- `rendered_image_url`, `pdf_url`, 서명 관련 시각은 후속 서명/PDF 구현을 위해 nullable로 준비합니다.
+- 자녀가 서명하면 `signature_requested`, 첫 참여 부모가 서명하면 `completed`로 변경합니다.
+- `completed_at`은 최초 완료 시각으로 유지하며 이후 다른 부모의 추가 서명으로 변경하지 않습니다.
+- 완성된 이미지와 PDF는 저장하지 않으므로 렌더링/PDF URL 컬럼을 두지 않습니다.
 - PDF 공유 조건은 자녀 서명과 여행 참여 부모 최소 1명 서명 완료입니다.
 
 ### pledge_items
@@ -183,8 +185,11 @@ DB 스키마와 공통 엔티티 규칙을 기록합니다.
 
 ### pledge_signatures
 
-- 목표 DBML에는 포함되어 있으나 아직 Entity/API를 구현하지 않았습니다.
-- 서명 파일 저장소와 렌더링 방식 확정 후 구현합니다.
+- `trip_pledge_id`, `user_id` 조합은 unique이며 제출한 서명은 덮어쓰지 않습니다.
+- `signature_image_data`는 클라이언트가 전송한 PNG Base64를 디코딩한 바이트이며 PostgreSQL `bytea`로 저장합니다.
+- `signature_mime_type`은 현재 `image/png`로 고정합니다.
+- 디코딩된 이미지의 최대 허용 크기는 512KB입니다.
+- 모든 여행 참여자에게 현재까지 저장된 전체 서명을 동일하게 제공합니다.
 
 ---
 

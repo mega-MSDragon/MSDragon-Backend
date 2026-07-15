@@ -1,6 +1,8 @@
 package com.msdragon.backend.pledge.dto
 
+import com.msdragon.backend.auth.entity.UserRole
 import com.msdragon.backend.pledge.entity.PledgeItem
+import com.msdragon.backend.pledge.entity.PledgeSignature
 import com.msdragon.backend.pledge.entity.PledgeTemplate
 import com.msdragon.backend.pledge.entity.TripPledge
 import com.msdragon.backend.pledge.entity.TripPledgeStatus
@@ -63,14 +65,19 @@ data class TripPledgeResponse(
 	@field:Schema(description = "서명 완료 시간", example = "2026-07-15T12:20:00", nullable = true)
 	val completedAt: LocalDateTime?,
 
-	@field:Schema(description = "현재 서명 상태를 반영한 비트맵 URL", nullable = true)
-	val renderedImageUrl: String?,
+	@field:Schema(description = "현재 로그인 사용자가 아직 본인 서명을 제출할 수 있는지 여부", example = "true")
+	val canSign: Boolean,
 
-	@field:Schema(description = "공유용 PDF URL", nullable = true)
-	val pdfUrl: String?,
+	@field:Schema(description = "현재까지 제출된 전체 참여자 서명. 모든 여행 참여자에게 동일하게 노출됩니다.")
+	val signatures: List<TripPledgeSignatureResponse>,
 ) {
 	companion object {
-		fun of(pledge: TripPledge, items: List<PledgeItem>): TripPledgeResponse =
+		fun of(
+			pledge: TripPledge,
+			items: List<PledgeItem>,
+			signatures: List<PledgeSignature>,
+			canSign: Boolean,
+		): TripPledgeResponse =
 			TripPledgeResponse(
 				id = requireNotNull(pledge.id),
 				tripId = requireNotNull(pledge.trip.id),
@@ -80,8 +87,49 @@ data class TripPledgeResponse(
 				reviewedAt = pledge.reviewedAt,
 				requestedAt = pledge.requestedAt,
 				completedAt = pledge.completedAt,
-				renderedImageUrl = pledge.renderedImageUrl,
-				pdfUrl = pledge.pdfUrl,
+				canSign = canSign,
+				signatures = signatures.map(TripPledgeSignatureResponse::from),
+			)
+	}
+}
+
+@Schema(description = "여행 10계명 참여자 서명")
+data class TripPledgeSignatureResponse(
+	@field:Schema(description = "서명 ID", example = "1")
+	val id: Long,
+
+	@field:Schema(description = "서명한 사용자 ID", example = "2")
+	val userId: Long,
+
+	@field:Schema(
+		description = "서명한 사용자의 역할",
+		example = "parent",
+		allowableValues = ["child", "parent"],
+	)
+	val role: UserRole,
+
+	@field:Schema(description = "서명한 사용자 표시 이름", example = "엄마")
+	val displayName: String,
+
+	@field:Schema(description = "서명 이미지 MIME 타입", example = "image/png")
+	val signatureImageMimeType: String,
+
+	@field:Schema(description = "data URI prefix 없는 PNG Base64 문자열", example = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB...")
+	val signatureImageBase64: String,
+
+	@field:Schema(description = "서명 시간", example = "2026-07-15T12:10:00")
+	val signedAt: LocalDateTime,
+) {
+	companion object {
+		fun from(signature: PledgeSignature): TripPledgeSignatureResponse =
+			TripPledgeSignatureResponse(
+				id = requireNotNull(signature.id),
+				userId = requireNotNull(signature.user.id),
+				role = signature.user.role,
+				displayName = signature.user.displayName,
+				signatureImageMimeType = signature.signatureMimeType,
+				signatureImageBase64 = java.util.Base64.getEncoder().encodeToString(signature.signatureImageData),
+				signedAt = signature.signedAt,
 			)
 	}
 }

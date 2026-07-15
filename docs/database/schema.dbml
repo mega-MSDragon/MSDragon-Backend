@@ -664,16 +664,13 @@ Table trip_pledges {
   created_by_user_id bigint [not null]
   status trip_pledge_status [not null, default: 'draft']
   title varchar(80)
-  rendered_image_url varchar(500)
-  pdf_url varchar(500)
   reviewed_at datetime
   requested_at datetime
   completed_at datetime
-  shared_at datetime
   created_at datetime [not null, default: `now()`]
   updated_at datetime [not null, default: `now()`]
 
-  Note: 'PDF 확정 기준. 랜덤 후보 10개와 사용자 수정 내용은 내용 확인/서명 준비 단계에서 여행별 확정본으로 저장한다. status는 draft -> reviewed -> signature_requested -> completed로 진행한다. rendered_image_url은 현재 서명 상태까지 반영한 전체 10계명 비트맵, pdf_url은 자녀와 여행 참여 부모 최소 1명 서명 완료 후 생성한다.'
+  Note: '랜덤 후보 10개와 사용자 수정 내용은 내용 확인/서명 준비 단계에서 여행별 확정본으로 저장한다. 자녀 서명 시 signature_requested, 참여 부모 최소 1명 서명 시 completed가 된다. completed 이후 다른 참여 부모의 추가 서명을 허용하며 completed_at은 최초 완료 시각을 유지한다. 완성 이미지와 PDF는 저장하지 않고 요청 시 생성한다.'
 }
 
 Table pledge_items {
@@ -695,9 +692,11 @@ Table pledge_signatures {
   id bigint [pk, increment]
   trip_pledge_id bigint [not null]
   user_id bigint [not null]
-  signature_image_url varchar(500)
-  signed_at datetime
+  signature_image_data bytea [not null]
+  signature_mime_type varchar(30) [not null, default: 'image/png']
+  signed_at datetime [not null]
   created_at datetime [not null, default: `now()`]
+  updated_at datetime [not null, default: `now()`]
 
   indexes {
     (trip_pledge_id, user_id) [unique]

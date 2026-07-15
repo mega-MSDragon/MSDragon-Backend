@@ -23,3 +23,14 @@ data class SaveTripPledgeItemRequest(
 	@field:Size(max = 255, message = "10계명 문구는 255자 이하로 입력해주세요.")
 	val content: String,
 )
+
+@Schema(description = "여행 10계명 본인 서명 저장 요청")
+data class SavePledgeSignatureRequest(
+	@field:Schema(
+		description = "PNG 서명 이미지의 data URI prefix 없는 Base64 문자열. 디코딩 결과는 최대 512KB까지 허용합니다.",
+		example = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB...",
+	)
+	@field:NotBlank(message = "서명 이미지를 입력해주세요.")
+	@field:Size(max = 700_000, message = "서명 이미지가 허용 크기를 초과했습니다.")
+	val signatureImageBase64: String,
+)

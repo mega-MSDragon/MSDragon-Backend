@@ -4,6 +4,7 @@ import com.msdragon.backend.auth.support.AuthenticatedUser
 import com.msdragon.backend.auth.support.CurrentUser
 import com.msdragon.backend.common.config.BEARER_AUTH_SCHEME
 import com.msdragon.backend.common.response.ApiResponse
+import com.msdragon.backend.pledge.dto.SavePledgeSignatureRequest
 import com.msdragon.backend.pledge.dto.SaveTripPledgeRequest
 import com.msdragon.backend.pledge.dto.TripPledgeCandidatesResponse
 import com.msdragon.backend.pledge.dto.TripPledgeResponse
@@ -17,6 +18,7 @@ import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
+import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
@@ -54,7 +56,7 @@ class TripPledgeController(
 
 	@Operation(
 		summary = "여행 10계명 확정본 조회",
-		description = "여행을 만든 자녀가 저장한 여행별 10계명 확정본을 조회합니다.",
+		description = "여행별 확정 문구와 현재까지 제출된 전체 참여자 서명을 조회합니다. 부모는 자녀 서명 요청 후 조회할 수 있습니다.",
 	)
 	@ApiResponses(
 		value = [
@@ -96,5 +98,29 @@ class TripPledgeController(
 		ApiResponse.success(
 			message = "여행 10계명 저장 성공",
 			data = tripPledgeService.saveReviewedPledge(currentUser, tripId, request),
+		)
+
+	@Operation(
+		summary = "여행 10계명 본인 서명 저장",
+		description = "현재 사용자의 PNG 서명을 저장합니다. 자녀가 먼저 서명해야 하며, 참여 부모는 전체 완료 후에도 본인 서명을 추가할 수 있습니다.",
+	)
+	@ApiResponses(
+		value = [
+			SwaggerApiResponse(responseCode = "200", description = "여행 10계명 서명 저장 성공"),
+			SwaggerApiResponse(responseCode = "400", description = "서명 순서, 상태, 이미지 형식 또는 크기가 올바르지 않음"),
+			SwaggerApiResponse(responseCode = "401", description = "인증 실패"),
+			SwaggerApiResponse(responseCode = "403", description = "서명 권한 없음"),
+			SwaggerApiResponse(responseCode = "404", description = "여행 또는 저장된 10계명을 찾을 수 없음"),
+		],
+	)
+	@PostMapping("/signatures/me")
+	fun saveSignature(
+		@Parameter(hidden = true) @CurrentUser currentUser: AuthenticatedUser,
+		@Parameter(description = "여행 ID", example = "1") @PathVariable tripId: Long,
+		@Valid @RequestBody request: SavePledgeSignatureRequest,
+	): ApiResponse<TripPledgeResponse> =
+		ApiResponse.success(
+			message = "여행 10계명 서명 저장 성공",
+			data = tripPledgeService.saveSignature(currentUser, tripId, request),
 		)
 }

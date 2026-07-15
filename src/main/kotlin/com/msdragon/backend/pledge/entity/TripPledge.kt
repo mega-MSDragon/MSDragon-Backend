@@ -32,12 +32,6 @@ class TripPledge(
 	@Column(name = "title", length = 80)
 	var title: String? = null,
 
-	@Column(name = "rendered_image_url", length = 500)
-	var renderedImageUrl: String? = null,
-
-	@Column(name = "pdf_url", length = 500)
-	var pdfUrl: String? = null,
-
 	@Column(name = "reviewed_at")
 	var reviewedAt: LocalDateTime? = null,
 
@@ -47,8 +41,6 @@ class TripPledge(
 	@Column(name = "completed_at")
 	var completedAt: LocalDateTime? = null,
 
-	@Column(name = "shared_at")
-	var sharedAt: LocalDateTime? = null,
 ) : BaseTimeEntity() {
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -59,5 +51,17 @@ class TripPledge(
 		this.title = title
 		this.reviewedAt = reviewedAt
 		status = TripPledgeStatus.REVIEWED
+	}
+
+	fun requestSignatures(requestedAt: LocalDateTime) {
+		this.requestedAt = requestedAt
+		status = TripPledgeStatus.SIGNATURE_REQUESTED
+	}
+
+	fun complete(completedAt: LocalDateTime) {
+		if (status != TripPledgeStatus.COMPLETED) {
+			this.completedAt = completedAt
+			status = TripPledgeStatus.COMPLETED
+		}
 	}
 }

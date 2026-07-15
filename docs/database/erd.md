@@ -9,7 +9,7 @@
 - **F2**: 로그인 provider는 와이어프레임 기준으로 `kakao`, `apple`만 유지합니다.
 - **F3**: 연령대는 공통 `age_band` ENUM으로 관리하고 `undisclosed`를 허용합니다. 역할별 허용값은 서비스 레이어에서 검증합니다.
 - **F4**: 가족은 자녀 대표 1명, 부모 최대 2명을 앱 검증과 DB trigger로 함께 강제합니다.
-- **F5**: 10계명은 서버 후보군에서 랜덤 10개를 내려주고, 서명 요청 시 여행별 확정본/서명/렌더링 비트맵/PDF를 저장합니다.
+- **F5**: 10계명은 서버 후보군에서 랜덤 10개를 내려주고 여행별 확정본과 참여자별 PNG 서명 바이트를 저장합니다. 완성 이미지/PDF는 요청 시 생성합니다.
 - **F6**: 장소 상세 이미지 대응을 위해 최소 `place_images` 테이블을 둡니다.
 - **F7**: 부모 피드백의 몸 상태, 베스트 장소, 보강된 태그를 저장합니다.
 - **F8**: 효도 리포트는 고정 지표 컬럼으로 관리하고, 기록 화면용 집계값을 리포트에 저장합니다.
@@ -523,12 +523,9 @@ CREATE TABLE trip_pledges (
     created_by_user_id BIGINT NOT NULL REFERENCES users(id),
     status             trip_pledge_status NOT NULL DEFAULT 'draft',
     title              VARCHAR(80),
-    rendered_image_url VARCHAR(500), -- 현재 서명 상태까지 반영한 전체 10계명 비트맵
-    pdf_url            VARCHAR(500), -- 자녀와 여행 참여 부모 최소 1명 서명 완료 후 공유용 PDF
     reviewed_at        TIMESTAMPTZ,
     requested_at       TIMESTAMPTZ,
     completed_at       TIMESTAMPTZ,
-    shared_at          TIMESTAMPTZ,
     created_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at         TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -547,9 +544,11 @@ CREATE TABLE pledge_signatures (
     id                  BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     trip_pledge_id      BIGINT NOT NULL REFERENCES trip_pledges(id),
     user_id             BIGINT NOT NULL REFERENCES users(id),
-    signature_image_url VARCHAR(500),
-    signed_at           TIMESTAMPTZ,    -- 부모 비동기 서명 → NULL 허용
+    signature_image_data BYTEA NOT NULL,
+    signature_mime_type VARCHAR(30) NOT NULL DEFAULT 'image/png',
+    signed_at           TIMESTAMPTZ NOT NULL,
     created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
     UNIQUE (trip_pledge_id, user_id)
 );
 ```
@@ -557,7 +556,9 @@ CREATE TABLE pledge_signatures (
 - PDF 확정 기준으로 `trip_pledges.status`는 `draft` → `reviewed` → `signature_requested` → `completed` 순서로 진행합니다.
 - 서명 요청 전 랜덤 후보 10개와 수정 중인 문구는 화면 상태로 처리하고, 내용 확인/서명 준비 단계에서 `trip_pledges`/`pledge_items`를 저장합니다.
 - 부모 홈의 서명 요청 카드는 `trip_pledges.status = 'signature_requested'`이고 해당 부모의 `pledge_signatures.signed_at`이 없을 때 노출합니다.
-- `rendered_image_url`은 현재 서명 상태까지 반영한 최신 전체 문서 비트맵을 가리키며, `pdf_url`은 자녀와 여행 참여 부모 최소 1명 서명 완료 후 생성합니다.
+- 자녀와 참여 부모 최소 1명이 서명하면 `completed`가 되며, 다른 참여 부모는 이후에도 추가 서명할 수 있습니다.
+- 모든 여행 참여자는 현재까지 저장된 전체 서명을 동일하게 조회합니다.
+- 완성 이미지와 PDF는 DB에 저장하지 않고 디자인된 HTML 템플릿을 기반으로 공유 요청 시 생성합니다.
 
 ---
 
