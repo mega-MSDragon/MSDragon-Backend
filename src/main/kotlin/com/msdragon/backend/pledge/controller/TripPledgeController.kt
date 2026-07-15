@@ -11,11 +11,17 @@ import com.msdragon.backend.pledge.dto.TripPledgeResponse
 import com.msdragon.backend.pledge.service.TripPledgeService
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
+import io.swagger.v3.oas.annotations.media.Content
+import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.responses.ApiResponse as SwaggerApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
+import org.springframework.http.ContentDisposition
+import org.springframework.http.HttpHeaders
+import org.springframework.http.MediaType
+import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
@@ -75,6 +81,38 @@ class TripPledgeController(
 			message = "여행 10계명 조회 성공",
 			data = tripPledgeService.getPledge(currentUser, tripId),
 		)
+
+	@Operation(
+		summary = "여행 10계명 PDF 조회",
+		description = "완료된 여행 10계명의 확정 문구와 현재까지 제출된 전체 서명을 HTML 템플릿에 합성해 PDF 원본으로 반환합니다.",
+	)
+	@ApiResponses(
+		value = [
+			SwaggerApiResponse(
+				responseCode = "200",
+				description = "여행 10계명 PDF 생성 성공",
+				content = [Content(mediaType = MediaType.APPLICATION_PDF_VALUE, schema = Schema(type = "string", format = "binary"))],
+			),
+			SwaggerApiResponse(responseCode = "400", description = "자녀와 참여 부모 최소 1명의 서명이 완료되지 않음"),
+			SwaggerApiResponse(responseCode = "401", description = "인증 실패"),
+			SwaggerApiResponse(responseCode = "403", description = "조회 권한 없음"),
+			SwaggerApiResponse(responseCode = "404", description = "여행 또는 저장된 10계명을 찾을 수 없음"),
+			SwaggerApiResponse(responseCode = "500", description = "PDF 생성 실패"),
+		],
+	)
+	@GetMapping("/pdf", produces = [MediaType.APPLICATION_PDF_VALUE])
+	fun getPledgePdf(
+		@Parameter(hidden = true) @CurrentUser currentUser: AuthenticatedUser,
+		@Parameter(description = "여행 ID", example = "1") @PathVariable tripId: Long,
+	): ResponseEntity<ByteArray> {
+		val pdf = tripPledgeService.generatePdf(currentUser, tripId)
+		return ResponseEntity.ok()
+			.contentType(MediaType.APPLICATION_PDF)
+			.contentLength(pdf.content.size.toLong())
+			.header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.inline().filename(pdf.fileName).build().toString())
+			.header(HttpHeaders.CACHE_CONTROL, "private, no-store")
+			.body(pdf.content)
+	}
 
 	@Operation(
 		summary = "여행 10계명 확정본 저장",

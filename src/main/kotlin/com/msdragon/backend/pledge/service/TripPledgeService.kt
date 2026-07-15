@@ -42,6 +42,7 @@ class TripPledgeService(
 	private val pledgeItemRepository: PledgeItemRepository,
 	private val pledgeSignatureRepository: PledgeSignatureRepository,
 	private val tripParticipantRepository: TripParticipantRepository,
+	private val tripPledgePdfRenderer: TripPledgePdfRenderer,
 ) {
 	@Transactional(readOnly = true)
 	fun getCandidates(currentUser: AuthenticatedUser, tripId: Long): TripPledgeCandidatesResponse {
@@ -72,6 +73,44 @@ class TripPledgeService(
 		validatePledgeViewer(user, trip, pledge)
 
 		return pledgeResponse(pledge, user)
+	}
+
+	@Transactional(readOnly = true)
+	fun generatePdf(currentUser: AuthenticatedUser, tripId: Long): TripPledgePdfFile {
+		val user = getLoginUser(currentUser.id)
+		val trip = getTrip(tripId)
+		val pledge = tripPledgeRepository.findByTripId(tripId)
+			?: throw NotFoundException("저장된 여행 10계명이 없습니다.")
+		validatePledgeViewer(user, trip, pledge)
+		if (pledge.status != TripPledgeStatus.COMPLETED) {
+			throw BadRequestException("자녀와 참여 부모 최소 1명이 서명해야 PDF를 생성할 수 있습니다.")
+		}
+
+		val pledgeId = requireNotNull(pledge.id)
+		val pdfContent = tripPledgePdfRenderer.render(
+			TripPledgePdfData(
+				tripId = tripId,
+				documentTitle = pledge.title ?: DEFAULT_TITLE,
+				tripTitle = trip.title,
+				startDate = trip.startDate,
+				endDate = trip.endDate,
+				items = pledgeItemRepository.findAllByTripPledgeIdOrderBySortOrderAsc(pledgeId)
+					.map(PledgeItem::content),
+				signatures = findOrderedSignatures(pledgeId).map { signature ->
+					TripPledgePdfSignature(
+						role = signature.user.role,
+						displayName = signature.user.displayName,
+						mimeType = signature.signatureMimeType,
+						imageData = signature.signatureImageData,
+						signedAt = signature.signedAt,
+					)
+				},
+			),
+		)
+		return TripPledgePdfFile(
+			fileName = "trip-pledge-$tripId.pdf",
+			content = pdfContent,
+		)
 	}
 
 	@Transactional
@@ -200,11 +239,7 @@ class TripPledgeService(
 
 	private fun pledgeResponse(pledge: TripPledge, currentUser: User): TripPledgeResponse {
 		val pledgeId = requireNotNull(pledge.id)
-		val signatures = pledgeSignatureRepository.findAllByTripPledgeIdOrderBySignedAtAsc(pledgeId)
-			.sortedWith(
-				compareBy<PledgeSignature> { if (it.user.role == UserRole.CHILD) 0 else 1 }
-					.thenBy(PledgeSignature::signedAt),
-			)
+		val signatures = findOrderedSignatures(pledgeId)
 		return TripPledgeResponse.of(
 			pledge = pledge,
 			items = pledgeItemRepository.findAllByTripPledgeIdOrderBySortOrderAsc(pledgeId),
@@ -212,6 +247,13 @@ class TripPledgeService(
 			canSign = canSign(currentUser, pledge, signatures),
 		)
 	}
+
+	private fun findOrderedSignatures(pledgeId: Long): List<PledgeSignature> =
+		pledgeSignatureRepository.findAllByTripPledgeIdOrderBySignedAtAsc(pledgeId)
+			.sortedWith(
+				compareBy<PledgeSignature> { if (it.user.role == UserRole.CHILD) 0 else 1 }
+					.thenBy(PledgeSignature::signedAt),
+			)
 
 	private fun getTrip(tripId: Long): Trip =
 		tripRepository.findByIdAndDeletedAtIsNull(tripId)

@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <style>
+    @page {
+      size: A4;
+      margin: 10mm;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      color: #171717;
+      font-family: "NanumGothic", sans-serif;
+      font-size: 11pt;
+      line-height: 1.55;
+    }
+
+    .document {
+      border: 1.5px solid #171717;
+      padding: 8mm 9mm 7mm;
+    }
+
+    .header {
+      border-bottom: 2px solid #171717;
+      padding-bottom: 3mm;
+      text-align: center;
+    }
+
+    .eyebrow {
+      color: #666666;
+      font-size: 9pt;
+      letter-spacing: 0;
+      margin: 0 0 1mm;
+    }
+
+    h1 {
+      font-family: "NanumGothic", sans-serif;
+      font-size: 21pt;
+      font-weight: 700;
+      margin: 0;
+    }
+
+    .trip-meta {
+      background: #f2f2f2;
+      margin: 3.5mm 0;
+      padding: 2mm 5mm;
+      text-align: center;
+    }
+
+    .trip-title {
+      font-weight: 700;
+    }
+
+    .trip-period {
+      color: #555555;
+      font-size: 9.5pt;
+      margin-top: 1mm;
+    }
+
+    .intro {
+      color: #555555;
+      font-size: 9.5pt;
+      margin: 0 0 2.5mm;
+      text-align: center;
+    }
+
+    #pledge-items {
+      counter-reset: pledge-item;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    #pledge-items li {
+      border-bottom: 1px solid #dddddd;
+      counter-increment: pledge-item;
+      min-height: 7.5mm;
+      padding: 1.5mm 2mm 1.5mm 11mm;
+      position: relative;
+    }
+
+    #pledge-items li::before {
+      content: counter(pledge-item, decimal-leading-zero);
+      font-size: 8.5pt;
+      font-weight: 700;
+      left: 2mm;
+      position: absolute;
+      top: 2mm;
+    }
+
+    .promise {
+      background: #f7f7f7;
+      font-size: 9pt;
+      margin: 3.5mm 0 3mm;
+      padding: 2mm 4mm;
+      text-align: center;
+    }
+
+    .signature-section {
+      page-break-inside: avoid;
+    }
+
+    .signature-heading {
+      font-size: 11pt;
+      font-weight: 700;
+      margin: 0 0 2mm;
+      text-align: center;
+    }
+
+    .signature-list {
+      text-align: center;
+      width: 100%;
+    }
+
+    .signature-card {
+      display: inline-block;
+      margin: 0 1%;
+      text-align: center;
+      vertical-align: top;
+      width: 30%;
+    }
+
+    .signature-image-frame {
+      border-bottom: 1px solid #999999;
+      height: 14mm;
+      text-align: center;
+    }
+
+    .signature-image {
+      height: 13mm;
+      max-width: 100%;
+    }
+
+    .signature-name {
+      font-size: 9pt;
+      font-weight: 700;
+      margin-top: 1mm;
+    }
+
+    .signature-role,
+    .signature-date {
+      color: #666666;
+      font-size: 7.5pt;
+      margin-top: 0.5mm;
+    }
+
+    .footer {
+      color: #777777;
+      font-size: 7pt;
+      margin-top: 3mm;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <main class="document">
+    <header class="header">
+      <p class="eyebrow">함께 만드는 편안한 가족 여행</p>
+      <h1 id="document-title">가족 여행 10계명</h1>
+    </header>
+
+    <section class="trip-meta">
+      <div id="trip-title" class="trip-title">여행 제목</div>
+      <div id="trip-period" class="trip-period">여행 기간</div>
+    </section>
+
+    <p class="intro">서로의 속도와 마음을 존중하며 아래 약속을 함께 지키겠습니다.</p>
+
+    <ol id="pledge-items"></ol>
+
+    <p class="promise">위 내용을 모두 확인했으며, 여행 중 서로를 배려할 것을 약속합니다.</p>
+
+    <section class="signature-section">
+      <h2 class="signature-heading">가족 서명</h2>
+      <div id="signature-list" class="signature-list"></div>
+    </section>
+
+    <footer class="footer">모셔용 · 여행 10계명</footer>
+  </main>
+</body>
+</html>

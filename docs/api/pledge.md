@@ -18,7 +18,7 @@
 - 모든 여행 참여자는 현재까지 제출된 전체 서명을 동일하게 조회합니다.
 - 서명은 PNG Base64로 받고 디코딩한 원본 바이트를 DB에 저장합니다.
 - 여행 수정으로 참여 부모 구성이 바뀌면 확정 문구와 모든 서명을 삭제합니다. 이후 조회는 새 확정본을 저장하기 전까지 `404 Not Found`를 반환합니다.
-- HTML 문서 렌더링과 PDF 생성은 디자인 확정 후 구현합니다.
+- 완료된 10계명은 저장된 문구와 전체 서명을 HTML에 합성해 요청 시 PDF로 생성하며 완성 파일은 저장하지 않습니다.
 
 ## 엔드포인트
 
@@ -26,6 +26,7 @@
 |--------|------|------|
 | `GET` | `/api/v1/trips/{tripId}/pledge/candidates` | 무작위 템플릿 후보 10개 조회 |
 | `GET` | `/api/v1/trips/{tripId}/pledge` | 여행별 10계명 확정본 조회 |
+| `GET` | `/api/v1/trips/{tripId}/pledge/pdf` | 완료된 10계명 PDF 조회 |
 | `PUT` | `/api/v1/trips/{tripId}/pledge` | 수정 완료한 10계명 확정본 저장 |
 | `POST` | `/api/v1/trips/{tripId}/pledge/signatures/me` | 현재 사용자의 서명 저장 |
 
@@ -159,3 +160,37 @@
 ### Response
 
 응답은 `GET /api/v1/trips/{tripId}/pledge`와 같은 `TripPledgeResponse`입니다. `signatures`에는 자녀를 먼저 표시하고 부모 서명을 서명 시각순으로 표시합니다.
+
+## GET /api/v1/trips/{tripId}/pledge/pdf
+
+완료된 여행 10계명의 확정 문구 10개와 현재까지 제출된 전체 참여자 서명을 하나의 A4 PDF로 반환합니다.
+
+- 여행 참여자만 조회할 수 있습니다.
+- 상태가 `completed`여야 합니다. 즉 자녀와 참여 부모 최소 1명이 서명해야 합니다.
+- 완료 후 다른 참여 부모가 추가로 서명하면 다음 PDF 요청부터 해당 서명도 포함됩니다.
+- 응답 시점에 PDF를 생성하며 DB나 파일 저장소에 완성 파일을 보관하지 않습니다.
+- 일반 API와 달리 성공 응답은 `ApiResponse` JSON이 아니라 PDF 원본 바이트입니다.
+
+### Response headers
+
+| Header | Value | 설명 |
+|--------|-------|------|
+| `Content-Type` | `application/pdf` | PDF 원본 바이트 |
+| `Content-Disposition` | `inline; filename="trip-pledge-{tripId}.pdf"` | 앱 내 미리보기를 우선하고 저장 시 사용할 파일명 제공 |
+| `Cache-Control` | `private, no-store` | 서명 문서가 공유 캐시에 남지 않도록 제한 |
+
+오류 응답은 기존 공통 JSON 오류 형식을 사용합니다.
+
+| Status | 조건 |
+|--------|------|
+| `400 Bad Request` | 자녀와 참여 부모 최소 1명의 서명이 아직 완료되지 않음 |
+| `401 Unauthorized` | 유효한 액세스 토큰이 없음 |
+| `403 Forbidden` | 여행 비참여자가 요청함 |
+| `404 Not Found` | 여행 또는 저장된 10계명이 없음 |
+| `500 Internal Server Error` | HTML 합성 또는 PDF 변환 실패 |
+
+### 클라이언트 사용
+
+- Android는 응답 바이트를 앱 캐시의 PDF 파일로 기록한 뒤 `PdfRenderer`로 페이지를 `Bitmap`에 렌더링해 `ImageView`에 표시할 수 있습니다. 같은 임시 파일을 저장 또는 공유 흐름에도 사용합니다.
+- iOS는 응답 `Data`로 `PDFDocument(data:)`를 만들고 PDFKit의 `PDFView`에 표시할 수 있습니다. 같은 데이터를 파일로 기록해 공유 시트 또는 저장 기능에 전달합니다.
+- PDF 바이트를 Base64나 JSON으로 다시 감싸지 말고 binary 응답으로 받아야 합니다.

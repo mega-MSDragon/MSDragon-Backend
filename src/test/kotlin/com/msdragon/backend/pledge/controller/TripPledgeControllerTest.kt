@@ -27,6 +27,9 @@ import com.msdragon.backend.trip.repository.TripDayRepository
 import com.msdragon.backend.trip.repository.TripParticipantRepository
 import com.msdragon.backend.trip.repository.TripRepository
 import com.msdragon.backend.trip.repository.TripStopRepository
+import org.apache.pdfbox.Loader
+import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject
+import org.apache.pdfbox.text.PDFTextStripper
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -41,8 +44,12 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import tools.jackson.databind.ObjectMapper
+import java.awt.image.BufferedImage
+import java.io.ByteArrayOutputStream
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.util.Base64
+import javax.imageio.ImageIO
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -314,6 +321,78 @@ class TripPledgeControllerTest {
 	}
 
 	@Test
+	fun `완료된 여행 10계명을 한글과 전체 서명이 포함된 PDF로 조회한다`() {
+		val (child, parent, trip) = createFamilyTrip()
+		val secondParent = saveUser(UserRole.PARENT, "parent-pdf-2", "아빠")
+		familyMemberRepository.save(
+			FamilyMember(family = trip.family, user = secondParent, memberRole = UserRole.PARENT),
+		)
+		tripParticipantRepository.save(TripParticipant(trip = trip, user = secondParent))
+		saveReviewedPledge(child, trip)
+		submitSignature(child, trip, createPngBase64(0xFF111111.toInt())).andExpect(status().isOk)
+		submitSignature(parent, trip, createPngBase64(0xFF333333.toInt())).andExpect(status().isOk)
+		submitSignature(secondParent, trip, createPngBase64(0xFF555555.toInt())).andExpect(status().isOk)
+
+		val result = mockMvc.perform(
+			get("/api/v1/trips/${requireNotNull(trip.id)}/pledge/pdf")
+				.header("Authorization", "Bearer ${tokenService.createAccessToken(child)}"),
+		)
+			.andExpect(status().isOk)
+			.andReturn()
+
+		check(result.response.contentType == MediaType.APPLICATION_PDF_VALUE)
+		check(result.response.getHeader("Content-Disposition") == "inline; filename=\"trip-pledge-${trip.id}.pdf\"")
+		check(result.response.getHeader("Cache-Control") == "private, no-store")
+		val pdfBytes = result.response.contentAsByteArray
+		check(pdfBytes.copyOfRange(0, 5).contentEquals("%PDF-".toByteArray()))
+
+		Loader.loadPDF(pdfBytes).use { document ->
+			check(document.numberOfPages == 1)
+			val text = PDFTextStripper().getText(document)
+			check(text.contains("가족 여행 10계명"))
+			check(text.contains("경주 여행"))
+			check(text.contains("가족 약속 1"))
+			check(text.contains("혜린"))
+			check(text.contains("엄마"))
+			check(text.contains("아빠"))
+			val imageCount = document.pages.sumOf { page ->
+				page.resources.xObjectNames.count { name -> page.resources.getXObject(name) is PDImageXObject }
+			}
+			check(imageCount >= 3)
+		}
+	}
+
+	@Test
+	fun `참여 부모 서명 전에는 여행 10계명 PDF를 생성할 수 없다`() {
+		val (child, _, trip) = createFamilyTrip()
+		saveReviewedPledge(child, trip)
+		submitSignature(child, trip).andExpect(status().isOk)
+
+		mockMvc.perform(
+			get("/api/v1/trips/${requireNotNull(trip.id)}/pledge/pdf")
+				.header("Authorization", "Bearer ${tokenService.createAccessToken(child)}"),
+		)
+			.andExpect(status().isBadRequest)
+			.andExpect(jsonPath("$.message").value("자녀와 참여 부모 최소 1명이 서명해야 PDF를 생성할 수 있습니다."))
+	}
+
+	@Test
+	fun `여행 비참여자는 완료된 여행 10계명 PDF를 조회할 수 없다`() {
+		val (child, parent, trip) = createFamilyTrip()
+		val otherParent = saveUser(UserRole.PARENT, "parent-other", "다른 부모")
+		saveReviewedPledge(child, trip)
+		submitSignature(child, trip).andExpect(status().isOk)
+		submitSignature(parent, trip).andExpect(status().isOk)
+
+		mockMvc.perform(
+			get("/api/v1/trips/${requireNotNull(trip.id)}/pledge/pdf")
+				.header("Authorization", "Bearer ${tokenService.createAccessToken(otherParent)}"),
+		)
+			.andExpect(status().isForbidden)
+			.andExpect(jsonPath("$.message").value("여행 참여자만 여행 10계명을 조회할 수 있습니다."))
+	}
+
+	@Test
 	fun `제출한 서명은 다시 저장할 수 없다`() {
 		val (child, _, trip) = createFamilyTrip()
 		saveReviewedPledge(child, trip)
@@ -364,6 +443,19 @@ class TripPledgeControllerTest {
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(mapOf("signatureImageBase64" to imageBase64))),
 		)
+
+	private fun createPngBase64(color: Int): String {
+		val image = BufferedImage(2, 2, BufferedImage.TYPE_INT_ARGB)
+		for (x in 0 until image.width) {
+			for (y in 0 until image.height) {
+				image.setRGB(x, y, color)
+			}
+		}
+		return ByteArrayOutputStream().use { output ->
+			check(ImageIO.write(image, "png", output))
+			Base64.getEncoder().encodeToString(output.toByteArray())
+		}
+	}
 
 	private fun createFamilyTrip(): Triple<User, User, Trip> {
 		val child = saveUser(UserRole.CHILD, "child-1", "혜린")
