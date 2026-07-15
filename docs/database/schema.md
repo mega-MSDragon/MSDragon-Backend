@@ -24,6 +24,9 @@ DB 스키마와 공통 엔티티 규칙을 기록합니다.
 | `TripParticipant` | `trip_participants` | 여행 참여자 |
 | `TripDay` | `trip_days` | 여행 일자 |
 | `TripStop` | `trip_stops` | 여행 일자별 방문지 코스와 장소 스냅샷 |
+| `PledgeTemplate` | `pledge_templates` | 여행 10계명 서버 후보 문구 |
+| `TripPledge` | `trip_pledges` | 여행별 10계명 확정본과 진행 상태 |
+| `PledgeItem` | `pledge_items` | 여행별 확정 문구 10개 |
 
 ---
 
@@ -152,6 +155,36 @@ DB 스키마와 공통 엔티티 규칙을 기록합니다.
 - `stop_type`은 `sightseeing`, `meal`, `rest`, `cafe` 중 하나입니다.
 - `recommendation_tags`, `source_payload`는 JSON 문자열로 저장합니다.
 - 장소 마스터 캐시와 방문지 간 세그먼트 단위 상세 테이블은 후속 작업입니다. 현재 경로는 `trip_days` 일자 단위 캐시에 저장합니다.
+
+---
+
+## 여행 10계명 테이블 구현 메모
+
+### pledge_templates
+
+- 서버 시작 시 와이어프레임 기준 기본 후보 문구 중 DB에 없는 문구만 추가합니다.
+- `is_active=true`인 후보만 무작위 후보 조회에 사용합니다.
+- 후보 조회 결과 자체는 저장하지 않습니다.
+
+### trip_pledges
+
+- `trip_id`는 unique이며 여행당 확정본을 하나만 저장합니다.
+- 이번 구현은 내용 확인 완료 상태인 `reviewed`까지 사용합니다.
+- 상태는 `draft`, `reviewed`, `signature_requested`, `completed` 순서로 진행합니다.
+- `rendered_image_url`, `pdf_url`, 서명 관련 시각은 후속 서명/PDF 구현을 위해 nullable로 준비합니다.
+- PDF 공유 조건은 자녀 서명과 여행 참여 부모 최소 1명 서명 완료입니다.
+
+### pledge_items
+
+- `trip_pledge_id`, `sort_order` 조합은 unique입니다.
+- 여행별 항목은 정확히 10개이며 요청 배열 순서대로 1~10을 저장합니다.
+- 원본 템플릿을 수정 없이 사용한 경우에만 `is_from_template=true`입니다.
+- 직접 작성한 항목은 `pledge_template_id`가 null일 수 있습니다.
+
+### pledge_signatures
+
+- 목표 DBML에는 포함되어 있으나 아직 Entity/API를 구현하지 않았습니다.
+- 서명 파일 저장소와 렌더링 방식 확정 후 구현합니다.
 
 ---
 

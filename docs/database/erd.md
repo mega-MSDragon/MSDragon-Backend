@@ -19,7 +19,7 @@
 - **F12**: 여행모드는 여행 기간으로 계산하고, 주변 화장실/의료시설 캐시와 여행모드 AI 챗봇 컨텍스트를 저장합니다.
 - **F13**: PDF 확정본 기준으로 동의/알림/위치 권한 설정은 앱 로컬/OS 권한으로 관리하고 백엔드 ERD에서 제외합니다.
 - **F14**: PDF 확정본 기준으로 여행 도시는 여행 정보 편집에서 변경 가능하며, 변경 저장 후 코스 재추천/덮어쓰기 확인 플로우를 거칩니다.
-- **F15**: PDF 확정본 기준으로 10계명 PDF 공유는 여행 참여 가족 전원 서명 완료 후 가능합니다.
+- **F15**: 후속 확정 기준으로 10계명 PDF 공유는 자녀와 여행 참여 부모 최소 1명 서명 완료 후 가능합니다.
 
 ## v2 변경 요약 (결정 반영)
 - **A1**: 단일 `users` 유지 — 역할별 NULL 컬럼이 없어 분리 이득 없음.
@@ -524,7 +524,7 @@ CREATE TABLE trip_pledges (
     status             trip_pledge_status NOT NULL DEFAULT 'draft',
     title              VARCHAR(80),
     rendered_image_url VARCHAR(500), -- 현재 서명 상태까지 반영한 전체 10계명 비트맵
-    pdf_url            VARCHAR(500), -- 여행 참여 가족 전원 서명 완료 후 공유용 PDF
+    pdf_url            VARCHAR(500), -- 자녀와 여행 참여 부모 최소 1명 서명 완료 후 공유용 PDF
     reviewed_at        TIMESTAMPTZ,
     requested_at       TIMESTAMPTZ,
     completed_at       TIMESTAMPTZ,
@@ -557,7 +557,7 @@ CREATE TABLE pledge_signatures (
 - PDF 확정 기준으로 `trip_pledges.status`는 `draft` → `reviewed` → `signature_requested` → `completed` 순서로 진행합니다.
 - 서명 요청 전 랜덤 후보 10개와 수정 중인 문구는 화면 상태로 처리하고, 내용 확인/서명 준비 단계에서 `trip_pledges`/`pledge_items`를 저장합니다.
 - 부모 홈의 서명 요청 카드는 `trip_pledges.status = 'signature_requested'`이고 해당 부모의 `pledge_signatures.signed_at`이 없을 때 노출합니다.
-- `rendered_image_url`은 현재 서명 상태까지 반영한 최신 전체 문서 비트맵을 가리키며, `pdf_url`은 여행 참여 가족 전원 서명 완료 후 생성합니다.
+- `rendered_image_url`은 현재 서명 상태까지 반영한 최신 전체 문서 비트맵을 가리키며, `pdf_url`은 자녀와 여행 참여 부모 최소 1명 서명 완료 후 생성합니다.
 
 ---
 
@@ -779,7 +779,7 @@ erDiagram
 | parent_profiles ↔ parent_profile_themes | N:M-like enum rows | 여행 취향 1~3개 링크 테이블 |
 | parent_profiles → parent_personality_results | MBTI 재진단 이력 | `is_current=true` partial unique |
 | pledge_templates → pledge_items | 후보군에서 여행별 확정본 복사 | `pledge_template_id` nullable |
-| trips → trip_pledges → pledge_signatures | 여행별 10계명과 가족 전원 서명 진행 상태 | `trip_pledges.status`, `UNIQUE(trip_id)`, `UNIQUE(trip_pledge_id, user_id)` |
+| trips → trip_pledges → pledge_signatures | 여행별 10계명과 자녀·부모 서명 진행 상태 | `trip_pledges.status`, `UNIQUE(trip_id)`, `UNIQUE(trip_pledge_id, user_id)` |
 | trips → trip_feedback_requests | 마지막날 자녀의 별점 요청 | `UNIQUE(trip_id, parent_user_id)` |
 | trips → trip_feedbacks | 부모별 1건 | `UNIQUE(trip_id, parent_user_id)` |
 | trips → filial_reports | 1:1, 전원 피드백 후 | 앱 레벨 |
