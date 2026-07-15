@@ -3,6 +3,14 @@
 여행 생성 시 저장한 부모님 프로필 스냅샷과 한국관광공사 TourAPI 무장애여행 정보를 기반으로 일자별 방문지를 추천하는 정책입니다.
 이번 정책은 장소 추천까지만 다루며, Tmap 경로/거리/소요시간 계산은 `docs/policy/route-optimization.md`에서 별도로 다룹니다.
 
+## 권한과 상태
+
+- API: `POST /api/v1/trips/{tripId}/course/recommendation`
+- 여행을 생성한 자녀만 추천 코스를 생성하거나 기존 코스를 추천 결과로 덮어쓸 수 있습니다.
+- `planning`, `ready`, `in_progress` 상태에서 호출할 수 있습니다.
+- `completed`, `archived` 상태에서는 호출할 수 없습니다.
+- 방문지 검색과 상세 조회는 코스를 변경하지 않으므로 기존처럼 같은 가족 구성원이 이용할 수 있습니다.
+
 ## API 사용
 
 기본 서비스는 한국관광공사 국문 무장애여행 서비스 `KorWithService2`를 사용합니다.

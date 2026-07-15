@@ -47,10 +47,11 @@ class TripCourseRecommendationService(
 ) {
 	@Transactional
 	fun recommendCourse(currentUser: AuthenticatedUser, tripId: Long): TripCourseResponse {
-		getLoginUser(currentUser.id)
+		val child = getLoginUser(currentUser.id)
 		val trip = tripRepository.findByIdAndDeletedAtIsNull(tripId)
 			?: throw NotFoundException("여행을 찾을 수 없습니다.")
 		validateTripReadable(currentUser.id, trip)
+		tripService.validateCourseEditable(child, trip)
 
 		val tripDays = tripDayRepository.findAllByTripIdOrderByDayNumberAsc(tripId)
 		if (tripDays.isEmpty()) {

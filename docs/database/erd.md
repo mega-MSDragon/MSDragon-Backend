@@ -18,7 +18,7 @@
 - **F11**: 앱 도시 선택용 `travel_destinations`와 공공데이터 행정 구역 `regions`를 분리하고, 코스 생성 job/API 사용 이력/티맵 경로 구간을 저장합니다.
 - **F12**: 여행모드는 여행 기간으로 계산하고, 주변 화장실/의료시설 캐시와 여행모드 AI 챗봇 컨텍스트를 저장합니다.
 - **F13**: PDF 확정본 기준으로 동의/알림/위치 권한 설정은 앱 로컬/OS 권한으로 관리하고 백엔드 ERD에서 제외합니다.
-- **F14**: PDF 확정본 기준으로 여행 도시는 여행 정보 편집에서 변경 가능하며, 변경 저장 후 코스 재추천/덮어쓰기 확인 플로우를 거칩니다.
+- **F14**: PDF 확정본 기준으로 여행 도시는 준비 중 정보 편집에서 변경 가능하며, 변경 저장 후 코스 재추천/덮어쓰기 확인 플로우를 거칩니다. 여행 중에는 도시와 제목을 고정합니다.
 - **F15**: 후속 확정 기준으로 10계명 PDF 공유는 자녀와 여행 참여 부모 최소 1명 서명 완료 후 가능합니다.
 
 ## v2 변경 요약 (결정 반영)
@@ -354,7 +354,7 @@ CREATE TABLE trips (
     id                 BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     family_id          BIGINT NOT NULL REFERENCES families(id),
     created_by_user_id BIGINT NOT NULL REFERENCES users(id),
-    destination_code   VARCHAR(60) NOT NULL,       -- PDF 확정: 여행 정보 편집에서 변경 가능
+    destination_code   VARCHAR(60) NOT NULL,       -- 준비 중 정보 편집에서 변경 가능, 여행 중 고정
     title              VARCHAR(80) NOT NULL,
     start_date         DATE NOT NULL,
     end_date           DATE NOT NULL,
@@ -367,9 +367,10 @@ CREATE TABLE trips (
     deleted_at         TIMESTAMPTZ,
     CHECK (end_date >= start_date)
 );
--- PDF 확정: 여행 도시는 여행 정보 편집에서 변경 가능하다.
+-- 여행 도시는 준비 중 정보 편집에서 변경 가능하고 여행 중에는 고정한다.
 -- 도시/날짜/함께 가는 가족/추천 기준 변경은 저장 후 코스 재추천과 기존 일정 덮어쓰기 확인 플로우를 거친다.
--- 제목, 날짜, 함께 가는 사람, 코스 편집은 저장하기 버튼 시점에 서비스 트랜잭션으로 확정 반영한다.
+-- 여행 중에는 오늘을 포함하는 날짜, 함께 가는 부모, 코스만 생성 자녀가 수정할 수 있다.
+-- completed/archived 상태에서는 기본정보와 코스를 수정할 수 없다.
 -- 여행모드는 start_date 00:00부터 end_date 23:59까지 노출하고 별도 여행 종료 버튼은 두지 않는다.
 -- 서울 날짜 기준 start_date부터 status=in_progress, end_date 다음 날부터 status=completed로 동기화한다.
 -- 여행 참여자 선택 여부와 관계없이 같은 family_id의 구성원은 여행모드에 접근할 수 있다.
@@ -794,7 +795,7 @@ erDiagram
 ---
 
 ## 11. 남은 구현 메모
-1. **여행 도시 변경 가능**: PDF 확정 기준으로 여행 정보 편집에서 도시 변경을 허용합니다. 저장 후 기존 코스 재추천/덮어쓰기 확인 플로우를 서비스에서 처리합니다.
+1. **여행 도시 변경 가능 범위**: 준비 중에는 도시 변경을 허용하고 저장 후 기존 코스 재추천/덮어쓰기 확인 플로우를 처리합니다. 여행 중에는 도시와 제목을 고정합니다.
 2. **겹치는 일정 차단**: 이미 선택된 날짜는 비활성화하고 겹치는 여행 생성을 막습니다. 초기 구현은 앱/서비스 검증을 우선합니다.
 3. **부모 최대 2명 제약**: `family_members` insert/update 시 DB trigger로 `member_role='parent'`가 2명을 초과하지 않게 막습니다.
 4. **효도 리포트 집계값**: 걸음수/이동거리/방문 장소 수는 별도 방문 로그 없이 `filial_reports`의 집계 컬럼에 저장합니다.

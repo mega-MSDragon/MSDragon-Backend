@@ -712,6 +712,205 @@ class TripControllerTest {
 	}
 
 	@Test
+	fun `진행 중 여행은 오늘을 포함한 기간과 참여 부모를 수정할 수 있다`() {
+		val child = saveUser(UserRole.CHILD, "child-1", "혜린")
+		val mother = saveUser(UserRole.PARENT, "parent-1", "엄마", GenderType.FEMALE)
+		val father = saveUser(UserRole.PARENT, "parent-2", "아빠", GenderType.MALE)
+		connectFamily(child, mother, father)
+		saveCompletedParentProfile(mother)
+		saveCompletedParentProfile(father)
+		val today = futureDate(0)
+		val tripId = createTrip(child, mother, today, today.plusDays(1))
+		saveSingleStopCourse(child, tripId)
+		val changedEndDate = today.plusDays(2)
+
+		mockMvc.perform(
+			put("/api/v1/trips/$tripId")
+				.header("Authorization", "Bearer ${tokenService.createAccessToken(child)}")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(
+					"""
+					{
+					  "title": "경주 여행",
+					  "destinationCode": "gyeongju",
+					  "startDate": "$today",
+					  "endDate": "$changedEndDate",
+					  "parentUserIds": [${requireNotNull(father.id)}],
+					  "courseResetConfirmed": true
+					}
+					""".trimIndent(),
+				),
+		)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.data.status").value("in_progress"))
+			.andExpect(jsonPath("$.data.startDate").value(today.toString()))
+			.andExpect(jsonPath("$.data.endDate").value(changedEndDate.toString()))
+			.andExpect(jsonPath("$.data.participants.length()").value(2))
+			.andExpect(jsonPath("$.data.participants[1].userId").value(requireNotNull(father.id)))
+			.andExpect(jsonPath("$.data.days.length()").value(3))
+			.andExpect(jsonPath("$.data.days[2].travelDate").value(changedEndDate.toString()))
+
+		mockMvc.perform(
+			get("/api/v1/trips/$tripId/course")
+				.header("Authorization", "Bearer ${tokenService.createAccessToken(child)}"),
+		)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.data.days.length()").value(3))
+			.andExpect(jsonPath("$.data.days[0].stops.length()").value(0))
+	}
+
+	@Test
+	fun `진행 중 여행은 제목과 도시를 수정할 수 없다`() {
+		val child = saveUser(UserRole.CHILD, "child-1", "혜린")
+		val mother = saveUser(UserRole.PARENT, "parent-1", "엄마", GenderType.FEMALE)
+		connectFamily(child, mother)
+		saveCompletedParentProfile(mother)
+		val today = futureDate(0)
+		val tripId = createTrip(child, mother, today, today.plusDays(1))
+		val authorization = "Bearer ${tokenService.createAccessToken(child)}"
+
+		mockMvc.perform(
+			put("/api/v1/trips/$tripId")
+				.header("Authorization", authorization)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(
+					"""
+					{
+					  "title": "수정한 경주 여행",
+					  "destinationCode": "gyeongju",
+					  "startDate": "$today",
+					  "endDate": "${today.plusDays(1)}",
+					  "parentUserIds": [${requireNotNull(mother.id)}]
+					}
+					""".trimIndent(),
+				),
+		)
+			.andExpect(status().isBadRequest)
+			.andExpect(jsonPath("$.message").value("여행 중에는 여행 제목을 수정할 수 없습니다."))
+
+		mockMvc.perform(
+			put("/api/v1/trips/$tripId")
+				.header("Authorization", authorization)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(
+					"""
+					{
+					  "title": "경주 여행",
+					  "destinationCode": "busan",
+					  "startDate": "$today",
+					  "endDate": "${today.plusDays(1)}",
+					  "parentUserIds": [${requireNotNull(mother.id)}]
+					}
+					""".trimIndent(),
+				),
+		)
+			.andExpect(status().isBadRequest)
+			.andExpect(jsonPath("$.message").value("여행 중에는 여행 도시를 수정할 수 없습니다."))
+	}
+
+	@Test
+	fun `진행 중 여행의 변경 기간에는 오늘이 포함되어야 한다`() {
+		val child = saveUser(UserRole.CHILD, "child-1", "혜린")
+		val mother = saveUser(UserRole.PARENT, "parent-1", "엄마", GenderType.FEMALE)
+		connectFamily(child, mother)
+		saveCompletedParentProfile(mother)
+		val today = futureDate(0)
+		val tripId = createTrip(child, mother, today, today.plusDays(1))
+
+		mockMvc.perform(
+			put("/api/v1/trips/$tripId")
+				.header("Authorization", "Bearer ${tokenService.createAccessToken(child)}")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(
+					"""
+					{
+					  "title": "경주 여행",
+					  "destinationCode": "gyeongju",
+					  "startDate": "${today.plusDays(1)}",
+					  "endDate": "${today.plusDays(2)}",
+					  "parentUserIds": [${requireNotNull(mother.id)}]
+					}
+					""".trimIndent(),
+				),
+		)
+			.andExpect(status().isBadRequest)
+			.andExpect(jsonPath("$.message").value("여행 중 변경한 기간에는 오늘이 포함되어야 합니다."))
+	}
+
+	@Test
+	fun `부모는 여행 코스를 변경할 수 없다`() {
+		val child = saveUser(UserRole.CHILD, "child-1", "혜린")
+		val mother = saveUser(UserRole.PARENT, "parent-1", "엄마", GenderType.FEMALE)
+		connectFamily(child, mother)
+		saveCompletedParentProfile(mother)
+		val tripId = createTrip(child, mother, futureDate(10), futureDate(10))
+		val authorization = "Bearer ${tokenService.createAccessToken(mother)}"
+
+		mockMvc.perform(
+			put("/api/v1/trips/$tripId/course")
+				.header("Authorization", authorization)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"days\":[]}"),
+		)
+			.andExpect(status().isForbidden)
+			.andExpect(jsonPath("$.message").value("여행을 만든 자녀만 여행 코스를 수정할 수 있습니다."))
+
+		mockMvc.perform(
+			post("/api/v1/trips/$tripId/course/recommendation")
+				.header("Authorization", authorization),
+		)
+			.andExpect(status().isForbidden)
+			.andExpect(jsonPath("$.message").value("여행을 만든 자녀만 여행 코스를 수정할 수 있습니다."))
+
+		mockMvc.perform(
+			post("/api/v1/trips/$tripId/days/1/route-optimization")
+				.header("Authorization", authorization),
+		)
+			.andExpect(status().isForbidden)
+			.andExpect(jsonPath("$.message").value("여행을 만든 자녀만 여행 코스를 수정할 수 있습니다."))
+	}
+
+	@Test
+	fun `완료된 여행은 기본 정보와 코스를 수정할 수 없다`() {
+		val child = saveUser(UserRole.CHILD, "child-1", "혜린")
+		val mother = saveUser(UserRole.PARENT, "parent-1", "엄마", GenderType.FEMALE)
+		connectFamily(child, mother)
+		saveCompletedParentProfile(mother)
+		val tripId = createTrip(child, mother, futureDate(10), futureDate(10))
+		val yesterday = futureDate(-1)
+		moveTripToDates(tripId, yesterday, yesterday)
+		val authorization = "Bearer ${tokenService.createAccessToken(child)}"
+
+		mockMvc.perform(
+			put("/api/v1/trips/$tripId")
+				.header("Authorization", authorization)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(
+					"""
+					{
+					  "title": "경주 여행",
+					  "destinationCode": "gyeongju",
+					  "startDate": "$yesterday",
+					  "endDate": "$yesterday",
+					  "parentUserIds": [${requireNotNull(mother.id)}]
+					}
+					""".trimIndent(),
+				),
+		)
+			.andExpect(status().isBadRequest)
+			.andExpect(jsonPath("$.message").value("완료되거나 보관된 여행은 여행 정보를 수정할 수 없습니다."))
+
+		mockMvc.perform(
+			put("/api/v1/trips/$tripId/course")
+				.header("Authorization", authorization)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"days\":[]}"),
+		)
+			.andExpect(status().isBadRequest)
+			.andExpect(jsonPath("$.message").value("완료되거나 보관된 여행은 여행 코스를 수정할 수 없습니다."))
+	}
+
+	@Test
 	fun `다른 여행과 겹치는 날짜로 여행 정보를 수정할 수 없다`() {
 		val child = saveUser(UserRole.CHILD, "child-1", "혜린")
 		val mother = saveUser(UserRole.PARENT, "parent-1", "엄마", GenderType.FEMALE)

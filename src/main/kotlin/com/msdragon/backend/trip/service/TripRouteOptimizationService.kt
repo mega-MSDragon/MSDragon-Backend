@@ -45,10 +45,11 @@ class TripRouteOptimizationService(
 		tripId: Long,
 		dayNumber: Int,
 	): TripCourseResponse {
-		getLoginUser(currentUser.id)
+		val child = getLoginUser(currentUser.id)
 		val trip = tripRepository.findByIdAndDeletedAtIsNull(tripId)
 			?: throw NotFoundException("여행을 찾을 수 없습니다.")
 		validateTripReadable(currentUser.id, trip)
+		tripService.validateCourseEditable(child, trip)
 		val tripDay = tripDayRepository.findByTripIdAndDayNumber(tripId, dayNumber)
 			?: throw NotFoundException("여행 일자를 찾을 수 없습니다.")
 		val stops = tripStopRepository.findAllByTripDayIdOrderBySortOrderAsc(requireNotNull(tripDay.id))

@@ -61,13 +61,13 @@ data class CreateTripRequest(
 
 @Schema(description = "여행 기본정보 수정 요청")
 data class UpdateTripRequest(
-	@field:Schema(description = "여행 제목", example = "경주 가족 여행")
+	@field:Schema(description = "여행 제목. 여행 중에는 기존 제목과 같은 값을 전달해야 합니다.", example = "경주 가족 여행")
 	@field:NotBlank(message = "여행 제목을 입력해주세요.")
 	@field:Size(max = 80, message = "여행 제목은 80자 이하로 입력해주세요.")
 	val title: String,
 
 	@field:Schema(
-		description = "여행 도시 코드",
+		description = "여행 도시 코드. 여행 중에는 기존 도시와 같은 값을 전달해야 합니다.",
 		example = "gyeongju",
 		allowableValues = [
 			"daegu",
@@ -87,11 +87,11 @@ data class UpdateTripRequest(
 	@field:NotNull(message = "여행 도시를 선택해주세요.")
 	val destinationCode: TripDestinationCode,
 
-	@field:Schema(description = "여행 시작일", example = "2026-07-10")
+	@field:Schema(description = "여행 시작일. 여행 중 변경하는 경우 시작일과 종료일 사이에 오늘이 포함되어야 합니다.", example = "2026-07-10")
 	@field:NotNull(message = "여행 시작일을 선택해주세요.")
 	val startDate: LocalDate,
 
-	@field:Schema(description = "여행 종료일. 시작일과 같거나 이후 날짜를 선택할 수 있습니다.", example = "2026-07-11")
+	@field:Schema(description = "여행 종료일. 시작일과 같거나 이후이며, 여행 중 변경하는 경우 기간에 오늘이 포함되어야 합니다.", example = "2026-07-11")
 	@field:NotNull(message = "여행 종료일을 선택해주세요.")
 	val endDate: LocalDate,
 
