@@ -370,9 +370,11 @@ class TripPledgeControllerTest {
 
 		mockMvc.perform(
 			get("/api/v1/trips/${requireNotNull(trip.id)}/pledge/pdf")
+				.accept(MediaType.APPLICATION_PDF)
 				.header("Authorization", "Bearer ${tokenService.createAccessToken(child)}"),
 		)
 			.andExpect(status().isBadRequest)
+			.andExpect { result -> check(result.response.contentType == MediaType.APPLICATION_JSON_VALUE) }
 			.andExpect(jsonPath("$.message").value("자녀와 참여 부모 최소 1명이 서명해야 PDF를 생성할 수 있습니다."))
 	}
 

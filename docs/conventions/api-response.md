@@ -52,3 +52,4 @@
 - Health check처럼 단순 상태 확인 API는 예외적으로 전용 응답 DTO를 사용할 수 있습니다.
 - Bean Validation 실패는 첫 번째 field error의 `defaultMessage`를 `message`로 내려줍니다.
 - validation error의 필드별 상세 목록은 아직 응답에 포함하지 않습니다.
+- PDF 등 바이너리 성공 응답을 사용하는 API도 오류 응답은 `Content-Type: application/json`과 위 실패 응답 구조를 사용합니다.

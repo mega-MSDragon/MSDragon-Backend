@@ -28,6 +28,7 @@ BaseException
 - 잘못된 인자는 `IllegalArgumentException`에서 처리합니다.
 - 현재 공통 예외 응답에는 별도 에러 코드 enum을 포함하지 않습니다.
 - 인증은 되었지만 리소스 접근 권한이 없으면 `ForbiddenException`으로 `403`을 반환합니다.
+- 성공 응답이 PDF 같은 바이너리인 API도 실패 응답은 항상 `Content-Type: application/json`인 공통 실패 응답을 반환합니다. 클라이언트의 `Accept`가 바이너리 타입만 지정되어 있어도 예외 처리기가 JSON 타입을 명시합니다.
 
 ---
 

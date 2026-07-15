@@ -183,3 +183,21 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse as SwaggerApiResponse
 - 저장 전 생성한 시간을 같은 요청에서 즉시 응답할 때는 DB 컬럼 정밀도에 맞춰 먼저 정규화합니다.
 - PostgreSQL/H2 `timestamp(6)`에 저장하는 현재 시각은 `ChronoUnit.MICROS`로 절삭한 뒤 Entity와 응답에 함께 사용합니다.
 - 저장 직후 응답과 다음 요청의 재조회 응답이 같아야 하는 시간 필드는 DB 왕복 전후 동일성 테스트를 작성합니다.
+
+### 2026-07-15: PDF 요청의 오류 응답 미디어 타입 누락
+
+**상황**
+
+- PDF API의 완료 조건 검증은 `BadRequestException`을 던졌지만, Swagger 요청의 `Accept: application/pdf`와 공통 JSON 예외 응답이 충돌해 운영 서버에서는 `400`이 아닌 `500`으로 처리됐습니다.
+- 기존 통합 테스트가 실제 Swagger 요청과 달리 `Accept` 헤더를 보내지 않아 문제를 발견하지 못했습니다.
+
+**원인**
+
+- `ControllerExceptionAdvice`가 오류 응답의 `Content-Type: application/json`을 명시하지 않아 Spring이 클라이언트가 요청한 PDF 타입으로 `ApiResponse`를 직렬화하려 했습니다.
+- 바이너리 성공 응답과 JSON 오류 응답을 함께 사용하는 엔드포인트의 콘텐츠 협상 조건을 테스트하지 않았습니다.
+
+**재발 방지 규칙**
+
+- 공통 예외 처리기는 모든 오류 응답의 `Content-Type`을 `application/json`으로 명시합니다.
+- PDF, 이미지, 파일 다운로드 API의 오류 통합 테스트는 실제 성공 미디어 타입을 `Accept` 헤더로 보내고도 상태 코드와 JSON 오류 본문이 유지되는지 확인합니다.
+- Swagger에 표시되는 요청 헤더를 운영 재현 조건으로 포함합니다.
