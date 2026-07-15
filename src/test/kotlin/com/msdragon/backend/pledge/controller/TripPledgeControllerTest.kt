@@ -303,6 +303,7 @@ class TripPledgeControllerTest {
 				.contentAsString,
 			"$.data.completedAt",
 		)
+		check(LocalDateTime.parse(completedAt).nano % 1_000 == 0)
 
 		submitSignature(secondParent, trip)
 			.andExpect(status().isOk)

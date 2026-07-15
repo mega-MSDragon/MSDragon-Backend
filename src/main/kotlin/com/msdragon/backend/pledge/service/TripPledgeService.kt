@@ -30,6 +30,7 @@ import com.msdragon.backend.trip.repository.TripParticipantRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
+import java.time.temporal.ChronoUnit
 import java.util.Base64
 
 @Service
@@ -105,7 +106,7 @@ class TripPledgeService(
 				createdByUser = user,
 			),
 		)
-		pledge.review(DEFAULT_TITLE, LocalDateTime.now())
+		pledge.review(DEFAULT_TITLE, currentTimestamp())
 
 		val existingItems = pledgeItemRepository.findAllByTripPledgeIdOrderBySortOrderAsc(requireNotNull(pledge.id))
 		if (existingItems.isNotEmpty()) {
@@ -151,7 +152,7 @@ class TripPledgeService(
 		}
 		validateSigner(user, trip, pledge)
 
-		val signedAt = LocalDateTime.now()
+		val signedAt = currentTimestamp()
 		pledgeSignatureRepository.save(
 			PledgeSignature(
 				tripPledge = pledge,
@@ -194,6 +195,8 @@ class TripPledgeService(
 			throw BadRequestException("같은 여행 10계명 템플릿을 중복 사용할 수 없습니다.")
 		}
 	}
+
+	private fun currentTimestamp(): LocalDateTime = LocalDateTime.now().truncatedTo(ChronoUnit.MICROS)
 
 	private fun pledgeResponse(pledge: TripPledge, currentUser: User): TripPledgeResponse {
 		val pledgeId = requireNotNull(pledge.id)
