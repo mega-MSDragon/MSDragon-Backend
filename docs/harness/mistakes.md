@@ -129,3 +129,21 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse as SwaggerApiResponse
   - `docs/setup/deploy.md`
   - 운영 서버 `.env`
 - 실제 secret 값은 Git, 문서, 대화 요약에 남기지 않고 placeholder로만 기록합니다.
+
+### 2026-07-15: Kotlin 기본 생성자 프로퍼티에 setter 가시성 지정 반복
+
+**상황**
+
+- JPA Entity 기본 생성자의 `var` 파라미터 바로 다음 줄에 `protected set`을 작성해 Kotlin 컴파일 오류가 발생했습니다.
+- 여행 Entity 수정 작업에서 이미 한 번 발견하고 고쳤던 문법 오류를 새 Entity 작성 중 다시 반복했습니다.
+
+**원인**
+
+- 클래스 본문 프로퍼티에 사용할 수 있는 setter 가시성 문법을 기본 생성자 프로퍼티에도 그대로 적용했습니다.
+
+**재발 방지 규칙**
+
+- Kotlin 기본 생성자에 선언한 `var` 프로퍼티에는 `private set`, `protected set`을 별도 줄로 붙이지 않습니다.
+- setter 가시성 제한이 반드시 필요하면 프로퍼티를 클래스 본문으로 옮기고, JPA 생성 요구사항과 테스트를 함께 확인합니다.
+- 이 프로젝트의 단순 JPA Entity는 기존 패턴처럼 생성자 `var`를 유지하고 상태 변경 의도는 도메인 메서드로 표현합니다.
+- 새 Entity 여러 개를 만든 직후에는 API 구현 전에 `./gradlew compileKotlin`을 먼저 실행합니다.
