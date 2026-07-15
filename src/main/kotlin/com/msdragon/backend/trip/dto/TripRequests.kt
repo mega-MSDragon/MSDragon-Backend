@@ -95,7 +95,7 @@ data class UpdateTripRequest(
 	@field:NotNull(message = "여행 종료일을 선택해주세요.")
 	val endDate: LocalDate,
 
-	@field:Schema(description = "함께 여행할 부모 사용자 ID 목록. 같은 가족에 연결된 부모만 선택할 수 있습니다.", example = "[2,3]")
+	@field:Schema(description = "함께 여행할 부모 사용자 ID 목록. 같은 가족에 연결된 부모만 선택할 수 있으며, 기존 참여 부모 구성이 바뀌면 10계명과 모든 서명이 초기화됩니다.", example = "[2,3]")
 	@field:NotEmpty(message = "여행 대상 부모를 선택해주세요.")
 	@field:Size(max = 2, message = "부모는 최대 2명까지 선택할 수 있습니다.")
 	val parentUserIds: List<Long>,

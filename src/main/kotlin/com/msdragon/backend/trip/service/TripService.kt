@@ -14,6 +14,7 @@ import com.msdragon.backend.parentprofile.entity.ParentProfile
 import com.msdragon.backend.parentprofile.entity.ParentProfileStatus
 import com.msdragon.backend.parentprofile.entity.TravelThemeCode
 import com.msdragon.backend.parentprofile.repository.ParentProfileRepository
+import com.msdragon.backend.pledge.service.TripPledgeService
 import com.msdragon.backend.trip.dto.CreateTripRequest
 import com.msdragon.backend.trip.dto.MyTripsResponse
 import com.msdragon.backend.trip.dto.SaveTripCourseRequest
@@ -58,6 +59,7 @@ class TripService(
 	private val tripParticipantRepository: TripParticipantRepository,
 	private val tripDayRepository: TripDayRepository,
 	private val tripStopRepository: TripStopRepository,
+	private val tripPledgeService: TripPledgeService,
 	private val objectMapper: ObjectMapper,
 ) {
 	@Transactional(readOnly = true)
@@ -228,6 +230,7 @@ class TripService(
 				replaceTripDays(trip, tripDays, request.startDate, dayCount)
 			}
 			if (participantsChanged) {
+				tripPledgeService.resetForParticipantChange(tripId)
 				replaceTripParticipants(trip, existingParticipants, selectedParents)
 			}
 		}

@@ -22,6 +22,9 @@ import com.msdragon.backend.parentprofile.entity.TravelPersonalityTypeCode
 import com.msdragon.backend.parentprofile.entity.TravelThemeCode
 import com.msdragon.backend.parentprofile.entity.WalkingPace
 import com.msdragon.backend.parentprofile.repository.ParentProfileRepository
+import com.msdragon.backend.pledge.repository.PledgeItemRepository
+import com.msdragon.backend.pledge.repository.PledgeSignatureRepository
+import com.msdragon.backend.pledge.repository.TripPledgeRepository
 import com.msdragon.backend.trip.repository.TripDayRepository
 import com.msdragon.backend.trip.repository.TripParticipantRepository
 import com.msdragon.backend.trip.repository.TripRepository
@@ -38,6 +41,7 @@ import com.msdragon.backend.trip.tmap.TmapRouteCoordinate
 import com.msdragon.backend.trip.tmap.TmapRouteOptimizationRequest
 import com.msdragon.backend.trip.tmap.TmapRouteOptimizationResult
 import org.springframework.boot.test.context.TestConfiguration
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -102,6 +106,15 @@ class TripControllerTest {
 	private lateinit var tripRepository: TripRepository
 
 	@Autowired
+	private lateinit var pledgeSignatureRepository: PledgeSignatureRepository
+
+	@Autowired
+	private lateinit var pledgeItemRepository: PledgeItemRepository
+
+	@Autowired
+	private lateinit var tripPledgeRepository: TripPledgeRepository
+
+	@Autowired
 	private lateinit var fakeTourApiClient: FakeTourApiClient
 
 	@Autowired
@@ -111,6 +124,18 @@ class TripControllerTest {
 	fun setUp() {
 		fakeTourApiClient.reset()
 		fakeTmapRouteClient.reset()
+		cleanDatabase()
+	}
+
+	@AfterEach
+	fun tearDown() {
+		cleanDatabase()
+	}
+
+	private fun cleanDatabase() {
+		pledgeSignatureRepository.deleteAll()
+		pledgeItemRepository.deleteAll()
+		tripPledgeRepository.deleteAll()
 		tripStopRepository.deleteAll()
 		tripDayRepository.deleteAll()
 		tripParticipantRepository.deleteAll()
@@ -405,6 +430,7 @@ class TripControllerTest {
 		val startDate = futureDate(10)
 		val tripId = createTrip(child, mother, startDate, startDate)
 		saveSingleStopCourse(child, tripId)
+		saveReviewedPledge(child, tripId)
 
 		mockMvc.perform(
 			put("/api/v1/trips/$tripId")
@@ -432,6 +458,8 @@ class TripControllerTest {
 			.andExpect(status().isOk)
 			.andExpect(jsonPath("$.data.days[0].stops.length()").value(1))
 			.andExpect(jsonPath("$.data.days[0].stops[0].name").value("경주 산책 공원"))
+
+		check(tripPledgeRepository.findByTripId(tripId.toLong()) != null)
 	}
 
 	@Test
@@ -478,6 +506,11 @@ class TripControllerTest {
 		val startDate = futureDate(10)
 		val tripId = createTrip(child, mother, startDate, startDate)
 		saveSingleStopCourse(child, tripId)
+		saveReviewedPledge(child, tripId)
+		savePledgeSignature(child, tripId)
+		savePledgeSignature(mother, tripId)
+		check(pledgeItemRepository.count() == 10L)
+		check(pledgeSignatureRepository.count() == 2L)
 		val trip = tripRepository.findById(tripId.toLong()).orElseThrow()
 		trip.status = TripStatus.READY
 		tripRepository.saveAndFlush(trip)
@@ -523,6 +556,16 @@ class TripControllerTest {
 			.andExpect(jsonPath("$.data.days.length()").value(3))
 			.andExpect(jsonPath("$.data.days[0].route").doesNotExist())
 			.andExpect(jsonPath("$.data.days[0].stops.length()").value(0))
+
+		check(tripPledgeRepository.findByTripId(tripId.toLong()) == null)
+		check(pledgeItemRepository.count() == 0L)
+		check(pledgeSignatureRepository.count() == 0L)
+		mockMvc.perform(
+			get("/api/v1/trips/$tripId/pledge")
+				.header("Authorization", "Bearer ${tokenService.createAccessToken(child)}"),
+		)
+			.andExpect(status().isNotFound)
+			.andExpect(jsonPath("$.message").value("저장된 여행 10계명이 없습니다."))
 	}
 
 	@Test
@@ -861,6 +904,27 @@ class TripControllerTest {
 			.andExpect(status().isOk)
 	}
 
+	private fun saveReviewedPledge(child: User, tripId: Int) {
+		val items = (1..10).joinToString(",") { index -> "{\"content\":\"가족 약속 $index\"}" }
+		mockMvc.perform(
+			put("/api/v1/trips/$tripId/pledge")
+				.header("Authorization", "Bearer ${tokenService.createAccessToken(child)}")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"items\":[$items]}"),
+		)
+			.andExpect(status().isOk)
+	}
+
+	private fun savePledgeSignature(user: User, tripId: Int) {
+		mockMvc.perform(
+			post("/api/v1/trips/$tripId/pledge/signatures/me")
+				.header("Authorization", "Bearer ${tokenService.createAccessToken(user)}")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"signatureImageBase64\":\"$PNG_BASE64\"}"),
+		)
+			.andExpect(status().isOk)
+	}
+
 	private fun createTrip(child: User, parent: User, startDate: LocalDate, endDate: LocalDate): Int {
 		val response = mockMvc.perform(
 			post("/api/v1/trips")
@@ -969,6 +1033,11 @@ class TripControllerTest {
 				"lclsSystm1" to lclsSystm1,
 			),
 		)
+
+	companion object {
+		private const val PNG_BASE64 =
+			"iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
+	}
 
 	@TestConfiguration
 	class TourApiTestConfig {

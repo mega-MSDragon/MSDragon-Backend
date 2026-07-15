@@ -170,6 +170,24 @@ class TripPledgeService(
 		return pledgeResponse(pledge, user)
 	}
 
+	@Transactional
+	fun resetForParticipantChange(tripId: Long) {
+		val pledge = tripPledgeRepository.findByTripId(tripId) ?: return
+		val pledgeId = requireNotNull(pledge.id)
+		val signatures = pledgeSignatureRepository.findAllByTripPledgeIdOrderBySignedAtAsc(pledgeId)
+		if (signatures.isNotEmpty()) {
+			pledgeSignatureRepository.deleteAll(signatures)
+			pledgeSignatureRepository.flush()
+		}
+		val items = pledgeItemRepository.findAllByTripPledgeIdOrderBySortOrderAsc(pledgeId)
+		if (items.isNotEmpty()) {
+			pledgeItemRepository.deleteAll(items)
+			pledgeItemRepository.flush()
+		}
+		tripPledgeRepository.delete(pledge)
+		tripPledgeRepository.flush()
+	}
+
 	private fun validateTemplateIds(request: SaveTripPledgeRequest) {
 		val templateIds = request.items.mapNotNull { it.templateId }
 		if (templateIds.distinct().size != templateIds.size) {
