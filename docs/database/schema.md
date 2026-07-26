@@ -6,7 +6,7 @@ DB 스키마와 공통 엔티티 규칙을 기록합니다.
 
 ## 현재 상태
 
-인증/가족/부모 프로필/여행/여행 10계명 도메인 Entity가 도입되었습니다.
+인증/가족/부모 프로필/여행/여행 10계명/여행 피드백 도메인 Entity가 도입되었습니다.
 `docs/database/schema.dbml`과 `docs/database/erd.md`는 PDF 확정 와이어프레임 기준 목표 설계를 포함하므로,
 현재 구현 Entity보다 앞서 있는 테이블과 컬럼이 있을 수 있습니다.
 
@@ -28,6 +28,9 @@ DB 스키마와 공통 엔티티 규칙을 기록합니다.
 | `TripPledge` | `trip_pledges` | 여행별 10계명 확정본과 진행 상태 |
 | `PledgeItem` | `pledge_items` | 여행별 확정 문구 10개 |
 | `PledgeSignature` | `pledge_signatures` | 참여자별 여행 10계명 PNG 서명 바이트 |
+| `TripFeedbackRequest` | `trip_feedback_requests` | 자녀가 참여 부모에게 보낸 평가 요청 |
+| `TripFeedback` | `trip_feedbacks` | 부모별 여행 피드백 1건 |
+| `TripFeedback.tags` | `trip_feedback_tags` | 피드백에서 선택한 좋았던 점·개선점 태그 |
 
 ---
 
@@ -195,6 +198,33 @@ DB 스키마와 공통 엔티티 규칙을 기록합니다.
 - `signature_mime_type`은 현재 `image/png`로 고정합니다.
 - 디코딩된 이미지의 최대 허용 크기는 512KB입니다.
 - 모든 여행 참여자에게 현재까지 저장된 전체 서명을 동일하게 제공합니다.
+
+---
+
+## 여행 피드백 테이블 구현 메모
+
+### trip_feedback_requests
+
+- `trip_id`, `parent_user_id` 조합은 unique입니다.
+- 여행 생성 자녀가 마지막 날부터 아직 제출하지 않은 참여 부모 전체에게 요청합니다.
+- 같은 API를 다시 호출해도 기존 부모별 요청 시각을 유지합니다.
+
+### trip_feedbacks
+
+- `trip_id`, `parent_user_id` 조합은 unique이며 부모별 한 번만 제출합니다.
+- `overall_rating`은 `0.0`부터 `5.0`까지 `0.5` 단위로 서비스에서 검증합니다.
+- `body_condition`은 `comfortable`, `slightly_tired`, `very_tired` 중 하나입니다.
+- `best_trip_stop_id`는 제출 시 해당 여행 방문지인지 검증하지만 FK는 두지 않습니다.
+- `best_place_name_snapshot`에 제출 당시 장소명을 저장해 이후 코스 변경과 관계없이 표시합니다.
+- `submitted_at`은 DB `timestamp(6)` 정밀도에 맞춰 마이크로초 단위로 저장합니다.
+- 여행 기간 또는 참여 부모 구성이 바뀌면 관련 요청과 피드백을 모두 삭제합니다.
+
+### trip_feedback_tags
+
+- `TripFeedback.tags`의 `@ElementCollection` 테이블입니다.
+- `trip_feedback_id`, `tag` 조합은 unique입니다.
+- 좋았던 점 6개와 개선할 점 4개 중 실제로 선택한 값만 저장합니다.
+- API enum과 화면 문구 매핑은 `docs/policy/trip-feedback.md`를 따릅니다.
 
 ---
 

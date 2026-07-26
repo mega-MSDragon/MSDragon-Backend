@@ -10,6 +10,7 @@ import com.msdragon.backend.common.exception.NotFoundException
 import com.msdragon.backend.common.exception.UnAuthorizedException
 import com.msdragon.backend.family.entity.FamilyMember
 import com.msdragon.backend.family.repository.FamilyMemberRepository
+import com.msdragon.backend.feedback.service.TripFeedbackService
 import com.msdragon.backend.parentprofile.entity.ParentProfile
 import com.msdragon.backend.parentprofile.entity.ParentProfileStatus
 import com.msdragon.backend.parentprofile.entity.TravelThemeCode
@@ -61,6 +62,7 @@ class TripService(
 	private val tripDayRepository: TripDayRepository,
 	private val tripStopRepository: TripStopRepository,
 	private val tripPledgeService: TripPledgeService,
+	private val tripFeedbackService: TripFeedbackService,
 	private val objectMapper: ObjectMapper,
 ) {
 	@Transactional(readOnly = true)
@@ -274,6 +276,9 @@ class TripService(
 		}
 
 		if (recommendationInputsChanged) {
+			if (datesChanged || participantsChanged) {
+				tripFeedbackService.resetForTripChange(tripId)
+			}
 			resetCourse(existingStops, tripDays)
 			if (datesChanged) {
 				replaceTripDays(trip, tripDays, request.startDate, dayCount)

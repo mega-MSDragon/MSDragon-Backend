@@ -57,7 +57,16 @@ CREATE TYPE report_stop_badge  AS ENUM ('comfortable', 'caution');
 
 -- C6: 평가 태그 고정 집합 (운영 변경 없음 → 마스터 테이블 대신 ENUM)
 CREATE TYPE feedback_tag AS ENUM (
-    'route_comfortable', 'food_good', 'slightly_tired', 'next_slower'
+    'walking_comfortable',
+    'rest_time_good',
+    'scenery_good',
+    'transport_comfortable',
+    'food_good',
+    'seating_sufficient',
+    'more_rest_needed',
+    'many_stairs_or_slopes',
+    'long_travel_time',
+    'crowded'
 );
 ```
 
@@ -578,29 +587,28 @@ CREATE TABLE trip_feedback_requests (
 );
 
 CREATE TABLE trip_feedbacks (
-    id             BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    trip_id        BIGINT NOT NULL REFERENCES trips(id),
-    parent_user_id BIGINT NOT NULL REFERENCES users(id),
-    overall_rating NUMERIC(2,1) CHECK (overall_rating BETWEEN 0 AND 5),  -- 0.5 단위
-    body_condition feedback_body_condition,
-    walk_rating    SMALLINT,     -- 도보 부담
-    rest_rating    SMALLINT,     -- 휴식 간격
-    best_place_id  BIGINT REFERENCES places(id),
-    free_comment   VARCHAR(200),
-    submitted_at   TIMESTAMPTZ,
-    created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+    id                       BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    trip_id                  BIGINT NOT NULL REFERENCES trips(id),
+    parent_user_id           BIGINT NOT NULL REFERENCES users(id),
+    overall_rating           NUMERIC(2,1) NOT NULL
+        CHECK (overall_rating BETWEEN 0 AND 5),  -- 서비스에서 0.5 단위 추가 검증
+    body_condition           feedback_body_condition NOT NULL,
+    best_trip_stop_id        BIGINT NOT NULL,         -- 제출 시 여행 소속 검증, FK 없음
+    best_place_name_snapshot VARCHAR(120) NOT NULL,
+    free_comment             VARCHAR(200),
+    submitted_at             TIMESTAMPTZ NOT NULL,
+    created_at               TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at               TIMESTAMPTZ NOT NULL DEFAULT now(),
     UNIQUE (trip_id, parent_user_id)
 );
 
 -- C6: feedback_tags 마스터 제거 → ENUM 직접 사용. 선택 행만 기록(다중선택 유지).
 CREATE TABLE trip_feedback_tags (
-    id               BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     trip_feedback_id BIGINT NOT NULL REFERENCES trip_feedbacks(id),
     tag              feedback_tag NOT NULL,
     UNIQUE (trip_feedback_id, tag)
 );
--- feedback_tag는 좋았던 점과 다음 여행 개선점을 함께 담고, 화면 분류와 추천 보정은 ENUM 매핑으로 처리한다.
+-- 좋았던 점 6개와 개선할 점 4개를 함께 담고, 그룹 일치 여부는 서비스에서 검증한다.
 
 -- C6: 지표 EAV 제거 → 고정 컬럼화
 CREATE TABLE filial_reports (
@@ -653,7 +661,9 @@ CREATE TABLE recommendation_adjustments (
 );
 ```
 
-마지막날 자녀 화면의 별점 요청 버튼은 `trip_feedback_requests`를 생성하고, 부모 화면의 별점 작성 버튼은 `trip_feedbacks` 미제출 상태일 때 노출합니다.
+종료일 00:00부터 자녀 화면의 별점 요청 버튼은 아직 제출하지 않은 참여 부모별 `trip_feedback_requests`를 생성합니다. 요청 API는 여러 번 호출해도 부모별 한 건만 유지합니다. 부모 화면의 별점 작성 버튼은 `trip_feedbacks` 미제출 상태일 때 노출하며, 요청 이력이 없어도 직접 제출할 수 있습니다.
+
+피드백은 전체 만족도 `0.0~5.0`을 `0.5` 단위로 받고, 몸 상태와 베스트 방문지를 필수로 저장합니다. 태그와 자유 의견은 선택입니다. 제출한 피드백은 수정하지 않습니다. 베스트 장소는 제출 시 해당 여행의 `trip_stops`인지 검증한 뒤 ID와 장소명 스냅샷을 저장하며, 이후 코스 전체 교체를 허용하기 위해 FK는 두지 않습니다.
 
 효도 리포트는 함께 여행한 부모가 모두 `trip_feedbacks.submitted_at`을 가진 뒤 생성합니다. `filial_reports`는 여행별 1개 스냅샷이며, `cover_image_url`은 리포트 화면 대표 이미지, `share_image_url`은 공유 시 사용하는 렌더링 이미지입니다. 부모별 별점/코멘트 원문은 `trip_feedbacks`에서 조회하고, 리포트 카드의 평균 별점은 `average_rating`에 저장합니다.
 
@@ -746,7 +756,6 @@ erDiagram
     users ||--o{ trip_feedback_requests : "요청대상"
     trips ||--o{ trip_feedbacks : "피드백"
     users ||--o{ trip_feedbacks : "부모"
-    places ||--o{ trip_feedbacks : "베스트장소"
     trip_feedbacks ||--o{ trip_feedback_tags : "태그(ENUM)"
     trips ||--o| filial_reports : "리포트"
     places ||--o| filial_reports : "베스트장소"
@@ -785,8 +794,8 @@ erDiagram
 | parent_profiles → parent_personality_results | MBTI 재진단 이력 | `is_current=true` partial unique |
 | pledge_templates → pledge_items | 후보군에서 여행별 확정본 복사 | `pledge_template_id` nullable |
 | trips → trip_pledges → pledge_signatures | 여행별 10계명과 자녀·부모 서명 진행 상태 | `trip_pledges.status`, `UNIQUE(trip_id)`, `UNIQUE(trip_pledge_id, user_id)` |
-| trips → trip_feedback_requests | 마지막날 자녀의 별점 요청 | `UNIQUE(trip_id, parent_user_id)` |
-| trips → trip_feedbacks | 부모별 1건 | `UNIQUE(trip_id, parent_user_id)` |
+| trips → trip_feedback_requests | 종료일 00:00부터 자녀의 미제출 부모 전체 평가 요청 | `UNIQUE(trip_id, parent_user_id)` |
+| trips → trip_feedbacks | 참여 부모별 수정 없는 1건 | `UNIQUE(trip_id, parent_user_id)` |
 | trips → filial_reports | 1:1, 전원 피드백 후 | 앱 레벨 |
 | filial_reports → filial_report_stop_summaries | 기록 상세 장소 흐름 스냅샷 | `UNIQUE(filial_report_id, day_number, sort_order)` |
 | places ↔ place_accessibility | 1:1 | `UNIQUE(place_id)` |

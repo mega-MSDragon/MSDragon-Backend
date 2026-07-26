@@ -162,10 +162,16 @@ Enum report_stop_badge {
 }
 
 Enum feedback_tag {
-  route_comfortable
+  walking_comfortable
+  rest_time_good
+  scenery_good
+  transport_comfortable
   food_good
-  slightly_tired
-  next_slower
+  seating_sufficient
+  more_rest_needed
+  many_stairs_or_slopes
+  long_travel_time
+  crowded
 }
 
 // ---------- 1. 식별 · 인증 · 가족 ----------
@@ -715,20 +721,19 @@ Table trip_feedback_requests {
     (trip_id, parent_user_id) [unique]
   }
 
-  Note: '마지막날 자녀가 부모에게 별점 작성을 요청한 이력. 부모 작성 여부는 trip_feedbacks 존재 여부로 판단한다.'
+  Note: '종료일 00:00부터 자녀가 미제출 참여 부모 모두에게 보내는 평가 요청 이력. 중복 호출해도 부모별 한 건만 유지하며, 부모 작성 여부는 trip_feedbacks 존재 여부로 판단한다.'
 }
 
 Table trip_feedbacks {
   id bigint [pk, increment]
   trip_id bigint [not null]
   parent_user_id bigint [not null]
-  overall_rating decimal(2,1)
-  body_condition feedback_body_condition
-  walk_rating smallint
-  rest_rating smallint
-  best_place_id bigint
+  overall_rating decimal(2,1) [not null]
+  body_condition feedback_body_condition [not null]
+  best_trip_stop_id bigint [not null, note: '제출 시 해당 여행 방문지인지 검증하되 FK는 두지 않는다.']
+  best_place_name_snapshot varchar(120) [not null]
   free_comment varchar(200)
-  submitted_at datetime
+  submitted_at datetime [not null]
   created_at datetime [not null, default: `now()`]
   updated_at datetime [not null, default: `now()`]
 
@@ -736,11 +741,10 @@ Table trip_feedbacks {
     (trip_id, parent_user_id) [unique]
   }
 
-  Note: '여행 완료 후 부모가 작성하는 소감. overall_rating은 0.5 단위 0~5점으로 검증하고, 부모별 1회 제출한다.'
+  Note: '종료일 00:00부터 참여 부모가 작성하는 소감. overall_rating은 0.0~5.0 범위의 0.5 단위로 검증하고 부모별 1회 제출하며 수정하지 않는다. 장소명은 제출 당시 스냅샷으로 유지한다.'
 }
 
 Table trip_feedback_tags {
-  id bigint [pk, increment]
   trip_feedback_id bigint [not null]
   tag feedback_tag [not null]
 
@@ -888,7 +892,6 @@ Ref: trip_feedback_requests.requested_by_user_id > users.id
 Ref: trip_feedback_requests.parent_user_id > users.id
 Ref: trip_feedbacks.trip_id > trips.id
 Ref: trip_feedbacks.parent_user_id > users.id
-Ref: trip_feedbacks.best_place_id > places.id
 Ref: trip_feedback_tags.trip_feedback_id > trip_feedbacks.id
 Ref: filial_reports.trip_id - trips.id
 Ref: filial_reports.best_place_id > places.id
