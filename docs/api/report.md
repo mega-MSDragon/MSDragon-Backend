@@ -1,6 +1,6 @@
-# Filial Report API
+# Report API
 
-참여 부모의 피드백을 집계한 여행별 효도 리포트를 생성하고 조회합니다.
+참여 부모의 피드백을 집계한 여행별 효도 리포트와 완료 여행 기록을 조회합니다.
 
 모든 API는 `Authorization: Bearer {accessToken}` 헤더가 필요합니다.
 
@@ -8,8 +8,56 @@
 
 | Method | Path | 설명 |
 |--------|------|------|
+| `GET` | `/api/v1/records` | 기록 탭 완료 여행 목록과 상단 통계 조회 |
 | `POST` | `/api/v1/trips/{tripId}/filial-report` | 효도 리포트 생성 또는 기존 리포트 반환 |
 | `GET` | `/api/v1/trips/{tripId}/filial-report` | 생성된 효도 리포트 조회 |
+
+## GET /api/v1/records
+
+같은 가족의 `completed` 여행을 종료일과 여행 ID 내림차순으로 조회합니다.
+
+- 여행 마지막 날의 `in_progress` 여행은 포함하지 않습니다.
+- `reportReady=false`인 여행도 목록에 포함합니다.
+- 부모 일부만 피드백을 제출했다면 제출된 값만으로 카드의 현재 평균 만족도를 반환합니다.
+- 상단 평균 만족도는 여행별 평균을 동일 비중으로 다시 평균냅니다.
+- 방문지 수와 이동거리는 피드백 여부와 관계없이 완료 여행 전체를 집계합니다.
+- 가족 매칭 전이면 `familyId=null`, 빈 목록, 0건 통계를 반환합니다.
+
+```json
+{
+  "status": 200,
+  "success": true,
+  "message": "기록 탭 조회 성공",
+  "data": {
+    "familyId": 1,
+    "statistics": {
+      "completedTripCount": 3,
+      "averageRating": 4.7,
+      "totalPlaceCount": 14,
+      "totalDistanceKm": 107.50
+    },
+    "records": [
+      {
+        "tripId": 3,
+        "title": "부산 온천 가족여행",
+        "destination": {
+          "code": "busan",
+          "displayName": "부산",
+          "displayOrder": 4,
+          "badgeLabel": null
+        },
+        "startDate": "2026-07-10",
+        "endDate": "2026-07-11",
+        "participants": [],
+        "coverImageUrl": "https://example.com/place.jpg",
+        "totalPlaceCount": 5,
+        "averageRating": 4.8,
+        "reportReady": true
+      }
+    ]
+  }
+}
+```
 
 ## POST /api/v1/trips/{tripId}/filial-report
 

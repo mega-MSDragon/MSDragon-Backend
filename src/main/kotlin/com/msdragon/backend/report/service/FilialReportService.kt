@@ -17,6 +17,9 @@ import com.msdragon.backend.report.dto.FilialReportBestPlaceResponse
 import com.msdragon.backend.report.dto.FilialReportParentFeedbackResponse
 import com.msdragon.backend.report.dto.FilialReportResponse
 import com.msdragon.backend.report.dto.FilialReportStopResponse
+import com.msdragon.backend.report.dto.TripRecordStatisticsResponse
+import com.msdragon.backend.report.dto.TripRecordSummaryResponse
+import com.msdragon.backend.report.dto.TripRecordsResponse
 import com.msdragon.backend.report.entity.FilialReport
 import com.msdragon.backend.report.repository.FilialReportRepository
 import com.msdragon.backend.trip.dto.TripDestinationResponse
@@ -25,6 +28,7 @@ import com.msdragon.backend.trip.dto.relationLabelOf
 import com.msdragon.backend.trip.entity.Trip
 import com.msdragon.backend.trip.entity.TripDay
 import com.msdragon.backend.trip.entity.TripParticipant
+import com.msdragon.backend.trip.entity.TripStatus
 import com.msdragon.backend.trip.entity.TripStop
 import com.msdragon.backend.trip.repository.TripDayRepository
 import com.msdragon.backend.trip.repository.TripParticipantRepository
@@ -34,6 +38,7 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.math.BigDecimal
 import java.math.RoundingMode
+import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
@@ -71,6 +76,46 @@ class FilialReportService(
 		validateReportReady(source)
 		refreshReport(report, source)
 		return reportResponse(report, source)
+	}
+
+	@Transactional
+	fun getRecords(currentUser: AuthenticatedUser): TripRecordsResponse {
+		val user = getLoginUser(currentUser.id)
+		val member = familyMemberRepository.findByUserId(requireNotNull(user.id))
+			?: return TripRecordsResponse.empty()
+		val familyId = requireNotNull(member.family.id)
+		val today = currentDate()
+		val records = tripRepository.findAllByFamilyIdAndDeletedAtIsNullOrderByStartDateAscIdAsc(familyId)
+			.onEach { it.synchronizeStatus(today) }
+			.filter { it.status == TripStatus.COMPLETED }
+			.sortedWith(compareByDescending<Trip> { it.endDate }.thenByDescending { requireNotNull(it.id) })
+			.map(::recordAggregate)
+
+		if (records.isEmpty()) {
+			return TripRecordsResponse.empty(familyId)
+		}
+
+		val tripAverages = records.mapNotNull(RecordAggregate::averageRating)
+		val averageRating = tripAverages
+			.takeIf(List<BigDecimal>::isNotEmpty)
+			?.fold(BigDecimal.ZERO, BigDecimal::add)
+			?.divide(BigDecimal(tripAverages.size), 1, RoundingMode.HALF_UP)
+		val routeDistances = records.mapNotNull(RecordAggregate::totalDistanceMeters)
+		val totalDistanceKm = routeDistances
+			.takeIf(List<Long>::isNotEmpty)
+			?.sum()
+			?.let { BigDecimal.valueOf(it).divide(METERS_PER_KILOMETER, 2, RoundingMode.HALF_UP) }
+
+		return TripRecordsResponse(
+			familyId = familyId,
+			statistics = TripRecordStatisticsResponse(
+				completedTripCount = records.size,
+				averageRating = averageRating,
+				totalPlaceCount = records.sumOf { it.response.totalPlaceCount },
+				totalDistanceKm = totalDistanceKm,
+			),
+			records = records.map(RecordAggregate::response),
+		)
 	}
 
 	@Transactional
@@ -205,6 +250,39 @@ class FilialReportService(
 		)
 	}
 
+	private fun recordAggregate(trip: Trip): RecordAggregate {
+		val tripId = requireNotNull(trip.id)
+		val source = loadSource(tripId)
+		val report = filialReportRepository.findByTripId(tripId)
+		val averageRating = source.feedbacks
+			.takeIf(List<TripFeedback>::isNotEmpty)
+			?.fold(BigDecimal.ZERO) { sum, feedback -> sum + feedback.overallRating }
+			?.divide(BigDecimal(source.feedbacks.size), 4, RoundingMode.HALF_UP)
+		val routeDistances = source.days.mapNotNull(TripDay::routeTotalDistanceMeters)
+		val totalDistanceMeters = routeDistances
+			.takeIf(List<Int>::isNotEmpty)
+			?.sumOf(Int::toLong)
+		val coverImageUrl = report?.coverImageUrl?.takeIf(String::isNotBlank)
+			?: source.stops.firstNotNullOfOrNull { it.imageUrl?.takeIf(String::isNotBlank) }
+
+		return RecordAggregate(
+			response = TripRecordSummaryResponse(
+				tripId = tripId,
+				title = trip.title,
+				destination = TripDestinationResponse.from(trip.destinationCode),
+				startDate = trip.startDate,
+				endDate = trip.endDate,
+				participants = source.participants.map(TripParticipantResponse::from),
+				coverImageUrl = coverImageUrl,
+				totalPlaceCount = source.stops.size,
+				averageRating = averageRating?.setScale(1, RoundingMode.HALF_UP),
+				reportReady = report != null,
+			),
+			averageRating = averageRating,
+			totalDistanceMeters = totalDistanceMeters,
+		)
+	}
+
 	private fun loadSource(tripId: Long): ReportSource =
 		ReportSource(
 			participants = tripParticipantRepository.findAllByTripIdOrderByIdAsc(tripId),
@@ -248,6 +326,8 @@ class FilialReportService(
 	private fun currentDateTime(): LocalDateTime =
 		LocalDateTime.now(SERVICE_ZONE_ID).truncatedTo(ChronoUnit.MICROS)
 
+	private fun currentDate(): LocalDate = LocalDate.now(SERVICE_ZONE_ID)
+
 	private data class ReportSource(
 		val participants: List<TripParticipant>,
 		val days: List<TripDay>,
@@ -260,6 +340,12 @@ class FilialReportService(
 		val totalPlaceCount: Int,
 		val averageRating: BigDecimal,
 		val totalDistanceKm: BigDecimal?,
+	)
+
+	private data class RecordAggregate(
+		val response: TripRecordSummaryResponse,
+		val averageRating: BigDecimal?,
+		val totalDistanceMeters: Long?,
 	)
 
 	companion object {
