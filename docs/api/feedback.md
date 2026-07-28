@@ -69,7 +69,7 @@
 | `feedbackAvailable` | 서울 날짜가 여행 종료일 이상인지 여부 |
 | `canRequest` | 현재 사용자가 생성 자녀이고 미제출 부모가 있어 요청 API를 호출할 수 있는지 여부 |
 | `canSubmit` | 현재 사용자가 미제출 참여 부모이고 작성 가능 시점인지 여부 |
-| `reportReady` | 모든 참여 부모가 제출했는지 여부 |
+| `reportReady` | 모든 참여 부모가 제출해 효도 리포트가 자동 생성되었는지 여부 |
 
 ## POST /api/v1/trips/{tripId}/feedback/me
 

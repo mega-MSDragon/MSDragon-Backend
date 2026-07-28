@@ -20,6 +20,8 @@ import com.msdragon.backend.parentprofile.entity.TravelPersonalityTypeCode
 import com.msdragon.backend.parentprofile.entity.TravelThemeCode
 import com.msdragon.backend.parentprofile.entity.WalkingPace
 import com.msdragon.backend.parentprofile.repository.ParentProfileRepository
+import com.msdragon.backend.report.repository.FilialReportRepository
+import com.msdragon.backend.trip.entity.ExternalApiProvider
 import com.msdragon.backend.trip.entity.Trip
 import com.msdragon.backend.trip.entity.TripDay
 import com.msdragon.backend.trip.entity.TripDestinationCode
@@ -90,6 +92,9 @@ class TripFeedbackControllerTest {
 	@Autowired
 	private lateinit var tripFeedbackRepository: TripFeedbackRepository
 
+	@Autowired
+	private lateinit var filialReportRepository: FilialReportRepository
+
 	@BeforeEach
 	fun setUp() {
 		cleanDatabase()
@@ -101,6 +106,7 @@ class TripFeedbackControllerTest {
 	}
 
 	private fun cleanDatabase() {
+		filialReportRepository.deleteAll()
 		tripFeedbackRepository.deleteAll()
 		tripFeedbackRequestRepository.deleteAll()
 		tripStopRepository.deleteAll()
@@ -142,6 +148,15 @@ class TripFeedbackControllerTest {
 		val fixture = createTripFixture(endDate = today())
 		val tripId = requireNotNull(fixture.trip.id)
 		val stopId = requireNotNull(fixture.stop.id)
+		fixture.days.last().applyRouteOptimization(
+			provider = ExternalApiProvider.TMAP,
+			totalDistanceMeters = 7_500,
+			totalDurationSeconds = 900,
+			polyline = null,
+			sourcePayload = null,
+			optimizedAt = LocalDateTime.now(),
+		)
+		tripDayRepository.saveAndFlush(fixture.days.last())
 
 		mockMvc.perform(
 			post("/api/v1/trips/$tripId/feedback/me")
@@ -179,10 +194,19 @@ class TripFeedbackControllerTest {
 			post("/api/v1/trips/$tripId/feedback/me")
 				.header("Authorization", authorization(fixture.father))
 				.contentType(MediaType.APPLICATION_JSON)
-				.content(feedbackBody(stopId = stopId, rating = BigDecimal("5.0"))),
+				.content(
+					feedbackBody(
+						stopId = requireNotNull(fixture.secondStop.id),
+						rating = BigDecimal("5.0"),
+						goodTags = listOf("walking_comfortable", "scenery_good"),
+						freeComment = "풍경이 좋았어요.",
+					),
+				),
 		)
 			.andExpect(status().isOk)
 			.andExpect(jsonPath("$.data.reportReady").value(true))
+
+		check(filialReportRepository.count() == 1L)
 
 		mockMvc.perform(
 			get("/api/v1/trips/$tripId/feedback/status")
@@ -194,6 +218,31 @@ class TripFeedbackControllerTest {
 			.andExpect(jsonPath("$.data.reportReady").value(true))
 
 		mockMvc.perform(
+			get("/api/v1/trips/$tripId/filial-report")
+				.header("Authorization", authorization(fixture.child)),
+		)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.data.tripId").value(tripId))
+			.andExpect(jsonPath("$.data.coverImageUrl").value("https://example.com/park.jpg"))
+			.andExpect(jsonPath("$.data.totalPlaceCount").value(2))
+			.andExpect(jsonPath("$.data.averageRating").value(2.5))
+			.andExpect(jsonPath("$.data.totalDistanceKm").value(7.5))
+			.andExpect(jsonPath("$.data.totalScore").doesNotExist())
+			.andExpect(jsonPath("$.data.goodTags.length()").value(3))
+			.andExpect(jsonPath("$.data.goodTags[0]").value("walking_comfortable"))
+			.andExpect(jsonPath("$.data.goodTags[1]").value("scenery_good"))
+			.andExpect(jsonPath("$.data.goodTags[2]").value("food_good"))
+			.andExpect(jsonPath("$.data.improvementTags[0]").value("more_rest_needed"))
+			.andExpect(jsonPath("$.data.parentFeedbacks.length()").value(2))
+			.andExpect(jsonPath("$.data.parentFeedbacks[0].bestPlace.tripStopId").value(stopId))
+			.andExpect(
+				jsonPath("$.data.parentFeedbacks[1].bestPlace.tripStopId")
+					.value(requireNotNull(fixture.secondStop.id)),
+			)
+			.andExpect(jsonPath("$.data.stops.length()").value(2))
+			.andExpect(jsonPath("$.data.generatedAt").isString)
+
+		mockMvc.perform(
 			post("/api/v1/trips/$tripId/feedback/me")
 				.header("Authorization", authorization(fixture.mother))
 				.contentType(MediaType.APPLICATION_JSON)
@@ -201,6 +250,47 @@ class TripFeedbackControllerTest {
 		)
 			.andExpect(status().isBadRequest)
 			.andExpect(jsonPath("$.message").value("이미 여행 피드백을 제출했습니다."))
+	}
+
+	@Test
+	fun `효도 리포트 생성 API는 모든 부모 제출 후 멱등하게 동작하고 다른 가족은 조회할 수 없다`() {
+		val fixture = createTripFixture(endDate = today())
+		val tripId = requireNotNull(fixture.trip.id)
+
+		mockMvc.perform(
+			post("/api/v1/trips/$tripId/filial-report")
+				.header("Authorization", authorization(fixture.child)),
+		)
+			.andExpect(status().isBadRequest)
+			.andExpect(jsonPath("$.message").value("모든 참여 부모가 피드백을 제출한 후 효도 리포트를 생성할 수 있습니다."))
+
+		listOf(fixture.mother to fixture.stop, fixture.father to fixture.secondStop).forEach { (parent, stop) ->
+			mockMvc.perform(
+				post("/api/v1/trips/$tripId/feedback/me")
+					.header("Authorization", authorization(parent))
+					.contentType(MediaType.APPLICATION_JSON)
+					.content(feedbackBody(stopId = requireNotNull(stop.id))),
+			)
+				.andExpect(status().isOk)
+		}
+
+		repeat(2) {
+			mockMvc.perform(
+				post("/api/v1/trips/$tripId/filial-report")
+					.header("Authorization", authorization(fixture.mother)),
+			)
+				.andExpect(status().isOk)
+				.andExpect(jsonPath("$.data.id").isNumber)
+		}
+		check(filialReportRepository.count() == 1L)
+
+		val outsider = saveUser(UserRole.CHILD, "child-outside-report", "다른 자녀", GenderType.FEMALE)
+		mockMvc.perform(
+			get("/api/v1/trips/$tripId/filial-report")
+				.header("Authorization", authorization(outsider)),
+		)
+			.andExpect(status().isForbidden)
+			.andExpect(jsonPath("$.message").value("효도 리포트 조회 권한이 없습니다."))
 	}
 
 	@Test
@@ -335,6 +425,14 @@ class TripFeedbackControllerTest {
 				.content(feedbackBody(stopId = requireNotNull(fixture.stop.id))),
 		)
 			.andExpect(status().isOk)
+		mockMvc.perform(
+			post("/api/v1/trips/$tripId/feedback/me")
+				.header("Authorization", authorization(fixture.father))
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(feedbackBody(stopId = requireNotNull(fixture.secondStop.id))),
+		)
+			.andExpect(status().isOk)
+		check(filialReportRepository.count() == 1L)
 
 		mockMvc.perform(
 			put("/api/v1/trips/$tripId")
@@ -358,6 +456,7 @@ class TripFeedbackControllerTest {
 
 		check(tripFeedbackRepository.count() == 0L)
 		check(tripFeedbackRequestRepository.count() == 0L)
+		check(filialReportRepository.count() == 0L)
 	}
 
 	@Test
@@ -442,9 +541,19 @@ class TripFeedbackControllerTest {
 				tripDay = days.last(),
 				sortOrder = 1,
 				name = "오도리 공원",
+				imageUrl = "https://example.com/park.jpg",
 			),
 		)
-		return TripFixture(child, mother, father, trip, stop)
+		val secondStop = tripStopRepository.save(
+			TripStop(
+				tripDay = days.last(),
+				sortOrder = 2,
+				name = "소프카레 점심",
+				category = "식당",
+				imageUrl = "https://example.com/curry.jpg",
+			),
+		)
+		return TripFixture(child, mother, father, trip, days, stop, secondStop)
 	}
 
 	private fun saveCompletedParentProfile(parent: User) {
@@ -510,6 +619,8 @@ class TripFeedbackControllerTest {
 		val mother: User,
 		val father: User,
 		val trip: Trip,
+		val days: List<TripDay>,
 		val stop: TripStop,
+		val secondStop: TripStop,
 	)
 }

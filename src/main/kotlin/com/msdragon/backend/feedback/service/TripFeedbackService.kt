@@ -19,6 +19,7 @@ import com.msdragon.backend.feedback.entity.TripFeedback
 import com.msdragon.backend.feedback.entity.TripFeedbackRequest
 import com.msdragon.backend.feedback.repository.TripFeedbackRepository
 import com.msdragon.backend.feedback.repository.TripFeedbackRequestRepository
+import com.msdragon.backend.report.service.FilialReportService
 import com.msdragon.backend.trip.dto.relationLabelOf
 import com.msdragon.backend.trip.entity.Trip
 import com.msdragon.backend.trip.repository.TripParticipantRepository
@@ -40,6 +41,7 @@ class TripFeedbackService(
 	private val tripStopRepository: TripStopRepository,
 	private val tripFeedbackRequestRepository: TripFeedbackRequestRepository,
 	private val tripFeedbackRepository: TripFeedbackRepository,
+	private val filialReportService: FilialReportService,
 ) {
 	@Transactional
 	fun requestFeedback(currentUser: AuthenticatedUser, tripId: Long): TripFeedbackStatusResponse {
@@ -112,7 +114,7 @@ class TripFeedbackService(
 			?: throw BadRequestException("해당 여행에 포함된 방문지만 베스트 장소로 선택할 수 있습니다.")
 		val tags = (request.goodTags + request.improvementTags)
 			.mapTo(mutableSetOf(), FeedbackTag::value)
-		val feedback = tripFeedbackRepository.save(
+		val feedback = tripFeedbackRepository.saveAndFlush(
 			TripFeedback(
 				trip = trip,
 				parentUser = parent,
@@ -125,8 +127,12 @@ class TripFeedbackService(
 				submittedAt = currentDateTime(),
 			),
 		)
+		val reportReady = reportReady(tripId)
+		if (reportReady) {
+			filialReportService.generateIfReady(trip)
+		}
 
-		return feedbackResponse(feedback, reportReady(tripId))
+		return feedbackResponse(feedback, reportReady)
 	}
 
 	@Transactional(readOnly = true)
@@ -142,6 +148,7 @@ class TripFeedbackService(
 
 	@Transactional
 	fun resetForTripChange(tripId: Long) {
+		filialReportService.deleteForTripChange(tripId)
 		val feedbacks = tripFeedbackRepository.findAllByTripIdOrderByParentUserIdAsc(tripId)
 		if (feedbacks.isNotEmpty()) {
 			tripFeedbackRepository.deleteAll(feedbacks)

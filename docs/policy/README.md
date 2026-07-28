@@ -15,3 +15,4 @@
 | [trip-pledge.md](./trip-pledge.md) | 여행 10계명 후보, 확정본, 서명 완료 기준 정책 |
 | [travel-mode.md](./travel-mode.md) | 여행 기간 기반 상태 전환과 여행 모드 진입 정책 |
 | [trip-feedback.md](./trip-feedback.md) | 마지막 날 평가 요청과 부모별 여행 피드백 제출 정책 |
+| [filial-report.md](./filial-report.md) | 부모 피드백 기반 효도 리포트 생성·집계 정책 |

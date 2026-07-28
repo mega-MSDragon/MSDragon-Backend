@@ -6,7 +6,7 @@ DB 스키마와 공통 엔티티 규칙을 기록합니다.
 
 ## 현재 상태
 
-인증/가족/부모 프로필/여행/여행 10계명/여행 피드백 도메인 Entity가 도입되었습니다.
+인증/가족/부모 프로필/여행/여행 10계명/여행 피드백/효도 리포트 도메인 Entity가 도입되었습니다.
 `docs/database/schema.dbml`과 `docs/database/erd.md`는 PDF 확정 와이어프레임 기준 목표 설계를 포함하므로,
 현재 구현 Entity보다 앞서 있는 테이블과 컬럼이 있을 수 있습니다.
 
@@ -31,6 +31,7 @@ DB 스키마와 공통 엔티티 규칙을 기록합니다.
 | `TripFeedbackRequest` | `trip_feedback_requests` | 자녀가 참여 부모에게 보낸 평가 요청 |
 | `TripFeedback` | `trip_feedbacks` | 부모별 여행 피드백 1건 |
 | `TripFeedback.tags` | `trip_feedback_tags` | 피드백에서 선택한 좋았던 점·개선점 태그 |
+| `FilialReport` | `filial_reports` | 부모 피드백 완료 시 자동 생성하는 여행별 효도 리포트 |
 
 ---
 
@@ -225,6 +226,22 @@ DB 스키마와 공통 엔티티 규칙을 기록합니다.
 - `trip_feedback_id`, `tag` 조합은 unique입니다.
 - 좋았던 점 6개와 개선할 점 4개 중 실제로 선택한 값만 저장합니다.
 - API enum과 화면 문구 매핑은 `docs/policy/trip-feedback.md`를 따릅니다.
+
+---
+
+## 효도 리포트 테이블 구현 메모
+
+### filial_reports
+
+- `trip_id`는 unique이며 여행별 리포트는 한 건만 저장합니다.
+- 마지막 참여 부모의 피드백 제출과 동시에 생성합니다.
+- `average_rating`은 부모별 전체 만족도 평균을 소수점 첫째 자리까지 저장합니다.
+- `total_place_count`는 현재 방문지 수, `total_distance_km`는 값이 있는 일자별 Tmap 경로 거리의 합입니다.
+- `cover_image_url`은 이미지가 있는 부모 베스트 장소를 우선하고, 없으면 첫 번째 방문지 이미지를 사용합니다.
+- 코스가 수정될 수 있는 마지막 날에는 생성·조회 API 호출 시 코스 기반 집계값을 다시 맞추고 최초 `generated_at`은 유지합니다.
+- 산식이 정해지지 않은 점수, 수상 문구, 요약, 걸음 수, 공유 이미지 URL은 nullable 상태로 유지합니다.
+- 여행 기간 또는 참여 부모 구성이 바뀌면 피드백과 함께 기존 리포트를 삭제합니다.
+- `filial_report_stop_summaries`는 장소별 편안/주의 배지와 요약 기준이 정해진 뒤 Entity로 구현합니다.
 
 ---
 

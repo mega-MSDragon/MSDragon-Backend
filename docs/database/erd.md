@@ -626,12 +626,12 @@ CREATE TABLE filial_reports (
     best_place_id       BIGINT REFERENCES places(id),
     best_comment        VARCHAR(500),
     parent_comment      VARCHAR(500),
-    total_place_count   SMALLINT,
-    average_rating      NUMERIC(2,1),
+    total_place_count   INTEGER NOT NULL,
+    average_rating      NUMERIC(2,1) NOT NULL,
     total_distance_km   NUMERIC(6,2),
     total_step_count    INTEGER,
     share_image_url     VARCHAR(500),
-    generated_at        TIMESTAMPTZ,
+    generated_at        TIMESTAMPTZ NOT NULL,
     created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at          TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -665,9 +665,13 @@ CREATE TABLE recommendation_adjustments (
 
 피드백은 전체 만족도 `0.0~5.0`을 `0.5` 단위로 받고, 몸 상태와 베스트 방문지를 필수로 저장합니다. 태그와 자유 의견은 선택입니다. 제출한 피드백은 수정하지 않습니다. 베스트 장소는 제출 시 해당 여행의 `trip_stops`인지 검증한 뒤 ID와 장소명 스냅샷을 저장하며, 이후 코스 전체 교체를 허용하기 위해 FK는 두지 않습니다.
 
-효도 리포트는 함께 여행한 부모가 모두 `trip_feedbacks.submitted_at`을 가진 뒤 생성합니다. `filial_reports`는 여행별 1개 스냅샷이며, `cover_image_url`은 리포트 화면 대표 이미지, `share_image_url`은 공유 시 사용하는 렌더링 이미지입니다. 부모별 별점/코멘트 원문은 `trip_feedbacks`에서 조회하고, 리포트 카드의 평균 별점은 `average_rating`에 저장합니다.
+효도 리포트는 함께 여행한 부모가 모두 `trip_feedbacks.submitted_at`을 가지는 마지막 피드백 제출 트랜잭션에서 즉시 생성합니다. `POST /filial-report`는 재시도 가능한 멱등 생성 API이며 여행별 `filial_reports` 한 건을 유지합니다. 부모별 별점/코멘트/베스트 장소 원문은 `trip_feedbacks`에서 조회하고 평균 별점은 `average_rating`에 저장합니다.
 
-기록 탭 상단 통계는 별도 테이블 없이 `family_id` 기준 완료 여행 수, `filial_reports.average_rating`, `total_place_count`, `total_distance_km`를 집계합니다. 기록 상세의 방문한 장소 흐름은 `filial_report_stop_summaries`에 리포트 생성 시점의 장소명, 일차/순서, 편안/주의 배지, 한 줄 코멘트를 스냅샷으로 저장합니다.
+`total_place_count`는 현재 방문지 수, `total_distance_km`는 값이 있는 `trip_days.route_total_distance_m`의 합계입니다. 대표 이미지는 부모 베스트 장소 이미지를 우선하고 첫 방문지 이미지로 대체합니다. 리포트 생성 뒤 마지막 날 코스 편집이 가능하므로 생성·조회 시 코스 기반 집계값을 다시 맞추고 최초 생성 시각은 유지합니다.
+
+효도 지수와 세부 점수, 수상 문구, 요약, 걸음 수, 공유 이미지 URL은 계산 기준이나 디자인이 확정되기 전까지 nullable 상태로 유지합니다. 장소별 편안/주의 배지와 한 줄 요약을 담는 `filial_report_stop_summaries`도 근거 데이터가 정해질 때까지 후속 설계로 둡니다.
+
+기록 탭 상단 통계는 별도 테이블 없이 `family_id` 기준 완료 여행 수, `filial_reports.average_rating`, `total_place_count`, `total_distance_km`를 집계합니다.
 
 ---
 
@@ -796,8 +800,8 @@ erDiagram
 | trips → trip_pledges → pledge_signatures | 여행별 10계명과 자녀·부모 서명 진행 상태 | `trip_pledges.status`, `UNIQUE(trip_id)`, `UNIQUE(trip_pledge_id, user_id)` |
 | trips → trip_feedback_requests | 종료일 00:00부터 자녀의 미제출 부모 전체 평가 요청 | `UNIQUE(trip_id, parent_user_id)` |
 | trips → trip_feedbacks | 참여 부모별 수정 없는 1건 | `UNIQUE(trip_id, parent_user_id)` |
-| trips → filial_reports | 1:1, 전원 피드백 후 | 앱 레벨 |
-| filial_reports → filial_report_stop_summaries | 기록 상세 장소 흐름 스냅샷 | `UNIQUE(filial_report_id, day_number, sort_order)` |
+| trips → filial_reports | 1:1, 전원 피드백 제출 즉시 생성 | `UNIQUE(trip_id)` |
+| filial_reports → filial_report_stop_summaries | 후속 장소별 배지·요약 스냅샷 | `UNIQUE(filial_report_id, day_number, sort_order)` |
 | places ↔ place_accessibility | 1:1 | `UNIQUE(place_id)` |
 | trips/places → chat_sessions | 여행모드·장소 질문 AI 컨텍스트 | `scope`, `context_snapshot` |
 
@@ -807,5 +811,5 @@ erDiagram
 1. **여행 도시 변경 가능 범위**: 준비 중에는 도시 변경을 허용하고 저장 후 기존 코스 재추천/덮어쓰기 확인 플로우를 처리합니다. 여행 중에는 도시와 제목을 고정합니다.
 2. **겹치는 일정 차단**: 이미 선택된 날짜는 비활성화하고 겹치는 여행 생성을 막습니다. 초기 구현은 앱/서비스 검증을 우선합니다.
 3. **부모 최대 2명 제약**: `family_members` insert/update 시 DB trigger로 `member_role='parent'`가 2명을 초과하지 않게 막습니다.
-4. **효도 리포트 집계값**: 걸음수/이동거리/방문 장소 수는 별도 방문 로그 없이 `filial_reports`의 집계 컬럼에 저장합니다.
+4. **효도 리포트 집계값**: 방문 장소 수와 Tmap 기반 대략적인 이동거리는 `filial_reports`에 저장합니다. 걸음 수와 나머지 점수는 계산 기준이 정해질 때까지 null입니다.
 5. **장소 이미지**: 공공데이터 API 응답이 확정되기 전까지 `place_images`는 `image_url`, `sort_order` 중심의 최소 구조로 유지합니다.
