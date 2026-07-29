@@ -98,6 +98,31 @@ timeout 값은 Spring Boot가 읽을 수 있는 ISO-8601 Duration 형식으로 �
 
 ---
 
+## 공중화장실 일회성 적재
+
+최신 애플리케이션 이미지를 배포한 뒤 EC2 프로젝트 디렉터리에서 실행합니다.
+원본 파일은 Git에 커밋하지 않습니다.
+
+```bash
+cd /opt/MSDragon-Backend
+mkdir -p data
+cp '/업로드한/공중화장실정보.csv' data/public-restrooms.csv
+
+docker compose run --rm \
+  -v "$PWD/data:/data" \
+  app \
+  --spring.main.web-application-type=none \
+  --app.restroom-import.enabled=true \
+  --app.restroom-import.file=/data/public-restrooms.csv
+```
+
+- 기존 `TMAP_APP_KEY`를 사용하므로 별도 환경변수는 필요하지 않습니다.
+- 호출 제한이나 API 오류로 중단되면 이미 저장된 시설은 유지됩니다. 다음 날 같은 명령을 다시 실행하면 기존 시설을 건너뛰고 이어서 처리합니다.
+- 누락과 실패 항목은 `data/public-restrooms-failures.csv`에 기록됩니다.
+- 정상 app 컨테이너에서는 적재기가 실행되지 않습니다.
+
+---
+
 ## GitHub Actions 배포
 
 Repository secrets:

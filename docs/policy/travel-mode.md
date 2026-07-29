@@ -36,9 +36,15 @@
 - 클라이언트는 `currentDayNumber`에 해당하는 일자를 처음 선택하고, 이후 사용자가 다른 날짜 탭을 선택하면 같은 응답의 `days`를 사용합니다.
 - 마지막 날 평가 요청·제출 상태는 여행 모드 응답에 합치지 않고 `GET /api/v1/trips/{tripId}/feedback/status`에서 조회합니다.
 
+## 주변 공중화장실
+
+- 공중화장실은 여행 모드 기본 응답과 분리된 `GET /api/v1/trips/{tripId}/nearby-restrooms`에서 조회합니다.
+- 같은 가족 구성원이 여행 기간 중 현재 위치를 전달해 사용할 수 있습니다.
+- 상세 조회 기준은 `docs/policy/nearby-support-facilities.md`를 따릅니다.
+
 ## 이번 구현 범위 밖
 
-- 경로 주변 화장실·병원·약국 조회
+- 병원·약국 조회
 - 여행 전용 AI 챗봇
 - 여행 모드 전용 체크리스트
 

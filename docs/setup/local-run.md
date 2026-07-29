@@ -86,6 +86,27 @@ Tmap 앱키가 비어 있으면 애플리케이션은 실행되지만, 경로 �
 
 ---
 
+## 공중화장실 CSV 적재
+
+Docker Compose의 PostgreSQL에 CP949 공중화장실 CSV를 한 번 적재할 때 사용합니다.
+
+```bash
+mkdir -p data
+cp '/Users/me/Downloads/공중화장실정보.csv' data/public-restrooms.csv
+
+docker compose run --rm \
+  -v "$PWD/data:/data" \
+  app \
+  --spring.main.web-application-type=none \
+  --app.restroom-import.enabled=true \
+  --app.restroom-import.file=/data/public-restrooms.csv
+```
+
+성공한 시설은 100건씩 저장합니다. 작업이 중단되면 같은 명령을 다시 실행하고,
+좌표 변환 실패 항목은 `data/public-restrooms-failures.csv`에서 확인합니다.
+
+---
+
 ## DB 설정
 
 `local` profile은 H2 인메모리 DB를 사용합니다.

@@ -25,7 +25,11 @@ import com.msdragon.backend.parentprofile.repository.ParentProfileRepository
 import com.msdragon.backend.pledge.repository.PledgeItemRepository
 import com.msdragon.backend.pledge.repository.PledgeSignatureRepository
 import com.msdragon.backend.pledge.repository.TripPledgeRepository
+import com.msdragon.backend.supportfacility.entity.SupportFacility
+import com.msdragon.backend.supportfacility.entity.SupportFacilityType
+import com.msdragon.backend.supportfacility.repository.SupportFacilityRepository
 import com.msdragon.backend.trip.entity.TripDay
+import com.msdragon.backend.trip.entity.ExternalApiProvider
 import com.msdragon.backend.trip.entity.TripStatus
 import com.msdragon.backend.trip.repository.TripDayRepository
 import com.msdragon.backend.trip.repository.TripParticipantRepository
@@ -95,6 +99,9 @@ class TripControllerTest {
 	private lateinit var parentProfileRepository: ParentProfileRepository
 
 	@Autowired
+	private lateinit var supportFacilityRepository: SupportFacilityRepository
+
+	@Autowired
 	private lateinit var tripDayRepository: TripDayRepository
 
 	@Autowired
@@ -134,6 +141,7 @@ class TripControllerTest {
 	}
 
 	private fun cleanDatabase() {
+		supportFacilityRepository.deleteAll()
 		pledgeSignatureRepository.deleteAll()
 		pledgeItemRepository.deleteAll()
 		tripPledgeRepository.deleteAll()
@@ -365,6 +373,71 @@ class TripControllerTest {
 		)
 			.andExpect(status().isOk)
 			.andExpect(jsonPath("$.data.trips[0].status").value("in_progress"))
+	}
+
+	@Test
+	fun `여행 중에는 현재 위치에서 가까운 공중화장실을 최대 10개 조회한다`() {
+		val child = saveUser(UserRole.CHILD, "child-1", "혜린")
+		val mother = saveUser(UserRole.PARENT, "parent-1", "엄마", GenderType.FEMALE)
+		connectFamily(child, mother)
+		saveCompletedParentProfile(mother)
+		val tripId = createTrip(child, mother, futureDate(0), futureDate(0))
+		val latitude = 37.5758692
+		val longitude = 126.9684817
+		supportFacilityRepository.saveAll(
+			(1..11).map { index ->
+				SupportFacility(
+					facilityType = SupportFacilityType.RESTROOM,
+					provider = ExternalApiProvider.LOCAL_EXCEL,
+					sourceId = "restroom-$index",
+					name = "화장실 $index",
+					address = "서울특별시 종로구 $index",
+					latitude = latitude.toBigDecimal(),
+					longitude = (longitude + index * 0.001).toBigDecimal(),
+					operatingHours = "상시",
+				)
+			} + SupportFacility(
+				facilityType = SupportFacilityType.RESTROOM,
+				provider = ExternalApiProvider.LOCAL_EXCEL,
+				sourceId = "restroom-far",
+				name = "범위 밖 화장실",
+				address = "서울특별시 외곽",
+				latitude = latitude.toBigDecimal(),
+				longitude = (longitude + 0.1).toBigDecimal(),
+			),
+		)
+
+		mockMvc.perform(
+			get("/api/v1/trips/$tripId/nearby-restrooms")
+				.header("Authorization", "Bearer ${tokenService.createAccessToken(mother)}")
+				.param("latitude", latitude.toString())
+				.param("longitude", longitude.toString()),
+		)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.data.length()").value(10))
+			.andExpect(jsonPath("$.data[0].name").value("화장실 1"))
+			.andExpect(jsonPath("$.data[0].distanceMeters").value(88))
+			.andExpect(jsonPath("$.data[9].name").value("화장실 10"))
+			.andExpect(jsonPath("$.data[?(@.name == '화장실 11')]").isEmpty)
+			.andExpect(jsonPath("$.data[?(@.name == '범위 밖 화장실')]").isEmpty)
+	}
+
+	@Test
+	fun `주변 공중화장실 조회 좌표 범위를 검증한다`() {
+		val child = saveUser(UserRole.CHILD, "child-1", "혜린")
+		val mother = saveUser(UserRole.PARENT, "parent-1", "엄마", GenderType.FEMALE)
+		connectFamily(child, mother)
+		saveCompletedParentProfile(mother)
+		val tripId = createTrip(child, mother, futureDate(0), futureDate(0))
+
+		mockMvc.perform(
+			get("/api/v1/trips/$tripId/nearby-restrooms")
+				.header("Authorization", "Bearer ${tokenService.createAccessToken(child)}")
+				.param("latitude", "91")
+				.param("longitude", "126.9684817"),
+		)
+			.andExpect(status().isBadRequest)
+			.andExpect(jsonPath("$.message").value("latitude는 -90 이상 90 이하여야 합니다."))
 	}
 
 	@Test

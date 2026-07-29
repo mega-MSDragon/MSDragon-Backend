@@ -816,3 +816,42 @@ TourAPI 서비스키가 서버에 설정되어 있지 않거나 TourAPI 호출�
 
 같은 가족의 부모는 코스를 조회할 수 있지만 저장, 추천 재생성, 경로 최적화는 할 수 없습니다.
 방문지 편집 흐름과 전체 덮어쓰기 기준은 `docs/policy/trip-edit.md`를 따릅니다.
+
+---
+
+## GET /api/v1/trips/{tripId}/nearby-restrooms
+
+여행 기간 중 같은 가족 구성원이 현재 위치 주변 공중화장실을 조회합니다.
+클라이언트가 반경이나 개수를 지정하지 않으며, 서버가 직선거리 5km 이내에서 가까운 순으로 최대 10개를 반환합니다.
+
+### Query Parameters
+
+| Parameter | Type | Required | 설명 |
+|-----------|------|----------|------|
+| `latitude` | number | true | 현재 위치 WGS84 위도. `-90` 이상 `90` 이하 |
+| `longitude` | number | true | 현재 위치 WGS84 경도. `-180` 이상 `180` 이하 |
+
+### Response
+
+```json
+{
+  "status": 200,
+  "success": true,
+  "message": "주변 공중화장실 조회 성공",
+  "data": [
+    {
+      "id": 1,
+      "name": "사직단 공중화장실",
+      "address": "서울특별시 종로구 사직동 1-28",
+      "latitude": 37.5758692,
+      "longitude": 126.9684817,
+      "distanceMeters": 320,
+      "phone": "02-2148-2832",
+      "operatingHours": "상시"
+    }
+  ]
+}
+```
+
+5km 이내 화장실이 없으면 `data`는 빈 배열입니다.
+여행 시작 전과 종료 후에는 `400`, 다른 가족 사용자는 `403`을 반환합니다.

@@ -26,6 +26,7 @@ dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-webmvc")
 	implementation("com.nimbusds:nimbus-jose-jwt:10.9.1")
 	implementation("io.github.openhtmltopdf:openhtmltopdf-pdfbox:1.1.40")
+	implementation("org.apache.commons:commons-csv:1.14.1")
 	implementation("org.jetbrains.kotlin:kotlin-reflect")
 	implementation("org.jsoup:jsoup:1.22.2")
 	implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.3")

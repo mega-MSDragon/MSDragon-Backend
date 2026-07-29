@@ -129,19 +129,8 @@ class TripService(
 
 	@Transactional(noRollbackFor = [BadRequestException::class])
 	fun getTravelMode(currentUser: AuthenticatedUser, tripId: Long): TripTravelModeResponse {
-		getLoginUser(currentUser.id)
-		val trip = tripRepository.findByIdAndDeletedAtIsNull(tripId)
-			?: throw NotFoundException("여행을 찾을 수 없습니다.")
-		validateTripReadable(currentUser.id, trip)
-
+		val trip = requireTravelModeTrip(currentUser, tripId)
 		val today = currentDate()
-		trip.synchronizeStatus(today)
-		when {
-			trip.status == TripStatus.ARCHIVED -> throw BadRequestException("보관된 여행은 여행 모드를 이용할 수 없습니다.")
-			today.isBefore(trip.startDate) -> throw BadRequestException("여행 시작일부터 여행 모드를 이용할 수 있습니다.")
-			today.isAfter(trip.endDate) -> throw BadRequestException("종료된 여행은 여행 모드를 이용할 수 없습니다.")
-		}
-
 		val course = tripCourse(trip)
 		val currentDay = course.days.firstOrNull { it.travelDate == today }
 			?: throw NotFoundException("현재 일자의 여행 코스를 찾을 수 없습니다.")
@@ -158,6 +147,27 @@ class TripService(
 			pledgeCompleted = tripPledgeService.isCompleted(tripId),
 			days = course.days,
 		)
+	}
+
+	@Transactional(noRollbackFor = [BadRequestException::class])
+	fun validateTravelModeAccess(currentUser: AuthenticatedUser, tripId: Long) {
+		requireTravelModeTrip(currentUser, tripId)
+	}
+
+	private fun requireTravelModeTrip(currentUser: AuthenticatedUser, tripId: Long): Trip {
+		getLoginUser(currentUser.id)
+		val trip = tripRepository.findByIdAndDeletedAtIsNull(tripId)
+			?: throw NotFoundException("여행을 찾을 수 없습니다.")
+		validateTripReadable(currentUser.id, trip)
+
+		val today = currentDate()
+		trip.synchronizeStatus(today)
+		when {
+			trip.status == TripStatus.ARCHIVED -> throw BadRequestException("보관된 여행은 여행 모드를 이용할 수 없습니다.")
+			today.isBefore(trip.startDate) -> throw BadRequestException("여행 시작일부터 여행 모드를 이용할 수 있습니다.")
+			today.isAfter(trip.endDate) -> throw BadRequestException("종료된 여행은 여행 모드를 이용할 수 없습니다.")
+		}
+		return trip
 	}
 
 	@Transactional

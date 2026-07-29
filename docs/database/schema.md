@@ -32,6 +32,7 @@ DB 스키마와 공통 엔티티 규칙을 기록합니다.
 | `TripFeedback` | `trip_feedbacks` | 부모별 여행 피드백 1건 |
 | `TripFeedback.tags` | `trip_feedback_tags` | 피드백에서 선택한 좋았던 점·개선점 태그 |
 | `FilialReport` | `filial_reports` | 부모 피드백 완료 시 자동 생성하는 여행별 효도 리포트 |
+| `SupportFacility` | `support_facilities` | 여행 모드 주변 공중화장실 등 편의시설 좌표 |
 
 ---
 
@@ -163,6 +164,16 @@ DB 스키마와 공통 엔티티 규칙을 기록합니다.
 - `stop_type`은 `sightseeing`, `meal`, `rest`, `cafe` 중 하나입니다.
 - `recommendation_tags`, `source_payload`는 JSON 문자열로 저장합니다.
 - 장소 마스터 캐시와 방문지 간 세그먼트 단위 상세 테이블은 후속 작업입니다. 현재 경로는 `trip_days` 일자 단위 캐시에 저장합니다.
+
+### support_facilities
+
+- `facility_type`, `provider`, `source_id` 조합은 unique입니다.
+- 현재 구현하는 `facility_type`은 `restroom`이며 병원과 약국은 후속 범위입니다.
+- 공중화장실 원천 `provider`는 `local_excel`이고 `source_id`는 `개방자치단체코드:관리번호`입니다.
+- 원천 CSV에 좌표가 없어 Tmap으로 WGS84 좌표를 한 번 변환해 저장합니다.
+- `raw_data`는 원본 CSV row와 좌표 변환 제공자를 JSON 문자열로 저장합니다.
+- `(facility_type, latitude, longitude)` 인덱스로 현재 위치 주변 bounding box 후보를 조회합니다.
+- 실제 거리와 정렬은 서비스에서 Haversine 공식으로 계산합니다.
 
 ---
 

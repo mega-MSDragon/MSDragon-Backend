@@ -16,3 +16,4 @@
 | [travel-mode.md](./travel-mode.md) | 여행 기간 기반 상태 전환과 여행 모드 진입 정책 |
 | [trip-feedback.md](./trip-feedback.md) | 마지막 날 평가 요청과 부모별 여행 피드백 제출 정책 |
 | [filial-report.md](./filial-report.md) | 부모 피드백 기반 효도 리포트 생성·집계 정책 |
+| [nearby-support-facilities.md](./nearby-support-facilities.md) | 여행 모드 주변 공중화장실 적재·조회 정책 |
