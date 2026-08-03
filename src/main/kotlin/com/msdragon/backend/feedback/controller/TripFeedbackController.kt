@@ -35,11 +35,7 @@ class TripFeedbackController(
 	)
 	@ApiResponses(
 		value = [
-			SwaggerApiResponse(responseCode = "200", description = "부모 평가 요청 성공"),
-			SwaggerApiResponse(responseCode = "400", description = "여행 마지막 날이 시작되지 않음"),
-			SwaggerApiResponse(responseCode = "401", description = "인증 실패"),
-			SwaggerApiResponse(responseCode = "403", description = "평가 요청 권한 없음"),
-			SwaggerApiResponse(responseCode = "404", description = "여행을 찾을 수 없음"),
+			SwaggerApiResponse(responseCode = "200", description = "처리 완료: 요청 성공(status=200) 또는 인증·정책 오류(status=400/401/403/404)"),
 		],
 	)
 	@PostMapping("/requests")
@@ -58,10 +54,7 @@ class TripFeedbackController(
 	)
 	@ApiResponses(
 		value = [
-			SwaggerApiResponse(responseCode = "200", description = "피드백 제출 현황 조회 성공"),
-			SwaggerApiResponse(responseCode = "401", description = "인증 실패"),
-			SwaggerApiResponse(responseCode = "403", description = "현황 조회 권한 없음"),
-			SwaggerApiResponse(responseCode = "404", description = "여행을 찾을 수 없음"),
+			SwaggerApiResponse(responseCode = "200", description = "처리 완료: 조회 성공(status=200) 또는 인증·정책 오류(status=401/403/404)"),
 		],
 	)
 	@GetMapping("/status")
@@ -80,11 +73,7 @@ class TripFeedbackController(
 	)
 	@ApiResponses(
 		value = [
-			SwaggerApiResponse(responseCode = "200", description = "여행 피드백 제출 성공"),
-			SwaggerApiResponse(responseCode = "400", description = "작성 시점, 별점 단위, 태그, 베스트 장소 또는 중복 제출 오류"),
-			SwaggerApiResponse(responseCode = "401", description = "인증 실패"),
-			SwaggerApiResponse(responseCode = "403", description = "피드백 작성 권한 없음"),
-			SwaggerApiResponse(responseCode = "404", description = "여행을 찾을 수 없음"),
+			SwaggerApiResponse(responseCode = "200", description = "처리 완료: 제출 성공(status=200) 또는 요청·인증·정책 오류(status=400/401/403/404)"),
 		],
 	)
 	@PostMapping("/me")
@@ -104,10 +93,7 @@ class TripFeedbackController(
 	)
 	@ApiResponses(
 		value = [
-			SwaggerApiResponse(responseCode = "200", description = "내 여행 피드백 조회 성공"),
-			SwaggerApiResponse(responseCode = "401", description = "인증 실패"),
-			SwaggerApiResponse(responseCode = "403", description = "피드백 조회 권한 없음"),
-			SwaggerApiResponse(responseCode = "404", description = "여행 또는 제출한 피드백을 찾을 수 없음"),
+			SwaggerApiResponse(responseCode = "200", description = "처리 완료: 조회 성공(status=200) 또는 인증·정책 오류(status=401/403/404)"),
 		],
 	)
 	@GetMapping("/me")

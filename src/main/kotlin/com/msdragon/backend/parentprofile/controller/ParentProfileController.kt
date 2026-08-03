@@ -34,9 +34,7 @@ class ParentProfileController(
 	)
 	@ApiResponses(
 		value = [
-			SwaggerApiResponse(responseCode = "200", description = "내 부모님 프로필 조회 성공"),
-			SwaggerApiResponse(responseCode = "400", description = "부모 사용자가 아님"),
-			SwaggerApiResponse(responseCode = "401", description = "인증 실패"),
+			SwaggerApiResponse(responseCode = "200", description = "처리 완료: 조회 성공(status=200) 또는 인증·정책 오류(status=400/401)"),
 		],
 	)
 	@GetMapping("/me")
@@ -54,10 +52,7 @@ class ParentProfileController(
 	)
 	@ApiResponses(
 		value = [
-			SwaggerApiResponse(responseCode = "200", description = "부모님 프로필 조회 성공"),
-			SwaggerApiResponse(responseCode = "401", description = "인증 실패"),
-			SwaggerApiResponse(responseCode = "403", description = "조회 권한 없음"),
-			SwaggerApiResponse(responseCode = "404", description = "부모 사용자를 찾을 수 없음"),
+			SwaggerApiResponse(responseCode = "200", description = "처리 완료: 조회 성공(status=200) 또는 인증·정책 오류(status=401/403/404)"),
 		],
 	)
 	@GetMapping("/{parentUserId}")
@@ -77,9 +72,7 @@ class ParentProfileController(
 	)
 	@ApiResponses(
 		value = [
-			SwaggerApiResponse(responseCode = "200", description = "내 부모님 프로필 저장 성공"),
-			SwaggerApiResponse(responseCode = "400", description = "요청 값이 올바르지 않거나 부모 사용자가 아님"),
-			SwaggerApiResponse(responseCode = "401", description = "인증 실패"),
+			SwaggerApiResponse(responseCode = "200", description = "처리 완료: 저장 성공(status=200) 또는 요청·인증·정책 오류(status=400/401)"),
 		],
 	)
 	@PutMapping("/me")

@@ -4,4 +4,5 @@ import org.springframework.http.HttpStatus
 
 class BadRequestException(
 	message: String,
-) : BaseException(HttpStatus.BAD_REQUEST, message)
+	status: Int = HttpStatus.BAD_REQUEST.value(),
+) : BaseException(status, message)

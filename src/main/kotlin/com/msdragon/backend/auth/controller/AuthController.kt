@@ -15,7 +15,6 @@ import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
@@ -30,8 +29,8 @@ class AuthController(
 	)
 	@ApiResponses(
 		value = [
-			SwaggerApiResponse(responseCode = "200", description = "소셜 로그인 처리 성공"),
-			SwaggerApiResponse(responseCode = "401", description = "소셜 로그인 토큰이 유효하지 않음"),
+			SwaggerApiResponse(responseCode = "200", description = "처리 완료: 성공(status=200) 또는 요청·소셜 토큰 오류(status=400/401)"),
+			SwaggerApiResponse(responseCode = "500", description = "소셜 인증 제공자 연동 오류"),
 		],
 	)
 	@PostMapping("/social-login")
@@ -49,12 +48,9 @@ class AuthController(
 	)
 	@ApiResponses(
 		value = [
-			SwaggerApiResponse(responseCode = "201", description = "회원가입 완료"),
-			SwaggerApiResponse(responseCode = "400", description = "회원가입 요청 값이 올바르지 않음"),
-			SwaggerApiResponse(responseCode = "401", description = "회원가입 토큰이 유효하지 않음"),
+			SwaggerApiResponse(responseCode = "200", description = "처리 완료: 회원가입 성공(status=201) 또는 정책 오류(status=400/401)"),
 		],
 	)
-	@ResponseStatus(HttpStatus.CREATED)
 	@PostMapping("/signup/complete")
 	fun completeSignup(
 		@Valid @RequestBody request: CompleteSignupRequest,
@@ -71,8 +67,7 @@ class AuthController(
 	)
 	@ApiResponses(
 		value = [
-			SwaggerApiResponse(responseCode = "200", description = "토큰 재발급 성공"),
-			SwaggerApiResponse(responseCode = "401", description = "refresh token이 유효하지 않음"),
+			SwaggerApiResponse(responseCode = "200", description = "처리 완료: 재발급 성공(status=200) 또는 요청·refresh token 오류(status=400/401)"),
 		],
 	)
 	@PostMapping("/refresh")

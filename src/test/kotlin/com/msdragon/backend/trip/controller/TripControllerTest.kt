@@ -217,7 +217,8 @@ class TripControllerTest {
 					""".trimIndent(),
 				),
 		)
-			.andExpect(status().isCreated)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(201))
 			.andExpect(jsonPath("$.data.title").value("경주 여행"))
 			.andExpect(jsonPath("$.data.destination.code").value("gyeongju"))
 			.andExpect(jsonPath("$.data.status").value("planning"))
@@ -261,7 +262,8 @@ class TripControllerTest {
 					""".trimIndent(),
 				),
 		)
-			.andExpect(status().isCreated)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(201))
 			.andExpect(jsonPath("$.data.days.length()").value(4))
 			.andExpect(jsonPath("$.data.days[3].dayNumber").value(4))
 			.andExpect(jsonPath("$.data.days[3].travelDate").value(endDate.toString()))
@@ -289,7 +291,8 @@ class TripControllerTest {
 					""".trimIndent(),
 				),
 		)
-			.andExpect(status().isBadRequest)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(400))
 			.andExpect(jsonPath("$.message").value("부모님 상세 프로필 작성이 필요합니다."))
 	}
 
@@ -317,7 +320,8 @@ class TripControllerTest {
 					""".trimIndent(),
 				),
 		)
-			.andExpect(status().isBadRequest)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(400))
 			.andExpect(jsonPath("$.message").value("선택한 날짜에 이미 등록된 여행이 있습니다."))
 	}
 
@@ -436,8 +440,40 @@ class TripControllerTest {
 				.param("latitude", "91")
 				.param("longitude", "126.9684817"),
 		)
-			.andExpect(status().isBadRequest)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(400))
 			.andExpect(jsonPath("$.message").value("latitude는 -90 이상 90 이하여야 합니다."))
+	}
+
+	@Test
+	fun `필수 쿼리 파라미터가 없으면 HTTP 200과 본문 status 400을 반환한다`() {
+		val child = saveUser(UserRole.CHILD, "child-query-missing", "혜린")
+
+		mockMvc.perform(
+			get("/api/v1/trips/1/nearby-restrooms")
+				.header("Authorization", "Bearer ${tokenService.createAccessToken(child)}")
+				.param("longitude", "126.9684817"),
+		)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(400))
+			.andExpect(jsonPath("$.success").value(false))
+			.andExpect(jsonPath("$.message").value("latitude 값이 입력되지 않았습니다."))
+	}
+
+	@Test
+	fun `쿼리 파라미터 형식이 틀리면 HTTP 200과 본문 status 400을 반환한다`() {
+		val child = saveUser(UserRole.CHILD, "child-query-type", "혜린")
+
+		mockMvc.perform(
+			get("/api/v1/trips/1/nearby-restrooms")
+				.header("Authorization", "Bearer ${tokenService.createAccessToken(child)}")
+				.param("latitude", "not-a-number")
+				.param("longitude", "126.9684817"),
+		)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(400))
+			.andExpect(jsonPath("$.success").value(false))
+			.andExpect(jsonPath("$.message").value("latitude 값이 올바르지 않습니다."))
 	}
 
 	@Test
@@ -478,7 +514,8 @@ class TripControllerTest {
 			get("/api/v1/trips/$tripId/travel-mode")
 				.header("Authorization", "Bearer ${tokenService.createAccessToken(otherChild)}"),
 		)
-			.andExpect(status().isForbidden)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(403))
 			.andExpect(jsonPath("$.message").value("여행 조회 권한이 없습니다."))
 	}
 
@@ -494,7 +531,8 @@ class TripControllerTest {
 			get("/api/v1/trips/$tripId/travel-mode")
 				.header("Authorization", "Bearer ${tokenService.createAccessToken(child)}"),
 		)
-			.andExpect(status().isBadRequest)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(400))
 			.andExpect(jsonPath("$.message").value("여행 시작일부터 여행 모드를 이용할 수 있습니다."))
 	}
 
@@ -511,7 +549,8 @@ class TripControllerTest {
 			get("/api/v1/trips/$tripId/travel-mode")
 				.header("Authorization", "Bearer ${tokenService.createAccessToken(child)}"),
 		)
-			.andExpect(status().isBadRequest)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(400))
 			.andExpect(jsonPath("$.message").value("종료된 여행은 여행 모드를 이용할 수 없습니다."))
 
 		check(tripRepository.findById(tripId.toLong()).orElseThrow().status == TripStatus.COMPLETED)
@@ -675,7 +714,8 @@ class TripControllerTest {
 					""".trimIndent(),
 				),
 		)
-			.andExpect(status().isBadRequest)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(400))
 			.andExpect(
 				jsonPath("$.message")
 					.value("도시, 날짜 또는 참여 부모를 변경하면 기존 코스가 삭제됩니다. 코스 초기화에 동의해주세요."),
@@ -751,7 +791,8 @@ class TripControllerTest {
 			get("/api/v1/trips/$tripId/pledge")
 				.header("Authorization", "Bearer ${tokenService.createAccessToken(child)}"),
 		)
-			.andExpect(status().isNotFound)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(404))
 			.andExpect(jsonPath("$.message").value("저장된 여행 10계명이 없습니다."))
 	}
 
@@ -780,7 +821,8 @@ class TripControllerTest {
 					""".trimIndent(),
 				),
 		)
-			.andExpect(status().isForbidden)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(403))
 			.andExpect(jsonPath("$.message").value("여행을 만든 자녀만 여행 정보를 수정할 수 있습니다."))
 	}
 
@@ -858,7 +900,8 @@ class TripControllerTest {
 					""".trimIndent(),
 				),
 		)
-			.andExpect(status().isBadRequest)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(400))
 			.andExpect(jsonPath("$.message").value("여행 중에는 여행 제목을 수정할 수 없습니다."))
 
 		mockMvc.perform(
@@ -877,7 +920,8 @@ class TripControllerTest {
 					""".trimIndent(),
 				),
 		)
-			.andExpect(status().isBadRequest)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(400))
 			.andExpect(jsonPath("$.message").value("여행 중에는 여행 도시를 수정할 수 없습니다."))
 	}
 
@@ -906,7 +950,8 @@ class TripControllerTest {
 					""".trimIndent(),
 				),
 		)
-			.andExpect(status().isBadRequest)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(400))
 			.andExpect(jsonPath("$.message").value("여행 중 변경한 기간에는 오늘이 포함되어야 합니다."))
 	}
 
@@ -925,21 +970,24 @@ class TripControllerTest {
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("{\"days\":[]}"),
 		)
-			.andExpect(status().isForbidden)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(403))
 			.andExpect(jsonPath("$.message").value("여행을 만든 자녀만 여행 코스를 수정할 수 있습니다."))
 
 		mockMvc.perform(
 			post("/api/v1/trips/$tripId/course/recommendation")
 				.header("Authorization", authorization),
 		)
-			.andExpect(status().isForbidden)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(403))
 			.andExpect(jsonPath("$.message").value("여행을 만든 자녀만 여행 코스를 수정할 수 있습니다."))
 
 		mockMvc.perform(
 			post("/api/v1/trips/$tripId/days/1/route-optimization")
 				.header("Authorization", authorization),
 		)
-			.andExpect(status().isForbidden)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(403))
 			.andExpect(jsonPath("$.message").value("여행을 만든 자녀만 여행 코스를 수정할 수 있습니다."))
 	}
 
@@ -970,7 +1018,8 @@ class TripControllerTest {
 					""".trimIndent(),
 				),
 		)
-			.andExpect(status().isBadRequest)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(400))
 			.andExpect(jsonPath("$.message").value("완료되거나 보관된 여행은 여행 정보를 수정할 수 없습니다."))
 
 		mockMvc.perform(
@@ -979,7 +1028,8 @@ class TripControllerTest {
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("{\"days\":[]}"),
 		)
-			.andExpect(status().isBadRequest)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(400))
 			.andExpect(jsonPath("$.message").value("완료되거나 보관된 여행은 여행 코스를 수정할 수 없습니다."))
 	}
 
@@ -1010,7 +1060,8 @@ class TripControllerTest {
 					""".trimIndent(),
 				),
 		)
-			.andExpect(status().isBadRequest)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(400))
 			.andExpect(jsonPath("$.message").value("선택한 날짜에 이미 등록된 여행이 있습니다."))
 	}
 
@@ -1043,7 +1094,8 @@ class TripControllerTest {
 					""".trimIndent(),
 				),
 		)
-			.andExpect(status().isBadRequest)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(400))
 			.andExpect(jsonPath("$.message").value("여행에 존재하지 않는 일자입니다: 2일차"))
 	}
 
@@ -1255,7 +1307,8 @@ class TripControllerTest {
 					""".trimIndent(),
 				),
 		)
-			.andExpect(status().isBadRequest)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(400))
 			.andExpect(jsonPath("$.message").value("자녀 사용자만 여행을 만들 수 있습니다."))
 	}
 
@@ -1327,7 +1380,8 @@ class TripControllerTest {
 					""".trimIndent(),
 				),
 		)
-			.andExpect(status().isCreated)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(201))
 			.andReturn()
 			.response
 			.contentAsString

@@ -106,7 +106,8 @@ class AuthAuthenticationTest {
 	@Test
 	fun `Authorization 헤더가 없으면 보호 API 접근을 거절한다`() {
 		mockMvc.perform(get("/api/v1/probe/current-user"))
-			.andExpect(status().isUnauthorized)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(401))
 			.andExpect(jsonPath("$.success").value(false))
 			.andExpect(jsonPath("$.message").value("Authorization 헤더가 필요합니다."))
 	}
@@ -117,9 +118,21 @@ class AuthAuthenticationTest {
 			get("/api/v1/probe/current-user")
 				.header("Authorization", "Basic invalid"),
 		)
-			.andExpect(status().isUnauthorized)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(401))
 			.andExpect(jsonPath("$.success").value(false))
 			.andExpect(jsonPath("$.message").value("Bearer 토큰 형식이 올바르지 않습니다."))
+	}
+
+	@Test
+	fun `존재하지 않는 URL은 실제 HTTP 404를 반환한다`() {
+		val user = saveUser()
+
+		mockMvc.perform(
+			get("/api/v1/not-existing")
+				.header("Authorization", "Bearer ${tokenService.createAccessToken(user)}"),
+		)
+			.andExpect(status().isNotFound)
 	}
 
 	private fun saveUser(): User =

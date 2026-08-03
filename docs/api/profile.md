@@ -4,6 +4,8 @@
 
 모든 API는 `Authorization: Bearer {accessToken}` 헤더가 필요합니다.
 
+> 응답 규칙: 서버가 처리한 요청·인증·정책 오류도 HTTP `200`으로 반환하며, 본문의 `status`와 `success`로 구분합니다.
+
 ---
 
 ## 엔드포인트

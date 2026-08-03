@@ -31,11 +31,7 @@ class SupportFacilityController(
 	)
 	@ApiResponses(
 		value = [
-			SwaggerApiResponse(responseCode = "200", description = "주변 공중화장실 조회 성공"),
-			SwaggerApiResponse(responseCode = "400", description = "좌표가 올바르지 않거나 여행 모드 이용 기간이 아님"),
-			SwaggerApiResponse(responseCode = "401", description = "인증 실패"),
-			SwaggerApiResponse(responseCode = "403", description = "조회 권한 없음"),
-			SwaggerApiResponse(responseCode = "404", description = "여행을 찾을 수 없음"),
+			SwaggerApiResponse(responseCode = "200", description = "처리 완료: 조회 성공(status=200) 또는 요청·인증·정책 오류(status=400/401/403/404)"),
 		],
 	)
 	@GetMapping("/{tripId}/nearby-restrooms")

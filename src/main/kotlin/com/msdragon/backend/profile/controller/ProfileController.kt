@@ -32,8 +32,7 @@ class ProfileController(
 	)
 	@ApiResponses(
 		value = [
-			SwaggerApiResponse(responseCode = "200", description = "내 프로필 조회 성공"),
-			SwaggerApiResponse(responseCode = "401", description = "인증 실패"),
+			SwaggerApiResponse(responseCode = "200", description = "처리 완료: 조회 성공(status=200) 또는 인증 오류(status=401)"),
 		],
 	)
 	@GetMapping("/me")
@@ -51,9 +50,7 @@ class ProfileController(
 	)
 	@ApiResponses(
 		value = [
-			SwaggerApiResponse(responseCode = "200", description = "내 프로필 수정 성공"),
-			SwaggerApiResponse(responseCode = "400", description = "수정 요청 값이 올바르지 않음"),
-			SwaggerApiResponse(responseCode = "401", description = "인증 실패"),
+			SwaggerApiResponse(responseCode = "200", description = "처리 완료: 수정 성공(status=200) 또는 요청·인증·정책 오류(status=400/401)"),
 		],
 	)
 	@PatchMapping("/me")

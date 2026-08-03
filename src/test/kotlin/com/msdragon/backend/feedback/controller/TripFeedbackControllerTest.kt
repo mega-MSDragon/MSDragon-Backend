@@ -248,7 +248,8 @@ class TripFeedbackControllerTest {
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(feedbackBody(stopId = stopId)),
 		)
-			.andExpect(status().isBadRequest)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(400))
 			.andExpect(jsonPath("$.message").value("이미 여행 피드백을 제출했습니다."))
 	}
 
@@ -261,7 +262,8 @@ class TripFeedbackControllerTest {
 			post("/api/v1/trips/$tripId/filial-report")
 				.header("Authorization", authorization(fixture.child)),
 		)
-			.andExpect(status().isBadRequest)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(400))
 			.andExpect(jsonPath("$.message").value("모든 참여 부모가 피드백을 제출한 후 효도 리포트를 생성할 수 있습니다."))
 
 		listOf(fixture.mother to fixture.stop, fixture.father to fixture.secondStop).forEach { (parent, stop) ->
@@ -289,7 +291,8 @@ class TripFeedbackControllerTest {
 			get("/api/v1/trips/$tripId/filial-report")
 				.header("Authorization", authorization(outsider)),
 		)
-			.andExpect(status().isForbidden)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(403))
 			.andExpect(jsonPath("$.message").value("효도 리포트 조회 권한이 없습니다."))
 	}
 
@@ -302,7 +305,8 @@ class TripFeedbackControllerTest {
 			post("/api/v1/trips/$tripId/feedback/requests")
 				.header("Authorization", authorization(fixture.child)),
 		)
-			.andExpect(status().isBadRequest)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(400))
 			.andExpect(jsonPath("$.message").value("여행 마지막 날부터 피드백을 작성할 수 있습니다."))
 
 		mockMvc.perform(
@@ -311,7 +315,8 @@ class TripFeedbackControllerTest {
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(feedbackBody(stopId = requireNotNull(fixture.stop.id))),
 		)
-			.andExpect(status().isBadRequest)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(400))
 			.andExpect(jsonPath("$.message").value("여행 마지막 날부터 피드백을 작성할 수 있습니다."))
 
 		fixture.trip.startDate = today().minusDays(1)
@@ -339,7 +344,8 @@ class TripFeedbackControllerTest {
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(feedbackBody(stopId = requireNotNull(fixture.stop.id), rating = BigDecimal("5.5"))),
 		)
-			.andExpect(status().isBadRequest)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(400))
 			.andExpect(jsonPath("$.message").value("전체 만족도는 5.0 이하여야 합니다."))
 
 		mockMvc.perform(
@@ -348,7 +354,8 @@ class TripFeedbackControllerTest {
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(feedbackBody(stopId = requireNotNull(fixture.stop.id), rating = BigDecimal("0.3"))),
 		)
-			.andExpect(status().isBadRequest)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(400))
 			.andExpect(jsonPath("$.message").value("전체 만족도는 0.5 단위로 입력해주세요."))
 
 		mockMvc.perform(
@@ -362,7 +369,8 @@ class TripFeedbackControllerTest {
 					),
 				),
 		)
-			.andExpect(status().isBadRequest)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(400))
 			.andExpect(jsonPath("$.message").value("좋았던 점에 사용할 수 없는 태그가 포함되어 있습니다."))
 
 		mockMvc.perform(
@@ -371,7 +379,8 @@ class TripFeedbackControllerTest {
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(feedbackBody(stopId = Long.MAX_VALUE)),
 		)
-			.andExpect(status().isBadRequest)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(400))
 			.andExpect(jsonPath("$.message").value("해당 여행에 포함된 방문지만 베스트 장소로 선택할 수 있습니다."))
 	}
 
@@ -385,7 +394,8 @@ class TripFeedbackControllerTest {
 			post("/api/v1/trips/$tripId/feedback/requests")
 				.header("Authorization", authorization(fixture.mother)),
 		)
-			.andExpect(status().isForbidden)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(403))
 			.andExpect(jsonPath("$.message").value("여행을 만든 자녀만 부모 평가를 요청할 수 있습니다."))
 
 		mockMvc.perform(
@@ -394,14 +404,16 @@ class TripFeedbackControllerTest {
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(feedbackBody(stopId = requireNotNull(fixture.stop.id))),
 		)
-			.andExpect(status().isForbidden)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(403))
 			.andExpect(jsonPath("$.message").value("여행에 참여한 부모만 피드백을 작성할 수 있습니다."))
 
 		mockMvc.perform(
 			get("/api/v1/trips/$tripId/feedback/status")
 				.header("Authorization", authorization(outsider)),
 		)
-			.andExpect(status().isForbidden)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(403))
 			.andExpect(jsonPath("$.message").value("여행 참여자만 피드백 현황을 조회할 수 있습니다."))
 	}
 

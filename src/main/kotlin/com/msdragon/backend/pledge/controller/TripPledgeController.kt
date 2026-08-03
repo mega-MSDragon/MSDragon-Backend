@@ -43,11 +43,7 @@ class TripPledgeController(
 	)
 	@ApiResponses(
 		value = [
-			SwaggerApiResponse(responseCode = "200", description = "여행 10계명 후보 조회 성공"),
-			SwaggerApiResponse(responseCode = "400", description = "이미 확정본이 있거나 여행 상태가 올바르지 않음"),
-			SwaggerApiResponse(responseCode = "401", description = "인증 실패"),
-			SwaggerApiResponse(responseCode = "403", description = "작성 권한 없음"),
-			SwaggerApiResponse(responseCode = "404", description = "여행을 찾을 수 없음"),
+			SwaggerApiResponse(responseCode = "200", description = "처리 완료: 조회 성공(status=200) 또는 인증·정책 오류(status=400/401/403/404)"),
 		],
 	)
 	@GetMapping("/candidates")
@@ -66,10 +62,7 @@ class TripPledgeController(
 	)
 	@ApiResponses(
 		value = [
-			SwaggerApiResponse(responseCode = "200", description = "여행 10계명 조회 성공"),
-			SwaggerApiResponse(responseCode = "401", description = "인증 실패"),
-			SwaggerApiResponse(responseCode = "403", description = "조회 권한 없음"),
-			SwaggerApiResponse(responseCode = "404", description = "여행 또는 저장된 10계명을 찾을 수 없음"),
+			SwaggerApiResponse(responseCode = "200", description = "처리 완료: 조회 성공(status=200) 또는 인증·정책 오류(status=401/403/404)"),
 		],
 	)
 	@GetMapping
@@ -90,13 +83,12 @@ class TripPledgeController(
 		value = [
 			SwaggerApiResponse(
 				responseCode = "200",
-				description = "여행 10계명 PDF 생성 성공",
-				content = [Content(mediaType = MediaType.APPLICATION_PDF_VALUE, schema = Schema(type = "string", format = "binary"))],
+				description = "처리 완료: PDF 생성 성공 또는 JSON 인증·정책 오류(status=400/401/403/404)",
+				content = [
+					Content(mediaType = MediaType.APPLICATION_PDF_VALUE, schema = Schema(type = "string", format = "binary")),
+					Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = Schema(implementation = ApiResponse::class)),
+				],
 			),
-			SwaggerApiResponse(responseCode = "400", description = "자녀와 참여 부모 최소 1명의 서명이 완료되지 않음"),
-			SwaggerApiResponse(responseCode = "401", description = "인증 실패"),
-			SwaggerApiResponse(responseCode = "403", description = "조회 권한 없음"),
-			SwaggerApiResponse(responseCode = "404", description = "여행 또는 저장된 10계명을 찾을 수 없음"),
 			SwaggerApiResponse(responseCode = "500", description = "PDF 생성 실패"),
 		],
 	)
@@ -120,11 +112,7 @@ class TripPledgeController(
 	)
 	@ApiResponses(
 		value = [
-			SwaggerApiResponse(responseCode = "200", description = "여행 10계명 저장 성공"),
-			SwaggerApiResponse(responseCode = "400", description = "항목 수, 템플릿, 여행 상태 또는 10계명 상태가 올바르지 않음"),
-			SwaggerApiResponse(responseCode = "401", description = "인증 실패"),
-			SwaggerApiResponse(responseCode = "403", description = "작성 권한 없음"),
-			SwaggerApiResponse(responseCode = "404", description = "여행을 찾을 수 없음"),
+			SwaggerApiResponse(responseCode = "200", description = "처리 완료: 저장 성공(status=200) 또는 요청·인증·정책 오류(status=400/401/403/404)"),
 		],
 	)
 	@PutMapping
@@ -144,11 +132,7 @@ class TripPledgeController(
 	)
 	@ApiResponses(
 		value = [
-			SwaggerApiResponse(responseCode = "200", description = "여행 10계명 서명 저장 성공"),
-			SwaggerApiResponse(responseCode = "400", description = "서명 순서, 상태, 이미지 형식 또는 크기가 올바르지 않음"),
-			SwaggerApiResponse(responseCode = "401", description = "인증 실패"),
-			SwaggerApiResponse(responseCode = "403", description = "서명 권한 없음"),
-			SwaggerApiResponse(responseCode = "404", description = "여행 또는 저장된 10계명을 찾을 수 없음"),
+			SwaggerApiResponse(responseCode = "200", description = "처리 완료: 저장 성공(status=200) 또는 요청·인증·정책 오류(status=400/401/403/404)"),
 		],
 	)
 	@PostMapping("/signatures/me")

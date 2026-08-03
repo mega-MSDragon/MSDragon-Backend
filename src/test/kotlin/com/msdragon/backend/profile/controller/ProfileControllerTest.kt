@@ -131,7 +131,8 @@ class ProfileControllerTest {
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""{"ageBand":"20s"}"""),
 		)
-			.andExpect(status().isBadRequest)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(400))
 			.andExpect(jsonPath("$.message").value("선택한 역할에서 사용할 수 없는 연령대입니다."))
 	}
 

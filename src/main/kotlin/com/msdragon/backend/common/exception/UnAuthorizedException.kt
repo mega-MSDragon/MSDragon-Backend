@@ -4,4 +4,5 @@ import org.springframework.http.HttpStatus
 
 class UnAuthorizedException(
 	message: String,
-) : BaseException(HttpStatus.UNAUTHORIZED, message)
+	status: Int = HttpStatus.UNAUTHORIZED.value(),
+) : BaseException(status, message)

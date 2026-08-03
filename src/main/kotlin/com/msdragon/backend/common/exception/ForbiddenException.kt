@@ -4,4 +4,5 @@ import org.springframework.http.HttpStatus
 
 class ForbiddenException(
 	message: String,
-) : BaseException(HttpStatus.FORBIDDEN, message)
+	status: Int = HttpStatus.FORBIDDEN.value(),
+) : BaseException(status, message)

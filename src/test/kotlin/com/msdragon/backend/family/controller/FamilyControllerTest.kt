@@ -161,7 +161,8 @@ class FamilyControllerTest {
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""{"code":"$parent1Code"}"""),
 		)
-			.andExpect(status().isBadRequest)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(400))
 			.andExpect(jsonPath("$.message").value("부모와 자녀만 가족으로 연결할 수 있습니다."))
 	}
 
@@ -182,7 +183,8 @@ class FamilyControllerTest {
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""{"code":"$childCode"}"""),
 		)
-			.andExpect(status().isBadRequest)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(400))
 			.andExpect(jsonPath("$.message").value("가족에는 부모를 최대 2명까지만 연결할 수 있습니다."))
 	}
 

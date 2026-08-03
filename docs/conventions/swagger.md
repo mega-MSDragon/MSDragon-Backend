@@ -24,6 +24,25 @@ API를 추가하거나 수정할 때 Swagger 문서화 어노테이션을 함께
 )
 ```
 
+정책 오류가 있는 API는 실제 HTTP `200` 응답 설명에 본문 `status` 목록을 함께 적습니다.
+
+```kotlin
+@ApiResponses(
+	value = [
+		SwaggerApiResponse(
+			responseCode = "200",
+			description = "처리 완료: 성공(status=200) 또는 요청·인증·정책 오류(status=400/401/403/404)",
+		),
+		SwaggerApiResponse(responseCode = "500", description = "서버 또는 외부 연동 오류"),
+	],
+)
+```
+
+- `responseCode`는 본문 `status`가 아니라 실제 HTTP 상태만 적습니다.
+- 요청·Validation·인증·정책상 `400/401/403/404`는 별도 HTTP 응답으로 나열하지 않고 HTTP `200` 설명에 포함합니다.
+- HTTP `500`은 필수 설정 누락, 외부 API 호출 실패 등 실제 시스템 오류가 가능한 API에만 적습니다.
+- 생성 성공은 HTTP `200`, 본문 `status=201`로 문서화합니다.
+
 파라미터:
 
 ```kotlin

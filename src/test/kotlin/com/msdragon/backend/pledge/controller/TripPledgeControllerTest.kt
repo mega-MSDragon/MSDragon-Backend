@@ -201,7 +201,8 @@ class TripPledgeControllerTest {
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(mapOf("items" to items))),
 		)
-			.andExpect(status().isBadRequest)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(400))
 			.andExpect(jsonPath("$.message").value("여행 10계명은 정확히 10개여야 합니다."))
 	}
 
@@ -222,7 +223,8 @@ class TripPledgeControllerTest {
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(mapOf("items" to items))),
 		)
-			.andExpect(status().isBadRequest)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(400))
 			.andExpect(jsonPath("$.message").value("같은 여행 10계명 템플릿을 중복 사용할 수 없습니다."))
 	}
 
@@ -234,7 +236,8 @@ class TripPledgeControllerTest {
 			get("/api/v1/trips/${requireNotNull(trip.id)}/pledge/candidates")
 				.header("Authorization", "Bearer ${tokenService.createAccessToken(parent)}"),
 		)
-			.andExpect(status().isForbidden)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(403))
 			.andExpect(jsonPath("$.message").value("여행을 만든 자녀만 여행 10계명을 작성할 수 있습니다."))
 	}
 
@@ -261,7 +264,8 @@ class TripPledgeControllerTest {
 		saveReviewedPledge(child, trip)
 
 		submitSignature(parent, trip)
-			.andExpect(status().isBadRequest)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(400))
 			.andExpect(jsonPath("$.message").value("자녀가 먼저 여행 10계명에 서명해야 합니다."))
 	}
 
@@ -373,7 +377,8 @@ class TripPledgeControllerTest {
 				.accept(MediaType.APPLICATION_PDF)
 				.header("Authorization", "Bearer ${tokenService.createAccessToken(child)}"),
 		)
-			.andExpect(status().isBadRequest)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(400))
 			.andExpect { result -> check(result.response.contentType == MediaType.APPLICATION_JSON_VALUE) }
 			.andExpect(jsonPath("$.message").value("자녀와 참여 부모 최소 1명이 서명해야 PDF를 생성할 수 있습니다."))
 	}
@@ -390,7 +395,8 @@ class TripPledgeControllerTest {
 			get("/api/v1/trips/${requireNotNull(trip.id)}/pledge/pdf")
 				.header("Authorization", "Bearer ${tokenService.createAccessToken(otherParent)}"),
 		)
-			.andExpect(status().isForbidden)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(403))
 			.andExpect(jsonPath("$.message").value("여행 참여자만 여행 10계명을 조회할 수 있습니다."))
 	}
 
@@ -401,7 +407,8 @@ class TripPledgeControllerTest {
 		submitSignature(child, trip).andExpect(status().isOk)
 
 		submitSignature(child, trip)
-			.andExpect(status().isBadRequest)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(400))
 			.andExpect(jsonPath("$.message").value("이미 여행 10계명에 서명했습니다."))
 	}
 
@@ -411,7 +418,8 @@ class TripPledgeControllerTest {
 		saveReviewedPledge(child, trip)
 
 		submitSignature(child, trip, "bm90LXBuZw==")
-			.andExpect(status().isBadRequest)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(400))
 			.andExpect(jsonPath("$.message").value("PNG 형식의 서명 이미지만 사용할 수 있습니다."))
 	}
 
@@ -423,7 +431,8 @@ class TripPledgeControllerTest {
 		submitSignature(child, trip).andExpect(status().isOk)
 
 		submitSignature(otherParent, trip)
-			.andExpect(status().isForbidden)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(403))
 			.andExpect(jsonPath("$.message").value("여행 참여자만 여행 10계명에 서명할 수 있습니다."))
 	}
 

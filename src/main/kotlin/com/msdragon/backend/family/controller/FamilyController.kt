@@ -34,8 +34,7 @@ class FamilyController(
 	)
 	@ApiResponses(
 		value = [
-			SwaggerApiResponse(responseCode = "200", description = "내 가족 조회 성공"),
-			SwaggerApiResponse(responseCode = "401", description = "인증 실패"),
+			SwaggerApiResponse(responseCode = "200", description = "처리 완료: 조회 성공(status=200) 또는 인증 오류(status=401)"),
 		],
 	)
 	@GetMapping
@@ -53,8 +52,7 @@ class FamilyController(
 	)
 	@ApiResponses(
 		value = [
-			SwaggerApiResponse(responseCode = "200", description = "가족 코드 조회 성공"),
-			SwaggerApiResponse(responseCode = "401", description = "인증 실패"),
+			SwaggerApiResponse(responseCode = "200", description = "처리 완료: 조회 성공(status=200) 또는 인증 오류(status=401)"),
 		],
 	)
 	@PostMapping("/code")
@@ -72,10 +70,7 @@ class FamilyController(
 	)
 	@ApiResponses(
 		value = [
-			SwaggerApiResponse(responseCode = "200", description = "가족 매칭 성공"),
-			SwaggerApiResponse(responseCode = "400", description = "매칭할 수 없는 요청"),
-			SwaggerApiResponse(responseCode = "401", description = "인증 실패"),
-			SwaggerApiResponse(responseCode = "404", description = "가족 코드를 찾을 수 없음"),
+			SwaggerApiResponse(responseCode = "200", description = "처리 완료: 매칭 성공(status=200) 또는 요청·인증·정책 오류(status=400/401/404)"),
 		],
 	)
 	@PostMapping("/matches")

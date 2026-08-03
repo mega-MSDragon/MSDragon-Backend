@@ -123,7 +123,8 @@ class ParentProfileControllerTest {
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""{"walkingPace":"slow"}"""),
 		)
-			.andExpect(status().isBadRequest)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(400))
 			.andExpect(jsonPath("$.message").value("부모 사용자만 프로필을 작성할 수 있습니다."))
 	}
 
@@ -154,7 +155,8 @@ class ParentProfileControllerTest {
 			get("/api/v1/parent-profiles/${requireNotNull(parent.id)}")
 				.header("Authorization", "Bearer ${tokenService.createAccessToken(child)}"),
 		)
-			.andExpect(status().isForbidden)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(403))
 			.andExpect(jsonPath("$.message").value("부모 프로필 조회 권한이 없습니다."))
 	}
 
@@ -168,7 +170,8 @@ class ParentProfileControllerTest {
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""{"travelThemes":["nature_scenery","history_culture","activity","shopping"]}"""),
 		)
-			.andExpect(status().isBadRequest)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(400))
 			.andExpect(jsonPath("$.message").value("여행 테마는 최대 3개까지 선택할 수 있습니다."))
 	}
 
@@ -191,7 +194,8 @@ class ParentProfileControllerTest {
 					""".trimIndent(),
 				),
 		)
-			.andExpect(status().isBadRequest)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(400))
 			.andExpect(jsonPath("$.message").value("이동 도움 필요 여부를 선택해주세요."))
 	}
 

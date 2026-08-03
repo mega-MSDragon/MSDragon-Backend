@@ -4,4 +4,5 @@ import org.springframework.http.HttpStatus
 
 class InternalServerException(
 	message: String,
-) : BaseException(HttpStatus.INTERNAL_SERVER_ERROR, message)
+	status: Int = HttpStatus.INTERNAL_SERVER_ERROR.value(),
+) : BaseException(status, message, HttpStatus.INTERNAL_SERVER_ERROR)

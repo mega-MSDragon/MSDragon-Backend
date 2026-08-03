@@ -9,21 +9,22 @@ import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.MissingServletRequestParameterException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException
 
 @RestControllerAdvice
 class ControllerExceptionAdvice {
 	@ExceptionHandler(BaseException::class)
 	fun handleBaseException(exception: BaseException): ResponseEntity<ApiResponse<Unit>> =
 		ResponseEntity
-			.status(exception.status)
+			.status(exception.httpStatus)
 			.contentType(MediaType.APPLICATION_JSON)
-			.body(ApiResponse.failure(exception.status.value(), exception.message))
+			.body(ApiResponse.failure(exception.status, exception.message))
 
 	@ExceptionHandler(MethodArgumentNotValidException::class)
 	fun handleValidationException(exception: MethodArgumentNotValidException): ResponseEntity<ApiResponse<Unit>> {
 		val message = exception.bindingResult.fieldErrors.firstOrNull()?.defaultMessage ?: "요청 값이 올바르지 않습니다."
 		return ResponseEntity
-			.status(HttpStatus.BAD_REQUEST)
+			.status(HttpStatus.OK)
 			.contentType(MediaType.APPLICATION_JSON)
 			.body(ApiResponse.failure(HttpStatus.BAD_REQUEST.value(), message))
 	}
@@ -31,7 +32,7 @@ class ControllerExceptionAdvice {
 	@ExceptionHandler(MissingServletRequestParameterException::class)
 	fun handleMissingParameter(exception: MissingServletRequestParameterException): ResponseEntity<ApiResponse<Unit>> =
 		ResponseEntity
-			.status(HttpStatus.BAD_REQUEST)
+			.status(HttpStatus.OK)
 			.contentType(MediaType.APPLICATION_JSON)
 			.body(ApiResponse.failure(HttpStatus.BAD_REQUEST.value(), "${exception.parameterName} 값이 입력되지 않았습니다."))
 
@@ -39,7 +40,7 @@ class ControllerExceptionAdvice {
 	fun handleHttpMessageNotReadable(exception: HttpMessageNotReadableException): ResponseEntity<ApiResponse<Unit>> {
 		val baseException = exception.findCause<BaseException>()
 		return ResponseEntity
-			.status(HttpStatus.BAD_REQUEST)
+			.status(HttpStatus.OK)
 			.contentType(MediaType.APPLICATION_JSON)
 			.body(
 				ApiResponse.failure(
@@ -49,12 +50,12 @@ class ControllerExceptionAdvice {
 			)
 	}
 
-	@ExceptionHandler(IllegalArgumentException::class)
-	fun handleIllegalArgumentException(exception: IllegalArgumentException): ResponseEntity<ApiResponse<Unit>> =
+	@ExceptionHandler(MethodArgumentTypeMismatchException::class)
+	fun handleMethodArgumentTypeMismatch(exception: MethodArgumentTypeMismatchException): ResponseEntity<ApiResponse<Unit>> =
 		ResponseEntity
-			.status(HttpStatus.BAD_REQUEST)
+			.status(HttpStatus.OK)
 			.contentType(MediaType.APPLICATION_JSON)
-			.body(ApiResponse.failure(HttpStatus.BAD_REQUEST.value(), exception.message ?: "잘못된 요청입니다."))
+			.body(ApiResponse.failure(HttpStatus.BAD_REQUEST.value(), "${exception.name} 값이 올바르지 않습니다."))
 }
 
 private inline fun <reified T : Throwable> Throwable.findCause(): T? {

@@ -31,11 +31,7 @@ class FilialReportController(
 	)
 	@ApiResponses(
 		value = [
-			SwaggerApiResponse(responseCode = "200", description = "효도 리포트 생성 성공"),
-			SwaggerApiResponse(responseCode = "400", description = "참여 부모 피드백이 아직 완료되지 않음"),
-			SwaggerApiResponse(responseCode = "401", description = "인증 실패"),
-			SwaggerApiResponse(responseCode = "403", description = "다른 가족 여행"),
-			SwaggerApiResponse(responseCode = "404", description = "여행을 찾을 수 없음"),
+			SwaggerApiResponse(responseCode = "200", description = "처리 완료: 생성 성공(status=200) 또는 인증·정책 오류(status=400/401/403/404)"),
 		],
 	)
 	@PostMapping
@@ -54,11 +50,7 @@ class FilialReportController(
 	)
 	@ApiResponses(
 		value = [
-			SwaggerApiResponse(responseCode = "200", description = "효도 리포트 조회 성공"),
-			SwaggerApiResponse(responseCode = "400", description = "참여 부모 피드백 상태가 변경됨"),
-			SwaggerApiResponse(responseCode = "401", description = "인증 실패"),
-			SwaggerApiResponse(responseCode = "403", description = "다른 가족 여행"),
-			SwaggerApiResponse(responseCode = "404", description = "여행 또는 생성된 리포트를 찾을 수 없음"),
+			SwaggerApiResponse(responseCode = "200", description = "처리 완료: 조회 성공(status=200) 또는 인증·정책 오류(status=400/401/403/404)"),
 		],
 	)
 	@GetMapping

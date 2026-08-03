@@ -35,7 +35,6 @@ import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
-import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
@@ -54,9 +53,7 @@ class TripController(
 	)
 	@ApiResponses(
 		value = [
-			SwaggerApiResponse(responseCode = "200", description = "여행 대상 부모 후보 조회 성공"),
-			SwaggerApiResponse(responseCode = "400", description = "자녀 사용자가 아님"),
-			SwaggerApiResponse(responseCode = "401", description = "인증 실패"),
+			SwaggerApiResponse(responseCode = "200", description = "처리 완료: 조회 성공(status=200) 또는 인증·정책 오류(status=400/401)"),
 		],
 	)
 	@GetMapping("/parent-candidates")
@@ -74,8 +71,7 @@ class TripController(
 	)
 	@ApiResponses(
 		value = [
-			SwaggerApiResponse(responseCode = "200", description = "여행 도시 목록 조회 성공"),
-			SwaggerApiResponse(responseCode = "401", description = "인증 실패"),
+			SwaggerApiResponse(responseCode = "200", description = "처리 완료: 조회 성공(status=200) 또는 인증 오류(status=401)"),
 		],
 	)
 	@GetMapping("/destinations")
@@ -93,8 +89,7 @@ class TripController(
 	)
 	@ApiResponses(
 		value = [
-			SwaggerApiResponse(responseCode = "200", description = "내 가족 여행 목록 조회 성공"),
-			SwaggerApiResponse(responseCode = "401", description = "인증 실패"),
+			SwaggerApiResponse(responseCode = "200", description = "처리 완료: 조회 성공(status=200) 또는 인증 오류(status=401)"),
 		],
 	)
 	@GetMapping
@@ -112,10 +107,7 @@ class TripController(
 	)
 	@ApiResponses(
 		value = [
-			SwaggerApiResponse(responseCode = "200", description = "여행 상세 조회 성공"),
-			SwaggerApiResponse(responseCode = "401", description = "인증 실패"),
-			SwaggerApiResponse(responseCode = "403", description = "조회 권한 없음"),
-			SwaggerApiResponse(responseCode = "404", description = "여행을 찾을 수 없음"),
+			SwaggerApiResponse(responseCode = "200", description = "처리 완료: 조회 성공(status=200) 또는 인증·정책 오류(status=401/403/404)"),
 		],
 	)
 	@GetMapping("/{tripId}")
@@ -135,10 +127,7 @@ class TripController(
 	)
 	@ApiResponses(
 		value = [
-			SwaggerApiResponse(responseCode = "200", description = "여행 코스 조회 성공"),
-			SwaggerApiResponse(responseCode = "401", description = "인증 실패"),
-			SwaggerApiResponse(responseCode = "403", description = "조회 권한 없음"),
-			SwaggerApiResponse(responseCode = "404", description = "여행을 찾을 수 없음"),
+			SwaggerApiResponse(responseCode = "200", description = "처리 완료: 조회 성공(status=200) 또는 인증·정책 오류(status=401/403/404)"),
 		],
 	)
 	@GetMapping("/{tripId}/course")
@@ -158,11 +147,7 @@ class TripController(
 	)
 	@ApiResponses(
 		value = [
-			SwaggerApiResponse(responseCode = "200", description = "여행 모드 조회 성공"),
-			SwaggerApiResponse(responseCode = "400", description = "여행 모드 이용 기간이 아님"),
-			SwaggerApiResponse(responseCode = "401", description = "인증 실패"),
-			SwaggerApiResponse(responseCode = "403", description = "조회 권한 없음"),
-			SwaggerApiResponse(responseCode = "404", description = "여행 또는 현재 일자를 찾을 수 없음"),
+			SwaggerApiResponse(responseCode = "200", description = "처리 완료: 조회 성공(status=200) 또는 인증·정책 오류(status=400/401/403/404)"),
 		],
 	)
 	@GetMapping("/{tripId}/travel-mode")
@@ -182,11 +167,7 @@ class TripController(
 	)
 	@ApiResponses(
 		value = [
-			SwaggerApiResponse(responseCode = "200", description = "여행 추천 코스 생성 성공"),
-			SwaggerApiResponse(responseCode = "400", description = "추천 코스 생성 요청 상태가 올바르지 않음"),
-			SwaggerApiResponse(responseCode = "401", description = "인증 실패"),
-			SwaggerApiResponse(responseCode = "403", description = "생성 권한 없음"),
-			SwaggerApiResponse(responseCode = "404", description = "여행을 찾을 수 없음"),
+			SwaggerApiResponse(responseCode = "200", description = "처리 완료: 생성 성공(status=200) 또는 인증·정책 오류(status=400/401/403/404)"),
 			SwaggerApiResponse(responseCode = "500", description = "TourAPI 설정 또는 호출 실패"),
 		],
 	)
@@ -207,11 +188,7 @@ class TripController(
 	)
 	@ApiResponses(
 		value = [
-			SwaggerApiResponse(responseCode = "200", description = "여행 일자 경로 최적화 성공"),
-			SwaggerApiResponse(responseCode = "400", description = "최적화할 방문지 상태가 올바르지 않음"),
-			SwaggerApiResponse(responseCode = "401", description = "인증 실패"),
-			SwaggerApiResponse(responseCode = "403", description = "최적화 권한 없음"),
-			SwaggerApiResponse(responseCode = "404", description = "여행 또는 여행 일자를 찾을 수 없음"),
+			SwaggerApiResponse(responseCode = "200", description = "처리 완료: 최적화 성공(status=200) 또는 인증·정책 오류(status=400/401/403/404)"),
 			SwaggerApiResponse(responseCode = "500", description = "Tmap 설정 또는 호출 실패"),
 		],
 	)
@@ -234,11 +211,7 @@ class TripController(
 	)
 	@ApiResponses(
 		value = [
-			SwaggerApiResponse(responseCode = "200", description = "방문지 검색 성공"),
-			SwaggerApiResponse(responseCode = "400", description = "검색 요청 값이 올바르지 않음"),
-			SwaggerApiResponse(responseCode = "401", description = "인증 실패"),
-			SwaggerApiResponse(responseCode = "403", description = "검색 권한 없음"),
-			SwaggerApiResponse(responseCode = "404", description = "여행을 찾을 수 없음"),
+			SwaggerApiResponse(responseCode = "200", description = "처리 완료: 검색 성공(status=200) 또는 요청·인증·정책 오류(status=400/401/403/404)"),
 			SwaggerApiResponse(responseCode = "500", description = "TourAPI 설정 또는 호출 실패"),
 		],
 	)
@@ -271,11 +244,7 @@ class TripController(
 	)
 	@ApiResponses(
 		value = [
-			SwaggerApiResponse(responseCode = "200", description = "방문지 상세 조회 성공"),
-			SwaggerApiResponse(responseCode = "400", description = "상세 조회 요청 값이 올바르지 않음"),
-			SwaggerApiResponse(responseCode = "401", description = "인증 실패"),
-			SwaggerApiResponse(responseCode = "403", description = "조회 권한 없음"),
-			SwaggerApiResponse(responseCode = "404", description = "여행 또는 방문지를 찾을 수 없음"),
+			SwaggerApiResponse(responseCode = "200", description = "처리 완료: 조회 성공(status=200) 또는 요청·인증·정책 오류(status=400/401/403/404)"),
 			SwaggerApiResponse(responseCode = "500", description = "TourAPI 설정 또는 호출 실패"),
 		],
 	)
@@ -304,12 +273,9 @@ class TripController(
 	)
 	@ApiResponses(
 		value = [
-			SwaggerApiResponse(responseCode = "201", description = "여행 생성 성공"),
-			SwaggerApiResponse(responseCode = "400", description = "여행 생성 요청 값이 올바르지 않음"),
-			SwaggerApiResponse(responseCode = "401", description = "인증 실패"),
+			SwaggerApiResponse(responseCode = "200", description = "처리 완료: 생성 성공(status=201) 또는 요청·인증·정책 오류(status=400/401)"),
 		],
 	)
-	@ResponseStatus(HttpStatus.CREATED)
 	@PostMapping
 	fun createTrip(
 		@CurrentUser currentUser: AuthenticatedUser,
@@ -327,11 +293,7 @@ class TripController(
 	)
 	@ApiResponses(
 		value = [
-			SwaggerApiResponse(responseCode = "200", description = "여행 기본정보 수정 성공"),
-			SwaggerApiResponse(responseCode = "400", description = "수정 요청 값, 여행 상태 또는 코스 초기화 확인이 올바르지 않음"),
-			SwaggerApiResponse(responseCode = "401", description = "인증 실패"),
-			SwaggerApiResponse(responseCode = "403", description = "수정 권한 없음"),
-			SwaggerApiResponse(responseCode = "404", description = "여행을 찾을 수 없음"),
+			SwaggerApiResponse(responseCode = "200", description = "처리 완료: 수정 성공(status=200) 또는 요청·인증·정책 오류(status=400/401/403/404)"),
 		],
 	)
 	@PutMapping("/{tripId}")
@@ -352,11 +314,7 @@ class TripController(
 	)
 	@ApiResponses(
 		value = [
-			SwaggerApiResponse(responseCode = "200", description = "여행 코스 저장 성공"),
-			SwaggerApiResponse(responseCode = "400", description = "코스 저장 요청 값이 올바르지 않음"),
-			SwaggerApiResponse(responseCode = "401", description = "인증 실패"),
-			SwaggerApiResponse(responseCode = "403", description = "저장 권한 없음"),
-			SwaggerApiResponse(responseCode = "404", description = "여행을 찾을 수 없음"),
+			SwaggerApiResponse(responseCode = "200", description = "처리 완료: 저장 성공(status=200) 또는 요청·인증·정책 오류(status=400/401/403/404)"),
 		],
 	)
 	@PutMapping("/{tripId}/course")

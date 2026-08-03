@@ -6,6 +6,8 @@ import com.msdragon.backend.auth.repository.UserRefreshTokenRepository
 import com.msdragon.backend.auth.repository.UserRepository
 import com.msdragon.backend.auth.service.KakaoOAuthClient
 import com.msdragon.backend.auth.service.OAuthUserInfo
+import com.msdragon.backend.common.exception.InternalServerException
+import com.msdragon.backend.common.exception.UnAuthorizedException
 import com.msdragon.backend.family.repository.FamilyCodeRepository
 import com.msdragon.backend.family.repository.FamilyCodeUsageRepository
 import com.msdragon.backend.family.repository.FamilyMemberRepository
@@ -124,7 +126,8 @@ class AuthControllerTest {
 					""".trimIndent(),
 				),
 		)
-			.andExpect(status().isCreated)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(201))
 			.andExpect(jsonPath("$.success").value(true))
 			.andExpect(jsonPath("$.data.signupRequired").value(false))
 			.andExpect(jsonPath("$.data.accessToken").isString)
@@ -161,7 +164,8 @@ class AuthControllerTest {
 					""".trimIndent(),
 				),
 		)
-			.andExpect(status().isBadRequest)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(400))
 			.andExpect(jsonPath("$.success").value(false))
 	}
 
@@ -172,9 +176,40 @@ class AuthControllerTest {
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""{"provider":"google","token":"google-token"}"""),
 		)
-			.andExpect(status().isBadRequest)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(400))
 			.andExpect(jsonPath("$.success").value(false))
 			.andExpect(jsonPath("$.message").value("지원하지 않는 값입니다: google"))
+	}
+
+	@Test
+	fun `유효하지 않은 소셜 토큰은 HTTP 200과 본문 status 401을 반환한다`() {
+		given(kakaoOAuthClient.verify("invalid-token"))
+			.willThrow(UnAuthorizedException("카카오 로그인 토큰이 유효하지 않습니다."))
+
+		mockMvc.perform(
+			post("/api/v1/auth/social-login")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""{"provider":"kakao","token":"invalid-token"}"""),
+		)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(401))
+			.andExpect(jsonPath("$.success").value(false))
+	}
+
+	@Test
+	fun `소셜 인증 연동 실패는 HTTP 500을 반환한다`() {
+		given(kakaoOAuthClient.verify("provider-error"))
+			.willThrow(InternalServerException("카카오 인증 서버 호출에 실패했습니다."))
+
+		mockMvc.perform(
+			post("/api/v1/auth/social-login")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""{"provider":"kakao","token":"provider-error"}"""),
+		)
+			.andExpect(status().isInternalServerError)
+			.andExpect(jsonPath("$.status").value(500))
+			.andExpect(jsonPath("$.success").value(false))
 	}
 
 	@Test
