@@ -201,3 +201,22 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse as SwaggerApiResponse
 - 공통 예외 처리기는 모든 오류 응답의 `Content-Type`을 `application/json`으로 명시합니다.
 - PDF, 이미지, 파일 다운로드 API의 오류 통합 테스트는 실제 성공 미디어 타입을 `Accept` 헤더로 보내고도 상태 코드와 JSON 오류 본문이 유지되는지 확인합니다.
 - Swagger에 표시되는 요청 헤더를 운영 재현 조건으로 포함합니다.
+
+### 2026-08-03: HTTP 200 응답 계약에서 Validation과 인증 실패 누락
+
+**상황**
+
+- 정책 오류를 HTTP `200`으로 통일하는 작업에서 Validation 실패는 HTTP `400`, Bearer access token 인증 실패는 HTTP `401`로 남겨두었습니다.
+- 사용자가 서버가 실패 결과를 정상적으로 만들어 반환하는 경우는 모두 HTTP `200`이어야 한다고 정정했습니다.
+
+**원인**
+
+- 일반적인 REST HTTP 상태 관례를 프로젝트에서 합의한 클라이언트 계약보다 우선했습니다.
+- "기본 HTTP 오류"와 서버가 처리한 요청·인증 실패의 경계를 너무 넓게 해석했습니다.
+
+**재발 방지 규칙**
+
+- 성공, JSON·파라미터·Validation 오류, access token 인증 실패, 도메인 정책 오류는 모두 실제 HTTP `200`으로 반환합니다.
+- 클라이언트는 본문 `success`와 `status`로 성공·실패를 분기합니다.
+- 존재하지 않는 URL, 지원하지 않는 method·media type 등 라우팅/프로토콜 오류와 예상하지 못한 서버·외부 연동 실패만 실제 HTTP 오류를 사용합니다.
+- 새 API의 Swagger와 테스트에는 실제 HTTP `200`과 본문 `status`를 따로 검증합니다.
