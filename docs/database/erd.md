@@ -353,7 +353,7 @@ CREATE INDEX ix_support_facilities_type_lat_lng
 
 현재 경로 최적화 구현은 Tmap 경유지 순서 최적화 결과를 `trip_days.route_*` 컬럼에 일자 단위로 저장합니다. 사용자가 시작점/도착점을 입력하지 않으므로 서버가 모든 시작/끝 조합을 조회해 `totalTime`, `totalDistance` 기준으로 최적 결과를 선택합니다. `trip_route_segments`는 후속으로 방문지 간 세그먼트 상세를 분리 저장해야 할 때 사용하는 확장 후보입니다.
 
-여행모드의 근처 시설 안내는 `support_facilities`를 좌표 반경으로 조회합니다. 화장실은 CP949 CSV 주소를 Tmap으로 일회성 좌표 변환해 `local_excel` provider로 적재합니다. `raw_data`에는 원본 CSV row와 좌표 변환 제공자를 JSON 문자열로 보관합니다. 병원과 약국은 후속 범위입니다.
+여행모드의 근처 공중화장실 안내는 `support_facilities`를 좌표 반경으로 조회합니다. 화장실은 CP949 CSV 주소를 Tmap으로 일회성 좌표 변환해 `local_excel` provider로 적재합니다. `raw_data`에는 원본 CSV row와 좌표 변환 제공자를 JSON 문자열로 보관합니다. 병원과 약국은 Tmap POI 주변 카테고리 검색에서 실시간 조회하며 DB에 저장하지 않습니다.
 
 ---
 

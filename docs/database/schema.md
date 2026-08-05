@@ -168,7 +168,8 @@ DB 스키마와 공통 엔티티 규칙을 기록합니다.
 ### support_facilities
 
 - `facility_type`, `provider`, `source_id` 조합은 unique입니다.
-- 현재 구현하는 `facility_type`은 `restroom`이며 병원과 약국은 후속 범위입니다.
+- 현재 DB에 저장하는 `facility_type`은 `restroom`입니다.
+- 병원과 약국은 Tmap POI에서 실시간 조회하므로 `support_facilities`에 저장하지 않습니다.
 - 공중화장실 원천 `provider`는 `local_excel`이고 `source_id`는 `개방자치단체코드:관리번호`입니다.
 - 원천 CSV에 좌표가 없어 Tmap으로 WGS84 좌표를 한 번 변환해 저장합니다.
 - `raw_data`는 원본 CSV row와 좌표 변환 제공자를 JSON 문자열로 저장합니다.

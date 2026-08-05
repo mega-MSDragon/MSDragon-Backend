@@ -34,6 +34,7 @@
 - 코스 저장 또는 추천 코스 재생성 시 기존 경로 캐시는 무효화됩니다.
 - 서울 날짜 기준 시작일이 되면 준비 여부와 관계없이 여행 상태를 `in_progress`, 종료일 다음 날부터 `completed`로 자동 동기화합니다.
 - 여행 모드는 시작일 00:00부터 종료일 23:59까지 같은 가족 구성원 모두가 이용할 수 있습니다. 여행 참여자로 선택되지 않은 가족 구성원도 포함합니다.
+- 여행 모드 주변 공중화장실은 DB 적재 데이터를 조회하고, 병원·약국은 Tmap POI 주변 카테고리 검색 결과를 실시간으로 조회합니다.
 
 ---
 
@@ -47,6 +48,9 @@
 | `GET` | `/api/v1/trips/{tripId}` | 여행 상세 조회 |
 | `GET` | `/api/v1/trips/{tripId}/course` | 여행 코스 조회 |
 | `GET` | `/api/v1/trips/{tripId}/travel-mode` | 현재 일차와 전체 코스를 포함한 여행 모드 조회 |
+| `GET` | `/api/v1/trips/{tripId}/nearby-restrooms` | 현재 위치 주변 공중화장실 조회 |
+| `GET` | `/api/v1/trips/{tripId}/nearby-hospitals` | 현재 위치 주변 병원 조회 |
+| `GET` | `/api/v1/trips/{tripId}/nearby-pharmacies` | 현재 위치 주변 약국 조회 |
 | `GET` | `/api/v1/trips/{tripId}/places/search` | 코스 편집용 방문지 검색 |
 | `GET` | `/api/v1/trips/{tripId}/places/{contentId}` | 코스 편집용 방문지 상세 조회 |
 | `POST` | `/api/v1/trips` | 여행 생성 |
@@ -857,3 +861,46 @@ TourAPI 서비스키가 서버에 설정되어 있지 않거나 TourAPI 호출�
 
 5km 이내 화장실이 없으면 `data`는 빈 배열입니다.
 여행 시작 전과 종료 후에는 HTTP `200`/본문 `status=400`, 다른 가족 사용자에게는 HTTP `200`/본문 `status=403`을 반환합니다.
+
+---
+
+## GET /api/v1/trips/{tripId}/nearby-hospitals
+
+여행 기간 중 같은 가족 구성원이 현재 위치 기준 5km 이내 병원을 가까운 순으로 최대 10개 조회합니다.
+서버는 Tmap POI 주변 카테고리 검색의 `병원` 카테고리를 실시간으로 조회하며 결과를 DB에 저장하지 않습니다.
+Tmap 분류상 의원·치과 등이 포함될 수 있고 응급실 운영 여부는 보장하지 않습니다.
+
+Query Parameters와 접근 정책은 주변 공중화장실 조회 API와 같습니다.
+
+### Response
+
+```json
+{
+  "status": 200,
+  "success": true,
+  "message": "주변 병원 조회 성공",
+  "data": [
+    {
+      "id": "12345678",
+      "type": "hospital",
+      "name": "서울대학교병원",
+      "address": "서울 종로구 대학로 101",
+      "latitude": 37.579617,
+      "longitude": 126.998998,
+      "distanceMeters": 320,
+      "phone": "02-2072-2114"
+    }
+  ]
+}
+```
+
+Tmap 호출·응답 처리 실패는 실제 HTTP `500`, 본문 `status=500`을 반환합니다.
+
+---
+
+## GET /api/v1/trips/{tripId}/nearby-pharmacies
+
+여행 기간 중 같은 가족 구성원이 현재 위치 기준 5km 이내 약국을 가까운 순으로 최대 10개 조회합니다.
+서버는 Tmap POI 주변 카테고리 검색의 `약국` 카테고리를 실시간으로 조회하며 결과를 DB에 저장하지 않습니다.
+
+Query Parameters, 접근 정책, 응답 필드는 주변 병원 조회 API와 같고 `type`은 `pharmacy`, 성공 메시지는 `주변 약국 조회 성공`입니다.

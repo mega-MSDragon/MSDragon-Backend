@@ -4,7 +4,9 @@ import com.msdragon.backend.auth.support.AuthenticatedUser
 import com.msdragon.backend.auth.support.CurrentUser
 import com.msdragon.backend.common.config.BEARER_AUTH_SCHEME
 import com.msdragon.backend.common.response.ApiResponse
+import com.msdragon.backend.supportfacility.dto.NearbyMedicalFacilityResponse
 import com.msdragon.backend.supportfacility.dto.NearbyRestroomResponse
+import com.msdragon.backend.supportfacility.entity.SupportFacilityType
 import com.msdragon.backend.supportfacility.service.SupportFacilityService
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
@@ -47,5 +49,67 @@ class SupportFacilityController(
 		ApiResponse.success(
 			message = "주변 공중화장실 조회 성공",
 			data = supportFacilityService.getNearbyRestrooms(currentUser, tripId, latitude, longitude),
+		)
+
+	@Operation(
+		summary = "현재 위치 주변 병원 조회",
+		description = "여행 기간 중 같은 가족 구성원이 현재 위치 기준 5km 이내 병원을 가까운 순으로 최대 10개 조회합니다.",
+	)
+	@ApiResponses(
+		value = [
+			SwaggerApiResponse(responseCode = "200", description = "처리 완료: 조회 성공(status=200) 또는 요청·인증·정책 오류(status=400/401/403/404)"),
+			SwaggerApiResponse(responseCode = "500", description = "Tmap API 또는 서버 오류(status=500)"),
+		],
+	)
+	@GetMapping("/{tripId}/nearby-hospitals")
+	fun getNearbyHospitals(
+		@CurrentUser currentUser: AuthenticatedUser,
+		@Parameter(description = "여행 ID", example = "1")
+		@PathVariable tripId: Long,
+		@Parameter(description = "현재 위치 WGS84 위도", example = "37.5758692")
+		@RequestParam latitude: Double,
+		@Parameter(description = "현재 위치 WGS84 경도", example = "126.9684817")
+		@RequestParam longitude: Double,
+	): ApiResponse<List<NearbyMedicalFacilityResponse>> =
+		ApiResponse.success(
+			message = "주변 병원 조회 성공",
+			data = supportFacilityService.getNearbyMedicalFacilities(
+				currentUser,
+				tripId,
+				latitude,
+				longitude,
+				SupportFacilityType.HOSPITAL,
+			),
+		)
+
+	@Operation(
+		summary = "현재 위치 주변 약국 조회",
+		description = "여행 기간 중 같은 가족 구성원이 현재 위치 기준 5km 이내 약국을 가까운 순으로 최대 10개 조회합니다.",
+	)
+	@ApiResponses(
+		value = [
+			SwaggerApiResponse(responseCode = "200", description = "처리 완료: 조회 성공(status=200) 또는 요청·인증·정책 오류(status=400/401/403/404)"),
+			SwaggerApiResponse(responseCode = "500", description = "Tmap API 또는 서버 오류(status=500)"),
+		],
+	)
+	@GetMapping("/{tripId}/nearby-pharmacies")
+	fun getNearbyPharmacies(
+		@CurrentUser currentUser: AuthenticatedUser,
+		@Parameter(description = "여행 ID", example = "1")
+		@PathVariable tripId: Long,
+		@Parameter(description = "현재 위치 WGS84 위도", example = "37.5758692")
+		@RequestParam latitude: Double,
+		@Parameter(description = "현재 위치 WGS84 경도", example = "126.9684817")
+		@RequestParam longitude: Double,
+	): ApiResponse<List<NearbyMedicalFacilityResponse>> =
+		ApiResponse.success(
+			message = "주변 약국 조회 성공",
+			data = supportFacilityService.getNearbyMedicalFacilities(
+				currentUser,
+				tripId,
+				latitude,
+				longitude,
+				SupportFacilityType.PHARMACY,
+			),
 		)
 }

@@ -471,7 +471,7 @@ Table support_facilities {
     (facility_type, latitude, longitude)
   }
 
-  Note: '여행모드 주변 안내용 보조시설. 화장실은 CP949 엑셀 원천 주소를 Tmap으로 일회성 좌표 변환해 local_excel provider로 적재하고, 병원/약국은 후속 구현한다.'
+  Note: '여행모드 주변 안내용 보조시설. 화장실은 CP949 엑셀 원천 주소를 Tmap으로 일회성 좌표 변환해 local_excel provider로 적재한다. 병원/약국은 Tmap POI에서 실시간 조회하고 이 테이블에 저장하지 않는다.'
 }
 
 // ---------- 4. 여행 · 일정 ----------

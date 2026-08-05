@@ -9,6 +9,7 @@ import com.msdragon.backend.auth.entity.UserRole
 import com.msdragon.backend.auth.repository.UserRefreshTokenRepository
 import com.msdragon.backend.auth.repository.UserRepository
 import com.msdragon.backend.auth.service.TokenService
+import com.msdragon.backend.common.exception.InternalServerException
 import com.msdragon.backend.family.entity.Family
 import com.msdragon.backend.family.entity.FamilyMember
 import com.msdragon.backend.family.repository.FamilyCodeRepository
@@ -28,6 +29,8 @@ import com.msdragon.backend.pledge.repository.TripPledgeRepository
 import com.msdragon.backend.supportfacility.entity.SupportFacility
 import com.msdragon.backend.supportfacility.entity.SupportFacilityType
 import com.msdragon.backend.supportfacility.repository.SupportFacilityRepository
+import com.msdragon.backend.supportfacility.tmap.TmapPoi
+import com.msdragon.backend.supportfacility.tmap.TmapPoiClient
 import com.msdragon.backend.trip.entity.TripDay
 import com.msdragon.backend.trip.entity.ExternalApiProvider
 import com.msdragon.backend.trip.entity.TripStatus
@@ -62,6 +65,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
@@ -128,10 +132,14 @@ class TripControllerTest {
 	@Autowired
 	private lateinit var fakeTmapRouteClient: FakeTmapRouteClient
 
+	@Autowired
+	private lateinit var fakeTmapPoiClient: FakeTmapPoiClient
+
 	@BeforeEach
 	fun setUp() {
 		fakeTourApiClient.reset()
 		fakeTmapRouteClient.reset()
+		fakeTmapPoiClient.reset()
 		cleanDatabase()
 	}
 
@@ -424,6 +432,85 @@ class TripControllerTest {
 			.andExpect(jsonPath("$.data[9].name").value("화장실 10"))
 			.andExpect(jsonPath("$.data[?(@.name == '화장실 11')]").isEmpty)
 			.andExpect(jsonPath("$.data[?(@.name == '범위 밖 화장실')]").isEmpty)
+	}
+
+	@Test
+	fun `여행 중에는 현재 위치 주변 병원과 약국을 Tmap에서 조회한다`() {
+		val child = saveUser(UserRole.CHILD, "child-medical", "혜린")
+		val mother = saveUser(UserRole.PARENT, "parent-medical", "엄마", GenderType.FEMALE)
+		connectFamily(child, mother)
+		saveCompletedParentProfile(mother)
+		val tripId = createTrip(child, mother, futureDate(0), futureDate(0))
+		val latitude = 37.5758692
+		val longitude = 126.9684817
+		fakeTmapPoiClient.poisByType[SupportFacilityType.HOSPITAL] = (1..11).map { index ->
+			TmapPoi(
+				id = "hospital-$index",
+				name = "병원 $index",
+				address = "서울 종로구 병원로 $index",
+				latitude = latitude.toBigDecimal(),
+				longitude = (longitude + index * 0.001).toBigDecimal(),
+				phone = "02-0000-$index",
+			)
+		}
+		fakeTmapPoiClient.poisByType[SupportFacilityType.PHARMACY] = listOf(
+			TmapPoi(
+				id = "pharmacy-1",
+				name = "가까운 약국",
+				address = "서울 종로구 약국로 1",
+				latitude = latitude.toBigDecimal(),
+				longitude = (longitude + 0.0005).toBigDecimal(),
+				phone = "02-1111-2222",
+			),
+		)
+
+		val authorization = "Bearer ${tokenService.createAccessToken(mother)}"
+		mockMvc.perform(
+			get("/api/v1/trips/$tripId/nearby-hospitals")
+				.header("Authorization", authorization)
+				.param("latitude", latitude.toString())
+				.param("longitude", longitude.toString()),
+		)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.data.length()").value(10))
+			.andExpect(jsonPath("$.data[0].id").value("hospital-1"))
+			.andExpect(jsonPath("$.data[0].type").value("hospital"))
+			.andExpect(jsonPath("$.data[0].distanceMeters").value(88))
+			.andExpect(jsonPath("$.data[9].id").value("hospital-10"))
+
+		mockMvc.perform(
+			get("/api/v1/trips/$tripId/nearby-pharmacies")
+				.header("Authorization", authorization)
+				.param("latitude", latitude.toString())
+				.param("longitude", longitude.toString()),
+		)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.data.length()").value(1))
+			.andExpect(jsonPath("$.data[0].id").value("pharmacy-1"))
+			.andExpect(jsonPath("$.data[0].type").value("pharmacy"))
+
+		check(fakeTmapPoiClient.requests.map { it.facilityType } == listOf(SupportFacilityType.HOSPITAL, SupportFacilityType.PHARMACY))
+		check(fakeTmapPoiClient.requests.all { it.radiusKilometers == 5 && it.limit == 10 })
+	}
+
+	@Test
+	fun `주변 의료시설 Tmap 호출 실패는 실제 HTTP 500을 반환한다`() {
+		val child = saveUser(UserRole.CHILD, "child-medical-failure", "혜린")
+		val mother = saveUser(UserRole.PARENT, "parent-medical-failure", "엄마", GenderType.FEMALE)
+		connectFamily(child, mother)
+		saveCompletedParentProfile(mother)
+		val tripId = createTrip(child, mother, futureDate(0), futureDate(0))
+		fakeTmapPoiClient.exception = InternalServerException("Tmap 주변 의료시설 조회에 실패했습니다.")
+
+		mockMvc.perform(
+			get("/api/v1/trips/$tripId/nearby-hospitals")
+				.header("Authorization", "Bearer ${tokenService.createAccessToken(mother)}")
+				.param("latitude", "37.5758692")
+				.param("longitude", "126.9684817"),
+		)
+			.andExpect(status().isInternalServerError)
+			.andExpect(jsonPath("$.status").value(500))
+			.andExpect(jsonPath("$.success").value(false))
 	}
 
 	@Test
@@ -1511,6 +1598,10 @@ class TripControllerTest {
 		@Bean
 		@Primary
 		fun fakeTmapRouteClient(): FakeTmapRouteClient = FakeTmapRouteClient()
+
+		@Bean
+		@Primary
+		fun fakeTmapPoiClient(): FakeTmapPoiClient = FakeTmapPoiClient()
 	}
 
 	class FakeTourApiClient : TourApiClient {
@@ -1572,6 +1663,38 @@ class TripControllerTest {
 
 		fun reset() {
 			requests.clear()
+		}
+	}
+
+	data class FakeTmapPoiRequest(
+		val facilityType: SupportFacilityType,
+		val latitude: BigDecimal,
+		val longitude: BigDecimal,
+		val radiusKilometers: Int,
+		val limit: Int,
+	)
+
+	class FakeTmapPoiClient : TmapPoiClient {
+		val poisByType: MutableMap<SupportFacilityType, List<TmapPoi>> = mutableMapOf()
+		val requests: MutableList<FakeTmapPoiRequest> = mutableListOf()
+		var exception: RuntimeException? = null
+
+		override fun findNearby(
+			facilityType: SupportFacilityType,
+			latitude: BigDecimal,
+			longitude: BigDecimal,
+			radiusKilometers: Int,
+			limit: Int,
+		): List<TmapPoi> {
+			exception?.let { throw it }
+			requests += FakeTmapPoiRequest(facilityType, latitude, longitude, radiusKilometers, limit)
+			return poisByType[facilityType].orEmpty()
+		}
+
+		fun reset() {
+			poisByType.clear()
+			requests.clear()
+			exception = null
 		}
 	}
 }
