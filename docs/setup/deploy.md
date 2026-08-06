@@ -88,13 +88,33 @@ TMAP_CAR_TYPE=1
 TMAP_DEFAULT_START_TIME=10:00
 TMAP_CONNECT_TIMEOUT=PT5S
 TMAP_REQUEST_TIMEOUT=PT15S
+OPENAI_API_KEY=<새로 발급한 OpenAI 프로젝트 API 키>
+OPENAI_MODEL=gpt-5.6-luna
+OPENAI_CONNECT_TIMEOUT=PT5S
+OPENAI_REQUEST_TIMEOUT=PT30S
+OPENAI_MAX_OUTPUT_TOKENS=800
 ```
 
 `APP_AUTH_JWT_SECRET`은 의미 있는 단어가 아니라 충분히 긴 랜덤 문자열이어야 합니다. 이 값을 변경하면 기존 로그인 토큰은 모두 무효화됩니다.
 `POSTGRES_HOST_PORT`는 EC2 host에서 publish할 PostgreSQL 포트입니다. DBeaver에서 직접 접속하려면 기본값 `5432`를 사용하고, 보안 그룹에서도 같은 포트를 허용합니다.
 `TOUR_API_SERVICE_KEY`가 비어 있으면 서버는 실행되지만 추천 코스 생성 API는 설정 오류로 실패합니다.
 `TMAP_APP_KEY`가 비어 있으면 서버는 실행되지만 경로 최적화, 공중화장실 좌표 변환, 주변 병원·약국 조회 API는 설정 오류로 실패합니다.
+`OPENAI_API_KEY`가 비어 있으면 서버는 실행되지만 여행 모드 AI 질문 전송 API는 설정 오류로 실패합니다.
 timeout 값은 Spring Boot가 읽을 수 있는 ISO-8601 Duration 형식으로 작성합니다. 예: `PT10S`.
+
+### OpenAI 키 반영
+
+채팅이나 저장소에 노출한 키는 폐기하고 OpenAI 프로젝트에서 새 키를 발급합니다. EC2의 `/opt/MSDragon-Backend/.env`에만 저장하며 Git, Dockerfile, `application.yaml`, GitHub Actions 로그에는 넣지 않습니다.
+
+```bash
+cd /opt/MSDragon-Backend
+vi .env
+docker compose up -d --build --force-recreate app
+docker compose exec app sh -lc 'test -n "$OPENAI_API_KEY" && echo OPENAI_API_KEY=set || echo OPENAI_API_KEY=missing'
+docker compose logs app --tail 100
+```
+
+현재 배포 workflow는 서버의 `.env`를 그대로 사용하므로 `OPENAI_API_KEY`를 GitHub Repository Secret에 중복 등록할 필요가 없습니다. `.env`를 수정한 뒤에는 app 컨테이너를 다시 생성해야 새 값이 반영됩니다.
 
 ---
 
@@ -150,6 +170,7 @@ docker compose up -d --build
 - `.env`에 `APP_AUTH_JWT_SECRET`, `APP_AUTH_APPLE_CLIENT_ID` 설정 완료
 - 추천 코스 생성 API를 사용할 경우 `.env`에 `TOUR_API_SERVICE_KEY` 설정 완료
 - 경로 최적화·공중화장실 적재·주변 병원·약국 API를 사용할 경우 `.env`에 `TMAP_APP_KEY` 설정 완료
+- 여행 모드 AI 챗봇을 사용할 경우 `.env`에 `OPENAI_API_KEY` 설정 완료
 - `deploy/nginx/certs/origin.pem` 존재
 - `deploy/nginx/certs/origin.key` 존재
 

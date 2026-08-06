@@ -680,27 +680,29 @@ CREATE TABLE recommendation_adjustments (
 CREATE TABLE chat_sessions (
     id                      BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     user_id                 BIGINT NOT NULL REFERENCES users(id),
-    trip_id                 BIGINT REFERENCES trips(id),
+    trip_id                 BIGINT NOT NULL REFERENCES trips(id),
     context_place_id        BIGINT REFERENCES places(id),
     scope                   chat_session_scope NOT NULL DEFAULT 'travel_mode',
-    system_prompt_version   VARCHAR(30),
-    model_name              VARCHAR(60),
+    system_prompt_version   VARCHAR(30) NOT NULL,
+    model_name              VARCHAR(60) NOT NULL,
     personalization_enabled BOOLEAN NOT NULL DEFAULT false,
-    context_snapshot        JSONB,
+    context_snapshot        TEXT NOT NULL,
     closed_at               TIMESTAMPTZ,
-    created_at              TIMESTAMPTZ NOT NULL DEFAULT now()
+    created_at              TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at              TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE TABLE chat_messages (
     id              BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     chat_session_id BIGINT NOT NULL REFERENCES chat_sessions(id),
     sender          chat_sender NOT NULL,
     content         TEXT NOT NULL,
-    metadata        JSONB,
-    created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+    metadata        TEXT,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 ```
 
-여행모드 AI 챗봇의 `context_snapshot`에는 현재 여행 코스, 선택 일자, 장소 정보, 앱에서 허용한 경우 부모 취향/MBTI 등 답변에 사용한 컨텍스트를 저장할 수 있습니다. AI 개인화 허용 여부는 PDF 확정 기준에 따라 앱 로컬 설정/동의 상태를 우선 사용합니다.
+여행모드 AI 챗봇은 첫 질문에 사용자별·여행별 세션을 자동 생성합니다. `context_snapshot`에는 현재 여행 코스, 선택 일자, 장소 정보를 JSON 문자열로 저장하고 질문마다 최신 값으로 갱신합니다. `chat_messages.metadata`에도 OpenAI response ID, 모델명, token 사용량을 JSON 문자열로 저장합니다. 현재는 부모 취향/MBTI 등 개인정보를 전송하지 않으며 `personalization_enabled=false`로 고정합니다.
 
 ---
 

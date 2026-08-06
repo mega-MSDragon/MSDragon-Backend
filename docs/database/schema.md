@@ -6,7 +6,7 @@ DB 스키마와 공통 엔티티 규칙을 기록합니다.
 
 ## 현재 상태
 
-인증/가족/부모 프로필/여행/여행 10계명/여행 피드백/효도 리포트 도메인 Entity가 도입되었습니다.
+인증/가족/부모 프로필/여행/여행 10계명/여행 피드백/효도 리포트/여행 AI 챗봇 도메인 Entity가 도입되었습니다.
 `docs/database/schema.dbml`과 `docs/database/erd.md`는 PDF 확정 와이어프레임 기준 목표 설계를 포함하므로,
 현재 구현 Entity보다 앞서 있는 테이블과 컬럼이 있을 수 있습니다.
 
@@ -33,6 +33,8 @@ DB 스키마와 공통 엔티티 규칙을 기록합니다.
 | `TripFeedback.tags` | `trip_feedback_tags` | 피드백에서 선택한 좋았던 점·개선점 태그 |
 | `FilialReport` | `filial_reports` | 부모 피드백 완료 시 자동 생성하는 여행별 효도 리포트 |
 | `SupportFacility` | `support_facilities` | 여행 모드 주변 공중화장실 등 편의시설 좌표 |
+| `ChatSession` | `chat_sessions` | 사용자별·여행별 AI 채팅 세션과 여행 문맥 스냅샷 |
+| `ChatMessage` | `chat_messages` | 사용자 질문과 AI 답변 이력 |
 
 ---
 
@@ -255,6 +257,26 @@ DB 스키마와 공통 엔티티 규칙을 기록합니다.
 - 여행 기간 또는 참여 부모 구성이 바뀌면 피드백과 함께 기존 리포트를 삭제합니다.
 - `filial_report_stop_summaries`는 장소별 편안/주의 배지와 요약 기준이 정해진 뒤 Entity로 구현합니다.
 - 기록 탭 통계는 별도 테이블 없이 `completed` 여행의 코스, Tmap 경로, 제출된 피드백을 조회 시 집계합니다.
+
+---
+
+## 여행 AI 챗봇 테이블 구현 메모
+
+### chat_sessions
+
+- `user_id`, `trip_id`, `scope`를 기준으로 종료되지 않은 최신 세션을 조회합니다.
+- 현재 구현은 여행 모드 전용이므로 `trip_id`가 필수이며 `scope`는 `travel_mode`입니다.
+- 첫 질문을 보낼 때 사용자별·여행별 세션을 자동 생성하고, 이후 질문마다 최신 코스로 `context_snapshot`을 갱신합니다.
+- `system_prompt_version`과 `model_name`은 해당 세션에 적용한 프롬프트·모델을 추적합니다.
+- `context_snapshot`은 여행과 코스 문맥을 직렬화한 JSON 문자열이며 DB에는 `text`로 저장합니다.
+- 부모 프로필과 여행 MBTI는 현재 AI 문맥에 넣지 않으므로 `personalization_enabled=false`입니다.
+
+### chat_messages
+
+- `chat_session_id`에 속한 사용자 질문과 AI 답변을 시간순으로 저장합니다.
+- `sender`는 `user`, `assistant` 중 하나입니다.
+- AI 답변의 `metadata`는 OpenAI response ID, 모델명, token 사용량을 직렬화한 JSON 문자열이며 DB에는 `text`로 저장합니다.
+- OpenAI 호출이 실패하면 같은 트랜잭션에서 생성한 세션과 사용자 질문도 저장하지 않습니다.
 
 ---
 

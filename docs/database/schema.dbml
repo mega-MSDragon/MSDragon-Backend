@@ -814,17 +814,18 @@ Table recommendation_adjustments {
 Table chat_sessions {
   id bigint [pk, increment]
   user_id bigint [not null]
-  trip_id bigint
+  trip_id bigint [not null]
   context_place_id bigint
   scope chat_session_scope [not null, default: 'travel_mode']
-  system_prompt_version varchar(30)
-  model_name varchar(60)
+  system_prompt_version varchar(30) [not null]
+  model_name varchar(60) [not null]
   personalization_enabled boolean [not null, default: false]
-  context_snapshot jsonb
+  context_snapshot text [not null]
   closed_at datetime
   created_at datetime [not null, default: `now()`]
+  updated_at datetime [not null, default: `now()`]
 
-  Note: '여행모드 AI 챗봇 세션. context_snapshot에는 현재 여행 코스, 선택 일자, 장소, 사용자 동의 시 부모 취향/MBTI 등 답변에 사용한 컨텍스트 스냅샷을 저장할 수 있다.'
+  Note: '여행모드 AI 챗봇 세션. 현재는 사용자별·여행별로 자동 생성하며 context_snapshot에는 최신 여행 코스와 장소 문맥을 JSON 문자열로 저장한다. 부모 취향/MBTI 개인화는 비활성화한다.'
 }
 
 Table chat_messages {
@@ -832,8 +833,9 @@ Table chat_messages {
   chat_session_id bigint [not null]
   sender chat_sender [not null]
   content text [not null]
-  metadata jsonb
+  metadata text
   created_at datetime [not null, default: `now()`]
+  updated_at datetime [not null, default: `now()`]
 }
 
 // ---------- Relationships ----------

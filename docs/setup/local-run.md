@@ -70,6 +70,8 @@ Compose로 실행하면 PostgreSQL도 host port로 publish됩니다. 기본 포�
 서비스키가 비어 있으면 애플리케이션은 실행되지만, 추천 코스 생성 API는 설정 오류로 실패합니다.
 여행 경로 최적화 API를 호출하려면 Tmap 앱키가 필요합니다.
 Tmap 앱키가 비어 있으면 애플리케이션은 실행되지만, 경로 최적화 API는 설정 오류로 실패합니다.
+여행 모드 AI 챗봇을 호출하려면 OpenAI API 키가 필요합니다.
+OpenAI API 키가 비어 있어도 애플리케이션은 실행되지만, 질문 전송 API는 설정 오류로 실패합니다.
 
 | Name | 설명 |
 |------|------|
@@ -83,6 +85,11 @@ Tmap 앱키가 비어 있으면 애플리케이션은 실행되지만, 경로 �
 | `TMAP_DEFAULT_START_TIME` | 일자별 경로 최적화 기본 출발 시간. 기본값 `10:00` |
 | `TMAP_CONNECT_TIMEOUT` | Tmap 연결 timeout. ISO-8601 Duration, 기본값 `PT5S` |
 | `TMAP_REQUEST_TIMEOUT` | Tmap 요청 timeout. ISO-8601 Duration, 기본값 `PT15S` |
+| `OPENAI_API_KEY` | OpenAI 프로젝트 API 키. Git에 커밋하지 않음 |
+| `OPENAI_MODEL` | AI 챗봇 모델. 기본값 `gpt-5.6-luna` |
+| `OPENAI_CONNECT_TIMEOUT` | OpenAI 연결 timeout. ISO-8601 Duration, 기본값 `PT5S` |
+| `OPENAI_REQUEST_TIMEOUT` | OpenAI 요청 timeout. ISO-8601 Duration, 기본값 `PT30S` |
+| `OPENAI_MAX_OUTPUT_TOKENS` | 답변 최대 output token. 기본값 `800` |
 
 ---
 

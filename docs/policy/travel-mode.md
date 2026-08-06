@@ -44,11 +44,17 @@
 - 공중화장실은 DB 적재 데이터, 병원·약국은 Tmap POI 실시간 검색 결과를 사용합니다.
 - 상세 조회 기준은 `docs/policy/nearby-support-facilities.md`를 따릅니다.
 
+## AI 챗봇
+
+- 같은 가족 구성원은 여행 기간 중 `GET/POST /api/v1/trips/{tripId}/chat/messages`를 사용할 수 있습니다.
+- 대화는 사용자별·여행별로 분리하며 첫 질문에 세션을 자동 생성합니다.
+- 현재 여행 코스와 장소 정보만 AI 문맥에 포함하고 부모 프로필·여행 MBTI는 보내지 않습니다.
+- 상세 기준은 `docs/policy/travel-chat.md`를 따릅니다.
+
 ## 이번 구현 범위 밖
 
-- 여행 전용 AI 챗봇
 - 여행 모드 전용 체크리스트
 
-위 기능은 여행 모드 기본 진입 API와 분리해 후속 API로 구현합니다.
+체크리스트는 여행 모드 기본 진입 API와 분리해 후속 API로 구현합니다.
 
 마지막 날 부모 평가 요청과 작성은 별도 피드백 API로 구현되었으며 `docs/policy/trip-feedback.md`를 따릅니다.
