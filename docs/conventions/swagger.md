@@ -44,6 +44,7 @@ API를 추가하거나 수정할 때 Swagger 문서화 어노테이션을 함께
 - 생성 성공은 HTTP `200`, 본문 `status=201`로 문서화합니다.
 - `OpenApiConfig`는 `description`의 `status=200/400/...` 표기를 읽어 HTTP `200` 응답의 `application/json`에 이름 있는 예시를 자동으로 추가합니다.
 - Springdoc이 공통 응답 schema를 `*/*`로 생성한 경우 `application/json`으로 정규화해 schema와 예시를 같은 media type에 표시합니다.
+- 성공 예시는 각 API의 응답 schema를 따라 생성합니다. DTO의 `@Schema(example=...)`, 중첩 객체, 배열, enum 값이 `data` 예시에 반영됩니다.
 - Swagger UI에서는 `200` 응답의 Example 드롭다운에서 성공, 요청 오류, 인증 오류, 권한 오류, 조회 오류 등을 선택해 확인합니다.
 - 실제 HTTP `500` 응답에는 서버 오류 예시를 자동으로 추가합니다.
 - 바이너리 응답은 `application/pdf` 등 원래 media type을 유지하고 오류용 `application/json`에만 내부 status 예시를 추가합니다.

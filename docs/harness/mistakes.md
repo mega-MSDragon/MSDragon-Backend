@@ -227,10 +227,12 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse as SwaggerApiResponse
 
 - 내부 `status`별 예시를 `application/json`에 추가했지만 Springdoc이 성공 응답 schema를 `*/*`에 생성해 Swagger UI의 기본 화면에는 예시가 보이지 않았습니다.
 - `/v3/api-docs`에서 예시 경로만 검사하고 Swagger UI가 기본 선택하는 media type까지 확인하지 않아 사용자가 운영 Swagger에서 다시 문제를 발견했습니다.
+- media type을 수정한 뒤에도 성공 예시를 공통 `status/success/message`만 넣어 각 API의 실제 `data` 구조를 확인할 수 없었습니다.
 
 **원인**
 
 - OpenAPI JSON에 `examples`가 존재하는지만 검증하고 schema와 examples가 같은 media type에 있는지 확인하지 않았습니다.
+- 내부 상태 분기만 문서화하면 충분하다고 보고 엔드포인트별 응답 DTO 샘플을 완료 조건에서 빠뜨렸습니다.
 
 **재발 방지 규칙**
 
@@ -238,3 +240,4 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse as SwaggerApiResponse
 - 공통 JSON 응답의 `*/*` schema는 `application/json`으로 정규화합니다.
 - 바이너리 응답은 성공 media type을 유지하고 JSON 오류 예시에만 정규화를 적용합니다.
 - OpenAPI 테스트는 `application/json.schema`, `application/json.examples`, 불필요한 `*/*` 제거를 함께 확인합니다.
+- 성공 예시는 응답 schema의 `data`를 재귀적으로 생성하고, 서로 다른 도메인의 중첩 객체·배열 필드까지 테스트합니다.

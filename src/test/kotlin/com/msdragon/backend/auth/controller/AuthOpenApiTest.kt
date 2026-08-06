@@ -98,6 +98,22 @@ class AuthOpenApiTest {
 					.value(200),
 			)
 			.andExpect(
+				jsonPath("$.paths['/api/v1/auth/social-login'].post.responses['200'].content['application/json'].examples.success.value.data.signupRequired")
+					.value(false),
+			)
+			.andExpect(
+				jsonPath("$.paths['/api/v1/auth/social-login'].post.responses['200'].content['application/json'].examples.success.value.data.user.id")
+					.value(1),
+			)
+			.andExpect(
+				jsonPath("$.paths['/api/v1/auth/signup/complete'].post.responses['200'].content['application/json'].examples.created.value.status")
+					.value(201),
+			)
+			.andExpect(
+				jsonPath("$.paths['/api/v1/trips/{tripId}'].get.responses['200'].content['application/json'].examples.success.value.data.id")
+					.value(1),
+			)
+			.andExpect(
 				jsonPath("$.paths['/api/v1/auth/social-login'].post.responses['200'].content['application/json'].examples.badRequest.value.status")
 					.value(400),
 			)
