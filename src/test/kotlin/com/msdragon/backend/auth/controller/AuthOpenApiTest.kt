@@ -38,6 +38,14 @@ class AuthOpenApiTest {
 		mockMvc.perform(get("/v3/api-docs"))
 			.andExpect(status().isOk)
 			.andExpect(
+				jsonPath("$.paths['/api/v1/auth/social-login'].post.responses['200'].content['application/json'].schema")
+					.exists(),
+			)
+			.andExpect(
+				jsonPath("$.paths['/api/v1/auth/social-login'].post.responses['200'].content['*/*']")
+					.doesNotExist(),
+			)
+			.andExpect(
 				jsonPath(
 					"$.components.schemas.SocialLoginRequest.properties.provider.enum",
 					containsInAnyOrder("kakao", "apple"),

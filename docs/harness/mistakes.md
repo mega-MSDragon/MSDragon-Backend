@@ -220,3 +220,21 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse as SwaggerApiResponse
 - 클라이언트는 본문 `success`와 `status`로 성공·실패를 분기합니다.
 - 존재하지 않는 URL, 지원하지 않는 method·media type 등 라우팅/프로토콜 오류와 예상하지 못한 서버·외부 연동 실패만 실제 HTTP 오류를 사용합니다.
 - 새 API의 Swagger와 테스트에는 실제 HTTP `200`과 본문 `status`를 따로 검증합니다.
+
+### 2026-08-06: Swagger 예시와 기본 미디어 타입 분리
+
+**상황**
+
+- 내부 `status`별 예시를 `application/json`에 추가했지만 Springdoc이 성공 응답 schema를 `*/*`에 생성해 Swagger UI의 기본 화면에는 예시가 보이지 않았습니다.
+- `/v3/api-docs`에서 예시 경로만 검사하고 Swagger UI가 기본 선택하는 media type까지 확인하지 않아 사용자가 운영 Swagger에서 다시 문제를 발견했습니다.
+
+**원인**
+
+- OpenAPI JSON에 `examples`가 존재하는지만 검증하고 schema와 examples가 같은 media type에 있는지 확인하지 않았습니다.
+
+**재발 방지 규칙**
+
+- Swagger 응답 예시를 추가할 때 schema와 examples가 같은 media type에 있는지 검증합니다.
+- 공통 JSON 응답의 `*/*` schema는 `application/json`으로 정규화합니다.
+- 바이너리 응답은 성공 media type을 유지하고 JSON 오류 예시에만 정규화를 적용합니다.
+- OpenAPI 테스트는 `application/json.schema`, `application/json.examples`, 불필요한 `*/*` 제거를 함께 확인합니다.

@@ -46,9 +46,10 @@ class OpenApiConfig {
 						return@forEach
 					}
 					val content = response.content ?: Content().also { response.content = it }
-					val mediaType = content[APPLICATION_JSON] ?: MediaType().also {
-						content.addMediaType(APPLICATION_JSON, it)
-					}
+					val mediaType = content[APPLICATION_JSON]
+						?: content.remove(ANY_MEDIA_TYPE)
+						?: MediaType()
+					content.addMediaType(APPLICATION_JSON, mediaType)
 					statuses.mapNotNull(STATUS_EXAMPLES::get).forEach { example ->
 						mediaType.addExamples(
 							example.name,
@@ -77,6 +78,7 @@ class OpenApiConfig {
 
 	companion object {
 		private const val APPLICATION_JSON = "application/json"
+		private const val ANY_MEDIA_TYPE = "*/*"
 		private val STATUS_PATTERN = Regex("status=([0-9/]+)")
 		private val STATUS_EXAMPLES = listOf(
 			StatusExample(200, "success", "성공", true, "요청을 성공적으로 처리했습니다."),
