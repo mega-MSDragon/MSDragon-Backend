@@ -42,6 +42,10 @@ API를 추가하거나 수정할 때 Swagger 문서화 어노테이션을 함께
 - 요청·Validation·인증·정책상 `400/401/403/404`는 별도 HTTP 응답으로 나열하지 않고 HTTP `200` 설명에 포함합니다.
 - HTTP `500`은 필수 설정 누락, 외부 API 호출 실패 등 실제 시스템 오류가 가능한 API에만 적습니다.
 - 생성 성공은 HTTP `200`, 본문 `status=201`로 문서화합니다.
+- `OpenApiConfig`는 `description`의 `status=200/400/...` 표기를 읽어 HTTP `200` 응답의 `application/json`에 이름 있는 예시를 자동으로 추가합니다.
+- Swagger UI에서는 `200` 응답의 Example 드롭다운에서 성공, 요청 오류, 인증 오류, 권한 오류, 조회 오류 등을 선택해 확인합니다.
+- 실제 HTTP `500` 응답에는 서버 오류 예시를 자동으로 추가합니다.
+- 바이너리 응답은 `application/pdf` 등 원래 media type을 유지하고 오류용 `application/json`에만 내부 status 예시를 추가합니다.
 
 파라미터:
 

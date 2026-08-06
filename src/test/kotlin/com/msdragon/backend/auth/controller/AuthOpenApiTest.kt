@@ -80,4 +80,38 @@ class AuthOpenApiTest {
 				),
 			)
 	}
+
+	@Test
+	fun `HTTP 200 응답에서 내부 status별 예시를 선택할 수 있다`() {
+		mockMvc.perform(get("/v3/api-docs"))
+			.andExpect(status().isOk)
+			.andExpect(
+				jsonPath("$.paths['/api/v1/auth/social-login'].post.responses['200'].content['application/json'].examples.success.value.status")
+					.value(200),
+			)
+			.andExpect(
+				jsonPath("$.paths['/api/v1/auth/social-login'].post.responses['200'].content['application/json'].examples.badRequest.value.status")
+					.value(400),
+			)
+			.andExpect(
+				jsonPath("$.paths['/api/v1/auth/social-login'].post.responses['200'].content['application/json'].examples.unauthorized.value.status")
+					.value(401),
+			)
+			.andExpect(
+				jsonPath("$.paths['/api/v1/auth/social-login'].post.responses['200'].content['application/json'].examples.forbidden")
+					.doesNotExist(),
+			)
+			.andExpect(
+				jsonPath("$.paths['/api/v1/auth/social-login'].post.responses['500'].content['application/json'].examples.internalServerError.value.status")
+					.value(500),
+			)
+			.andExpect(
+				jsonPath("$.paths['/api/v1/trips/{tripId}/pledge/pdf'].get.responses['200'].content['application/json'].examples.badRequest.value.status")
+					.value(400),
+			)
+			.andExpect(
+				jsonPath("$.paths['/api/v1/trips/{tripId}/pledge/pdf'].get.responses['200'].content['application/pdf'].examples")
+					.doesNotExist(),
+			)
+	}
 }
