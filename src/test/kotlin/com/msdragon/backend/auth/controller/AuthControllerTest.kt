@@ -251,4 +251,55 @@ class AuthControllerTest {
 			.andExpect(jsonPath("$.data.accessToken").isString)
 			.andExpect(jsonPath("$.data.refreshToken").isString)
 	}
+
+	@Test
+	fun `로그아웃하면 refresh token을 폐기하고 반복 요청도 성공한다`() {
+		given(kakaoOAuthClient.verify("kakao-token"))
+			.willReturn(OAuthUserInfo(OAuthProvider.KAKAO, "12345", "카카오이름"))
+
+		val loginResponse = mockMvc.perform(
+			post("/api/v1/auth/social-login")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""{"provider":"kakao","token":"kakao-token"}"""),
+		).andReturn().response.contentAsString
+		val signupToken = JsonPath.read<String>(loginResponse, "$.data.signupToken")
+
+		val signupResponse = mockMvc.perform(
+			post("/api/v1/auth/signup/complete")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(
+					"""
+					{
+					  "signupToken": "$signupToken",
+					  "role": "child",
+					  "displayName": "최혜린",
+					  "ageBand": "20s",
+					  "gender": "female"
+					}
+					""".trimIndent(),
+				),
+		).andReturn().response.contentAsString
+		val refreshToken = JsonPath.read<String>(signupResponse, "$.data.refreshToken")
+		val logoutBody = """{"refreshToken":"$refreshToken"}"""
+
+		repeat(2) {
+			mockMvc.perform(
+				post("/api/v1/auth/logout")
+					.contentType(MediaType.APPLICATION_JSON)
+					.content(logoutBody),
+			)
+				.andExpect(status().isOk)
+				.andExpect(jsonPath("$.status").value(200))
+				.andExpect(jsonPath("$.success").value(true))
+		}
+
+		mockMvc.perform(
+			post("/api/v1/auth/refresh")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(logoutBody),
+		)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(401))
+			.andExpect(jsonPath("$.success").value(false))
+	}
 }

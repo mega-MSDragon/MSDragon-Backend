@@ -1,6 +1,6 @@
 # Auth Domain
 
-Auth 도메인은 소셜 로그인, 회원가입 완료, 서비스 토큰 발급을 담당합니다.
+Auth 도메인은 소셜 로그인, 회원가입 완료, 서비스 토큰 발급과 로그아웃을 담당합니다.
 
 ---
 
@@ -13,6 +13,7 @@ Auth 도메인은 소셜 로그인, 회원가입 완료, 서비스 토큰 발급
 - 미가입 사용자는 `signupToken`만 발급하고 DB에 임시 사용자를 만들지 않습니다.
 - 회원가입 완료 시 `users`를 생성하고 access/refresh token을 발급합니다.
 - refresh token은 해시만 저장하고 재발급 시 기존 token을 폐기합니다.
+- 로그아웃은 요청받은 refresh token 하나를 폐기하며 이미 폐기되었거나 존재하지 않는 토큰도 성공으로 처리합니다.
 - API 요청 enum은 DTO에서 직접 enum 타입으로 받고, JSON 값은 `kakao`, `child`, `20s`처럼 DB 저장 값과 같은 소문자 문자열을 사용합니다.
 - `deviceId`는 현재 인증 흐름에서 쓰지 않으므로 받지 않습니다.
 - `/api/v1/auth/**`를 제외한 보호 API는 `Authorization: Bearer {accessToken}`으로 인증합니다.
@@ -48,6 +49,7 @@ auth
 - `POST /api/v1/auth/social-login`
 - `POST /api/v1/auth/signup/complete`
 - `POST /api/v1/auth/refresh`
+- `POST /api/v1/auth/logout`
 
 ---
 

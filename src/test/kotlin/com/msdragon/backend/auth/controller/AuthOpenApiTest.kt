@@ -27,6 +27,7 @@ class AuthOpenApiTest {
 			.andExpect(jsonPath("$.paths['/api/v1/users/me'].get.security[0].bearerAuth").isArray)
 			.andExpect(jsonPath("$.paths['/api/v1/users/me'].delete.security[0].bearerAuth").isArray)
 			.andExpect(jsonPath("$.paths['/api/v1/auth/social-login'].post.security").doesNotExist())
+			.andExpect(jsonPath("$.paths['/api/v1/auth/logout'].post.security").doesNotExist())
 			.andExpect(jsonPath("$.paths['/api/v1/family'].get.parameters").doesNotExist())
 			.andExpect(jsonPath("$.paths['/api/v1/family/code'].post.parameters").doesNotExist())
 			.andExpect(jsonPath("$.paths['/api/v1/family/matches'].post.parameters").doesNotExist())
@@ -130,6 +131,14 @@ class AuthOpenApiTest {
 			.andExpect(
 				jsonPath("$.paths['/api/v1/users/me'].delete.responses['200'].content['application/json'].examples.unauthorized.value.status")
 					.value(401),
+			)
+			.andExpect(
+				jsonPath("$.paths['/api/v1/auth/logout'].post.responses['200'].content['application/json'].examples.success.value.status")
+					.value(200),
+			)
+			.andExpect(
+				jsonPath("$.paths['/api/v1/auth/logout'].post.responses['200'].content['application/json'].examples.badRequest.value.status")
+					.value(400),
 			)
 			.andExpect(
 				jsonPath("$.paths['/api/v1/auth/social-login'].post.responses['200'].content['application/json'].examples.forbidden")

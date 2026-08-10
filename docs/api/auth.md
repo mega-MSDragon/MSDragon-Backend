@@ -16,6 +16,8 @@
 - 회원가입 완료 시 `users`를 생성하고 access/refresh token을 발급합니다.
 - access token 만료 시간은 1시간, refresh token 만료 시간은 14일, signup token 만료 시간은 30분입니다.
 - refresh token은 원문을 저장하지 않고 SHA-256 해시로 저장하며, 재발급 시 회전합니다.
+- 로그아웃은 현재 세션의 refresh token 하나만 폐기하며, 이미 폐기되었거나 서버에 없는 토큰도 성공으로 처리합니다.
+- 로그아웃 후 access token은 만료 전까지 유효하므로 클라이언트가 보관 중인 access/refresh token을 모두 삭제합니다.
 - 요청 enum은 API DTO에서 enum 타입으로 받으며 JSON 값은 소문자 문자열을 사용합니다.
 - `deviceId`는 현재 요구사항에서 쓰이지 않으므로 받지 않습니다. 기기별 로그아웃/푸시/기기 관리가 필요해질 때 다시 추가합니다.
 - 로그인 이후 보호 API는 `Authorization: Bearer {accessToken}` 헤더로 인증합니다.
@@ -29,6 +31,7 @@
 | `POST` | `/api/v1/auth/social-login` | 소셜 토큰 검증 및 가입 상태 확인 |
 | `POST` | `/api/v1/auth/signup/complete` | 회원가입 완료 및 서비스 토큰 발급 |
 | `POST` | `/api/v1/auth/refresh` | refresh token 회전 및 토큰 재발급 |
+| `POST` | `/api/v1/auth/logout` | 현재 세션의 refresh token 폐기 |
 
 ---
 
@@ -178,3 +181,30 @@ access token이 없거나, 형식이 다르거나, 만료/변조된 경우 HTTP 
 ### Response
 
 `/social-login`의 가입 완료 사용자 응답과 같은 형태입니다.
+
+---
+
+## POST /api/v1/auth/logout
+
+### Request
+
+```json
+{
+  "refreshToken": "..."
+}
+```
+
+이미 폐기되었거나 서버에 없는 refresh token도 같은 성공 응답을 반환합니다.
+
+### Response
+
+```json
+{
+  "status": 200,
+  "success": true,
+  "message": "로그아웃 성공",
+  "data": null
+}
+```
+
+클라이언트는 응답을 받은 뒤 로컬에 저장한 access token과 refresh token을 모두 삭제합니다.

@@ -3,6 +3,7 @@ package com.msdragon.backend.auth.service
 import com.msdragon.backend.auth.dto.AuthResponse
 import com.msdragon.backend.auth.dto.AuthUserResponse
 import com.msdragon.backend.auth.dto.CompleteSignupRequest
+import com.msdragon.backend.auth.dto.LogoutRequest
 import com.msdragon.backend.auth.dto.RefreshTokenRequest
 import com.msdragon.backend.auth.dto.SocialLoginRequest
 import com.msdragon.backend.auth.entity.DevicePlatform
@@ -95,6 +96,16 @@ class AuthService(
 		}
 
 		return createLoginResponse(user, savedRefreshToken.platform)
+	}
+
+	@Transactional
+	fun logout(request: LogoutRequest) {
+		val refreshTokenHash = tokenService.hashRefreshToken(request.refreshToken)
+		val savedRefreshToken = userRefreshTokenRepository.findByRefreshTokenHash(refreshTokenHash) ?: return
+
+		if (savedRefreshToken.revokedAt == null) {
+			savedRefreshToken.revoke()
+		}
 	}
 
 	private fun createLoginResponse(

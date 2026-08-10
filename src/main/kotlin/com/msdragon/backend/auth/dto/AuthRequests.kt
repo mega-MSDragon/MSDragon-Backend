@@ -57,3 +57,10 @@ data class RefreshTokenRequest(
 	@field:NotBlank(message = "refresh token을 입력해주세요.")
 	val refreshToken: String,
 )
+
+@Schema(description = "로그아웃 요청")
+data class LogoutRequest(
+	@field:Schema(description = "폐기할 Refresh Token", example = "refresh-token")
+	@field:NotBlank(message = "refresh token을 입력해주세요.")
+	val refreshToken: String,
+)

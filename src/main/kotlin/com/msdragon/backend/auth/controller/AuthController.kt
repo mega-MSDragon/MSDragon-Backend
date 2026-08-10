@@ -2,6 +2,7 @@ package com.msdragon.backend.auth.controller
 
 import com.msdragon.backend.auth.dto.AuthResponse
 import com.msdragon.backend.auth.dto.CompleteSignupRequest
+import com.msdragon.backend.auth.dto.LogoutRequest
 import com.msdragon.backend.auth.dto.RefreshTokenRequest
 import com.msdragon.backend.auth.dto.SocialLoginRequest
 import com.msdragon.backend.auth.service.AuthService
@@ -78,4 +79,21 @@ class AuthController(
 			message = "토큰 재발급 성공",
 			data = authService.refresh(request),
 		)
+
+	@Operation(
+		summary = "로그아웃",
+		description = "현재 세션의 refresh token을 폐기합니다. 이미 폐기되었거나 서버에 없는 토큰도 성공으로 처리하며, 클라이언트는 보관 중인 access/refresh token을 삭제해야 합니다.",
+	)
+	@ApiResponses(
+		value = [
+			SwaggerApiResponse(responseCode = "200", description = "처리 완료: 로그아웃 성공(status=200) 또는 요청 값 오류(status=400)"),
+		],
+	)
+	@PostMapping("/logout")
+	fun logout(
+		@Valid @RequestBody request: LogoutRequest,
+	): ApiResponse<Unit> {
+		authService.logout(request)
+		return ApiResponse.success(message = "로그아웃 성공")
+	}
 }
