@@ -1,6 +1,6 @@
 # Profile Domain
 
-Profile 도메인은 마이페이지의 내 기본 프로필 조회/수정을 담당합니다.
+Profile 도메인은 마이페이지의 내 기본 프로필 조회·수정과 회원 탈퇴를 담당합니다.
 
 ---
 
@@ -8,6 +8,8 @@ Profile 도메인은 마이페이지의 내 기본 프로필 조회/수정을 �
 
 - 로그인 사용자의 기본 프로필을 조회합니다.
 - 로그인 사용자의 이름, 연령대, 성별을 수정합니다.
+- 탈퇴 사용자의 기본정보를 익명화하고 모든 refresh token을 폐기합니다.
+- 탈퇴 역할에 따라 가족 연결을 정리하고 대표 자녀의 미완료 여행을 보관합니다.
 - 역할별 허용 연령대 정책은 auth 도메인의 `UserProfilePolicy`를 재사용합니다.
 - 연결 가족 프로필 조회는 family 도메인의 가족 조회 API에서 제공합니다.
 
@@ -27,6 +29,11 @@ profile
 ## 관련 테이블
 
 - `users`
+- `user_refresh_tokens`
+- `families`
+- `family_members`
+- `family_codes`
+- `trips`
 
 ---
 
@@ -34,6 +41,7 @@ profile
 
 - `GET /api/v1/users/me`
 - `PATCH /api/v1/users/me`
+- `DELETE /api/v1/users/me`
 
 ---
 

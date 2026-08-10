@@ -58,6 +58,7 @@ class FilialReportService(
 	fun createReport(currentUser: AuthenticatedUser, tripId: Long): FilialReportResponse {
 		val user = getLoginUser(currentUser.id)
 		val trip = getTrip(tripId)
+		trip.synchronizeStatus(currentDate())
 		validateFamilyAccess(user, trip)
 		val source = loadSource(tripId)
 		validateReportReady(source)
@@ -69,6 +70,7 @@ class FilialReportService(
 	fun getReport(currentUser: AuthenticatedUser, tripId: Long): FilialReportResponse {
 		val user = getLoginUser(currentUser.id)
 		val trip = getTrip(tripId)
+		trip.synchronizeStatus(currentDate())
 		validateFamilyAccess(user, trip)
 		val report = filialReportRepository.findByTripId(tripId)
 			?: throw NotFoundException("생성된 효도 리포트가 없습니다.")
@@ -82,10 +84,15 @@ class FilialReportService(
 	fun getRecords(currentUser: AuthenticatedUser): TripRecordsResponse {
 		val user = getLoginUser(currentUser.id)
 		val member = familyMemberRepository.findByUserId(requireNotNull(user.id))
-			?: return TripRecordsResponse.empty()
-		val familyId = requireNotNull(member.family.id)
+		val familyId = member?.family?.takeIf { it.isActive }?.id
 		val today = currentDate()
-		val records = tripRepository.findAllByFamilyIdAndDeletedAtIsNullOrderByStartDateAscIdAsc(familyId)
+		val familyTrips = familyId?.let(tripRepository::findAllByFamilyIdAndDeletedAtIsNullOrderByStartDateAscIdAsc)
+			.orEmpty()
+		val participatedTrips = tripParticipantRepository.findAllByUserId(requireNotNull(user.id))
+			.map(TripParticipant::trip)
+			.filter { it.deletedAt == null }
+		val records = (familyTrips + participatedTrips)
+			.distinctBy { requireNotNull(it.id) }
 			.onEach { it.synchronizeStatus(today) }
 			.filter { it.status == TripStatus.COMPLETED }
 			.sortedWith(compareByDescending<Trip> { it.endDate }.thenByDescending { requireNotNull(it.id) })
@@ -307,9 +314,13 @@ class FilialReportService(
 	}
 
 	private fun validateFamilyAccess(user: User, trip: Trip) {
-		val member = familyMemberRepository.findByUserId(requireNotNull(user.id))
-			?: throw ForbiddenException("효도 리포트 조회 권한이 없습니다.")
-		if (member.family.id != trip.family.id) {
+		val userId = requireNotNull(user.id)
+		val isCurrentFamilyMember = familyMemberRepository.findByUserId(userId)
+			?.let { it.family.isActive && it.family.id == trip.family.id }
+			?: false
+		val isCompletedTripParticipant = trip.status == TripStatus.COMPLETED &&
+			tripParticipantRepository.existsByTripIdAndUserId(requireNotNull(trip.id), userId)
+		if (!isCurrentFamilyMember && !isCompletedTripParticipant) {
 			throw ForbiddenException("효도 리포트 조회 권한이 없습니다.")
 		}
 	}

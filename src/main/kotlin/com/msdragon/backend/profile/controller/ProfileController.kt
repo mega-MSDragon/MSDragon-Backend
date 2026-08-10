@@ -13,6 +13,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
+import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PatchMapping
 import org.springframework.web.bind.annotation.RequestBody
@@ -62,4 +63,21 @@ class ProfileController(
 			message = "내 프로필 수정 성공",
 			data = profileService.updateMyProfile(currentUser.id, request),
 		)
+
+	@Operation(
+		summary = "회원 탈퇴",
+		description = "로그인 사용자의 계정을 탈퇴 처리합니다. 소셜 계정은 새 사용자로 재가입할 수 있으며, 현재 access token과 refresh token은 더 이상 사용할 수 없습니다.",
+	)
+	@ApiResponses(
+		value = [
+			SwaggerApiResponse(responseCode = "200", description = "처리 완료: 탈퇴 성공(status=200) 또는 인증 오류(status=401)"),
+		],
+	)
+	@DeleteMapping("/me")
+	fun withdraw(
+		@CurrentUser currentUser: AuthenticatedUser,
+	): ApiResponse<Unit> {
+		profileService.withdraw(currentUser.id)
+		return ApiResponse.success(message = "회원 탈퇴 성공")
+	}
 }

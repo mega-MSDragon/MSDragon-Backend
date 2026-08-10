@@ -9,6 +9,7 @@ Auth 도메인은 소셜 로그인, 회원가입 완료, 서비스 토큰 발급
 - 카카오 access token으로 카카오 사용자 식별자를 검증합니다.
 - 애플 identity token을 Apple JWKS로 검증합니다.
 - `oauth_provider + oauth_subject` 기준으로 사용자를 식별합니다.
+- 탈퇴 시 기존 소셜 식별자를 익명화하므로 같은 소셜 계정은 새 사용자로 가입할 수 있습니다.
 - 미가입 사용자는 `signupToken`만 발급하고 DB에 임시 사용자를 만들지 않습니다.
 - 회원가입 완료 시 `users`를 생성하고 access/refresh token을 발급합니다.
 - refresh token은 해시만 저장하고 재발급 시 기존 token을 폐기합니다.

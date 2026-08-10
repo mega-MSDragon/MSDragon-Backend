@@ -6,5 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository
 interface TripParticipantRepository : JpaRepository<TripParticipant, Long> {
 	fun findAllByTripIdOrderByIdAsc(tripId: Long): List<TripParticipant>
 
+	fun findAllByUserId(userId: Long): List<TripParticipant>
+
 	fun existsByTripIdAndUserId(tripId: Long, userId: Long): Boolean
 }

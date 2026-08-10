@@ -5,4 +5,6 @@ import org.springframework.data.jpa.repository.JpaRepository
 
 interface UserRefreshTokenRepository : JpaRepository<UserRefreshToken, Long> {
 	fun findByRefreshTokenHash(refreshTokenHash: String): UserRefreshToken?
+
+	fun findAllByUserIdAndRevokedAtIsNull(userId: Long): List<UserRefreshToken>
 }

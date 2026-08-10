@@ -8,6 +8,7 @@
 
 | 문서 | 설명 |
 |------|------|
+| [account-withdrawal.md](./account-withdrawal.md) | 회원 탈퇴 시 익명화, 인증 폐기, 가족 연결과 여행 기록 처리 정책 |
 | [parent-travel-mbti.md](./parent-travel-mbti.md) | 부모님 여행 MBTI 타입과 가중치 계산 정책 |
 | [course-recommendation.md](./course-recommendation.md) | TourAPI 기반 여행 코스 추천 API 사용처와 가중치 정책 |
 | [route-optimization.md](./route-optimization.md) | Tmap 기반 일자별 방문 순서와 경로 최적화 정책 |

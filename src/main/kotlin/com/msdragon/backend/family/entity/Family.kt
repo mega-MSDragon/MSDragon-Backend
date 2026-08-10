@@ -26,4 +26,8 @@ class Family(
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	var id: Long? = null
 		protected set
+
+	fun deactivate() {
+		isActive = false
+	}
 }

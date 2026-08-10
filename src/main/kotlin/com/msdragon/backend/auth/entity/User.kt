@@ -25,7 +25,7 @@ class User(
 	val oauthProvider: OAuthProvider,
 
 	@Column(name = "oauth_subject", nullable = false, length = 255)
-	val oauthSubject: String,
+	var oauthSubject: String,
 
 	@Column(name = "display_name", nullable = false, length = 50)
 	var displayName: String,
@@ -67,5 +67,19 @@ class User(
 		lastLoginAt = LocalDateTime.now()
 	}
 
+	fun withdraw(withdrawnAt: LocalDateTime, withdrawnOauthSubject: String) {
+		oauthSubject = withdrawnOauthSubject
+		displayName = WITHDRAWN_DISPLAY_NAME
+		ageBand = AgeBand.UNDISCLOSED
+		gender = GenderType.UNDISCLOSED
+		signupCompletedAt = null
+		lastLoginAt = null
+		deletedAt = withdrawnAt
+	}
+
 	fun isSignupCompleted(): Boolean = signupCompletedAt != null
+
+	companion object {
+		private const val WITHDRAWN_DISPLAY_NAME = "탈퇴한 사용자"
+	}
 }

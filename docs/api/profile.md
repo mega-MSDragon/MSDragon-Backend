@@ -1,6 +1,6 @@
 # Profile API
 
-마이페이지의 내 기본 프로필 조회/수정을 처리합니다.
+마이페이지의 내 기본 프로필 조회, 수정과 회원 탈퇴를 처리합니다.
 
 모든 API는 `Authorization: Bearer {accessToken}` 헤더가 필요합니다.
 
@@ -14,6 +14,7 @@
 |--------|------|------|
 | `GET` | `/api/v1/users/me` | 내 프로필 조회 |
 | `PATCH` | `/api/v1/users/me` | 내 프로필 수정 |
+| `DELETE` | `/api/v1/users/me` | 회원 탈퇴 |
 
 ---
 
@@ -63,3 +64,36 @@
 ### Response
 
 `GET /api/v1/users/me`와 같은 형태입니다.
+
+---
+
+## DELETE /api/v1/users/me
+
+현재 로그인 계정을 탈퇴 처리합니다. Request Body는 없습니다.
+
+탈퇴가 완료되면 기존 access token과 refresh token을 사용할 수 없습니다. 같은 소셜 계정으로 다시 로그인하면 미가입 사용자로 처리되며 회원가입을 새로 진행합니다.
+
+### Request
+
+```http
+DELETE /api/v1/users/me
+Authorization: Bearer {accessToken}
+```
+
+### Response
+
+```json
+{
+  "status": 200,
+  "success": true,
+  "message": "회원 탈퇴 성공"
+}
+```
+
+### 오류
+
+| 본문 status | 조건 |
+|-------------|------|
+| `401` | access token이 없거나 유효하지 않음 |
+
+가족 연결과 여행 기록 처리 기준은 `docs/policy/account-withdrawal.md`를 따릅니다.

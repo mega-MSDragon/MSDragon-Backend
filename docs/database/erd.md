@@ -20,6 +20,7 @@
 - **F13**: PDF 확정본 기준으로 동의/알림/위치 권한 설정은 앱 로컬/OS 권한으로 관리하고 백엔드 ERD에서 제외합니다.
 - **F14**: PDF 확정본 기준으로 여행 도시는 준비 중 정보 편집에서 변경 가능하며, 변경 저장 후 코스 재추천/덮어쓰기 확인 플로우를 거칩니다. 여행 중에는 도시와 제목을 고정합니다.
 - **F15**: 후속 확정 기준으로 10계명 PDF 공유는 자녀와 여행 참여 부모 최소 1명 서명 완료 후 가능합니다.
+- **F16**: 회원 탈퇴는 사용자 soft delete와 익명화로 처리합니다. 가족 연결은 해제하되 완료 여행 참여 이력은 유지합니다.
 
 ## v2 변경 요약 (결정 반영)
 - **A1**: 단일 `users` 유지 — 역할별 NULL 컬럼이 없어 분리 이득 없음.
@@ -89,6 +90,9 @@ CREATE TABLE users (
     deleted_at      TIMESTAMPTZ,
     UNIQUE (oauth_provider, oauth_subject)
 );
+
+-- 탈퇴 시 oauth_subject를 고유 익명값으로 교체하고 기본 프로필을 익명화한 뒤 deleted_at을 기록한다.
+-- 같은 소셜 계정은 새 users row로 재가입할 수 있다.
 
 CREATE TABLE user_refresh_tokens (
     id                 BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -208,6 +212,8 @@ CREATE TABLE parent_personality_scores (
 ```
 
 마이페이지의 기본 프로필 수정은 `users.display_name`, `age_band`, `gender`를 갱신합니다. 자녀/부모가 보는 가족 목록은 `family_members`와 연결된 `users`를 조회하고, 엄마/아빠 표시는 부모 `users.gender`가 `female`이면 `엄마`, `male`이면 `아빠`, `undisclosed`이면 `null`로 응답에서 계산합니다.
+
+회원 탈퇴 시 사용자의 refresh token과 가족 코드를 폐기합니다. 부모는 본인 가족 연결만 해제하고, 대표 자녀는 가족을 비활성화한 뒤 구성원 전체 연결을 해제합니다. 대표 자녀가 만든 미완료 여행은 `archived`로 전환하며 완료 여행과 `trip_participants`는 기록 조회를 위해 유지합니다.
 
 부모 프로필 카드와 MBTI 상세는 `parent_profiles`, `parent_profile_themes`, `parent_personality_results.is_current = true`, `travel_personality_types`, `parent_personality_scores`에서 조회합니다. 최종 타입과 가중치 정책은 `docs/policy/parent-travel-mbti.md`에서 관리합니다. `새로운 MBTI 뽑기`는 부모 프로필 작성 플로우를 다시 진행한 뒤 기존 current 결과를 false로 변경하고 새 결과를 current로 저장합니다. `profile_snapshot`에는 재진단 당시 입력값을 보관해 과거 진단 결과와 현재 수정된 프로필이 섞이지 않게 합니다.
 
@@ -671,7 +677,7 @@ CREATE TABLE recommendation_adjustments (
 
 효도 지수와 세부 점수, 수상 문구, 요약, 걸음 수, 공유 이미지 URL은 계산 기준이나 디자인이 확정되기 전까지 nullable 상태로 유지합니다. 장소별 편안/주의 배지와 한 줄 요약을 담는 `filial_report_stop_summaries`도 근거 데이터가 정해질 때까지 후속 설계로 둡니다.
 
-기록 탭은 별도 테이블 없이 `family_id` 기준 `completed` 여행을 조회합니다. 완료 여행 수와 방문지 수, Tmap 경로 거리를 합산하고, 만족도는 제출된 `trip_feedbacks`로 여행별 평균을 구한 뒤 각 여행을 동일 비중으로 다시 평균냅니다. 효도 리포트가 없는 여행도 피드백 대기 상태로 목록에 포함합니다.
+기록 탭은 별도 테이블 없이 현재 `family_id`의 완료 여행과 사용자가 `trip_participants`로 참여했던 완료 여행을 합쳐 조회합니다. 완료 여행 수와 방문지 수, Tmap 경로 거리를 합산하고, 만족도는 제출된 `trip_feedbacks`로 여행별 평균을 구한 뒤 각 여행을 동일 비중으로 다시 평균냅니다. 효도 리포트가 없는 여행도 피드백 대기 상태로 목록에 포함합니다.
 
 ---
 

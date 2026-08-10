@@ -80,4 +80,8 @@ class Trip(
 			else -> status
 		}
 	}
+
+	fun archive() {
+		status = TripStatus.ARCHIVED
+	}
 }

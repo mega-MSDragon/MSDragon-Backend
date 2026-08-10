@@ -11,6 +11,7 @@
 - 카카오는 앱에서 받은 `accessToken`을 백엔드로 전달합니다.
 - 애플은 앱에서 받은 `identityToken`을 백엔드로 전달합니다.
 - 미가입 사용자는 DB에 임시 `users` row를 만들지 않고 `signupToken`을 발급합니다.
+- 탈퇴한 계정의 소셜 식별자는 익명화되므로 같은 소셜 계정으로 로그인하면 미가입 사용자 응답을 반환합니다.
   - 이유: `users.role`은 필수 컬럼이므로 역할 선택 전 row를 만들면 스키마와 충돌합니다.
 - 회원가입 완료 시 `users`를 생성하고 access/refresh token을 발급합니다.
 - access token 만료 시간은 1시간, refresh token 만료 시간은 14일, signup token 만료 시간은 30분입니다.

@@ -6,6 +6,7 @@
 // - 10계명은 서버 후보군에서 랜덤 제공 후 여행별 확정본으로 복사하고 참여 부모 변경 시 확정본과 모든 서명 삭제
 // - 효도 리포트는 고정 지표와 여행별 집계값을 저장하고 기록 탭 통계는 완료 여행을 조회 시 집계
 // - 동의/알림/위치 권한 설정은 앱 로컬/OS 권한으로 관리하고 백엔드 ERD에서 제외
+// - 회원 탈퇴는 users soft delete와 익명화로 처리하고 가족 연결을 해제하며 완료 여행 참여 이력은 유지
 // =====================================================================
 
 // ---------- Enums ----------
@@ -193,7 +194,7 @@ Table users {
     (oauth_provider, oauth_subject) [unique]
   }
 
-  Note: '마이페이지 기본 프로필. 이름, 연령대, 성별 수정은 users를 갱신한다. 연결 가족의 기본 프로필 수정 가능 여부는 family_members 관계와 서비스 권한으로 검증한다.'
+  Note: '마이페이지 기본 프로필. 탈퇴 시 deleted_at을 기록하고 oauth_subject를 고유 익명값으로 교체하며 이름·연령대·성별을 익명화한다. 같은 소셜 계정은 새 users row로 재가입할 수 있다.'
 }
 
 Table user_refresh_tokens {
@@ -232,7 +233,7 @@ Table family_members {
   created_at datetime [not null, default: `now()`]
   updated_at datetime [not null, default: `now()`]
 
-  Note: '가족당 자녀 1명, 부모 최대 2명은 앱 검증과 DB trigger로 함께 강제한다. 엄마/아빠 표시는 부모 성별 기반 응답 계산값이다.'
+  Note: '가족당 자녀 1명, 부모 최대 2명은 앱 검증과 DB trigger로 함께 강제한다. 부모 탈퇴 시 본인 row를 삭제하고 대표 자녀 탈퇴 시 가족의 모든 row를 삭제한다.'
 }
 
 Table family_codes {
@@ -503,6 +504,8 @@ Table trip_participants {
   indexes {
     (trip_id, user_id) [unique]
   }
+
+  Note: '가족 연결이 해제되어도 완료 여행 기록 권한을 판별할 수 있도록 과거 참여자 row를 유지한다.'
 }
 
 Table course_generation_jobs {

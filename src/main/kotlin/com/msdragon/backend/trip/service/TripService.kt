@@ -110,8 +110,8 @@ class TripService(
 		getLoginUser(currentUser.id)
 		val trip = tripRepository.findByIdAndDeletedAtIsNull(tripId)
 			?: throw NotFoundException("여행을 찾을 수 없습니다.")
-		validateTripReadable(currentUser.id, trip)
 		trip.synchronizeStatus(currentDate())
+		validateTripReadable(currentUser.id, trip)
 
 		return tripDetail(trip)
 	}
@@ -121,8 +121,8 @@ class TripService(
 		getLoginUser(currentUser.id)
 		val trip = tripRepository.findByIdAndDeletedAtIsNull(tripId)
 			?: throw NotFoundException("여행을 찾을 수 없습니다.")
-		validateTripReadable(currentUser.id, trip)
 		trip.synchronizeStatus(currentDate())
+		validateTripReadable(currentUser.id, trip)
 
 		return tripCourse(trip)
 	}
@@ -526,9 +526,12 @@ class TripService(
 	}
 
 	private fun validateTripReadable(userId: Long, trip: Trip) {
-		val myMember = familyMemberRepository.findByUserId(userId)
-			?: throw ForbiddenException("여행 조회 권한이 없습니다.")
-		if (myMember.family.id != trip.family.id) {
+		val isCurrentFamilyMember = familyMemberRepository.findByUserId(userId)
+			?.let { it.family.isActive && it.family.id == trip.family.id }
+			?: false
+		val isCompletedTripParticipant = trip.status == TripStatus.COMPLETED &&
+			tripParticipantRepository.existsByTripIdAndUserId(requireNotNull(trip.id), userId)
+		if (!isCurrentFamilyMember && !isCompletedTripParticipant) {
 			throw ForbiddenException("여행 조회 권한이 없습니다.")
 		}
 	}
