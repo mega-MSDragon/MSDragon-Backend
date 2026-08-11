@@ -45,7 +45,7 @@ class AuthController(
 
 	@Operation(
 		summary = "회원가입 완료",
-		description = "소셜 로그인 후 받은 signupToken과 역할/이름/연령대/성별을 저장하고 서비스 토큰을 발급합니다.",
+		description = "소셜 로그인 후 받은 signupToken과 약관 동의, 역할, 이름, 연령대, 성별을 저장하고 서비스 토큰을 발급합니다. 성별을 생략하면 undisclosed로 저장합니다.",
 	)
 	@ApiResponses(
 		value = [

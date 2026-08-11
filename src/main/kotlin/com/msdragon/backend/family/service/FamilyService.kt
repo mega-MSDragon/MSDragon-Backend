@@ -147,7 +147,7 @@ class FamilyService(
 
 	private fun generateUniqueCode(): String {
 		repeat(CODE_GENERATION_MAX_ATTEMPTS) {
-			val code = "MSH-%04d".format(random.nextInt(CODE_NUMBER_BOUND) + CODE_NUMBER_START)
+			val code = "MSH-%04d".format(random.nextInt(CODE_NUMBER_BOUND))
 			if (!familyCodeRepository.existsByCode(code)) {
 				return code
 			}
@@ -155,12 +155,14 @@ class FamilyService(
 		throw InternalServerException("가족 코드를 생성할 수 없습니다.")
 	}
 
-	private fun normalizeCode(code: String): String = code.trim().uppercase()
+	private fun normalizeCode(code: String): String {
+		val compactCode = code.uppercase().replace("-", "")
+		return "${compactCode.take(3)}-${compactCode.drop(3)}"
+	}
 
 	companion object {
 		private const val MAX_PARENT_COUNT = 2L
 		private const val CODE_GENERATION_MAX_ATTEMPTS = 30
-		private const val CODE_NUMBER_START = 1000
-		private const val CODE_NUMBER_BOUND = 9000
+		private const val CODE_NUMBER_BOUND = 10_000
 	}
 }

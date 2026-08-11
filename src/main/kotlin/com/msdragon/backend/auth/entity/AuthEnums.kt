@@ -96,6 +96,21 @@ enum class DevicePlatform(
 	}
 }
 
+enum class UserConsentType(
+	@get:JsonValue
+	override val value: String,
+) : DbEnum {
+	PRIVACY_COLLECTION("privacy_collection"),
+	LOCATION_BASED_FACILITY("location_based_facility"),
+	;
+
+	companion object {
+		@JvmStatic
+		@JsonCreator(mode = JsonCreator.Mode.DELEGATING)
+		fun from(value: String): UserConsentType = enumValueOf(value, entries)
+	}
+}
+
 private fun <T> enumValueOf(value: String, entries: Iterable<T>): T where T : Enum<T>, T : DbEnum =
 	entries.firstOrNull { it.value == value.lowercase() || it.name.equals(value, ignoreCase = true) }
 		?: throw BadRequestException("지원하지 않는 값입니다: $value")
@@ -123,3 +138,6 @@ class GenderTypeConverter : DbEnumConverter<GenderType>(GenderType.entries)
 
 @Converter(autoApply = true)
 class DevicePlatformConverter : DbEnumConverter<DevicePlatform>(DevicePlatform.entries)
+
+@Converter(autoApply = true)
+class UserConsentTypeConverter : DbEnumConverter<UserConsentType>(UserConsentType.entries)

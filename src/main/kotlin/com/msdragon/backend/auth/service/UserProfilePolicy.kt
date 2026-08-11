@@ -20,6 +20,8 @@ class UserProfilePolicy {
 			)
 
 			UserRole.PARENT -> setOf(
+				AgeBand.AGE_30S,
+				AgeBand.AGE_40S,
 				AgeBand.AGE_50S,
 				AgeBand.AGE_60S,
 				AgeBand.AGE_70S,

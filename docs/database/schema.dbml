@@ -5,7 +5,7 @@
 // - 가족은 자녀 1명, 부모 최대 2명을 앱 검증과 DB trigger로 강제
 // - 10계명은 서버 후보군에서 랜덤 제공 후 여행별 확정본으로 복사하고 참여 부모 변경 시 확정본과 모든 서명 삭제
 // - 효도 리포트는 고정 지표와 여행별 집계값을 저장하고 기록 탭 통계는 완료 여행을 조회 시 집계
-// - 동의/알림/위치 권한 설정은 앱 로컬/OS 권한으로 관리하고 백엔드 ERD에서 제외
+// - 회원가입 약관 결정은 버전별 이력으로 저장하고 알림/OS 위치 권한은 앱에서 관리
 // - 회원 탈퇴는 users soft delete와 익명화로 처리하고 가족 연결을 해제하며 완료 여행 참여 이력은 유지
 // =====================================================================
 
@@ -44,6 +44,11 @@ Enum device_platform {
   ios
   android
   web
+}
+
+Enum user_consent_type {
+  privacy_collection
+  location_based_facility
 }
 
 Enum parent_profile_status {
@@ -213,6 +218,23 @@ Table user_refresh_tokens {
     user_id
     expires_at
   }
+}
+
+Table user_consents {
+  id bigint [pk, increment]
+  user_id bigint [not null]
+  consent_type user_consent_type [not null]
+  terms_version varchar(20) [not null]
+  agreed boolean [not null]
+  decided_at datetime [not null]
+  created_at datetime [not null, default: `now()`]
+  updated_at datetime [not null, default: `now()`]
+
+  indexes {
+    (user_id, consent_type, terms_version) [unique]
+  }
+
+  Note: '개인정보 수집 및 이용 필수 약관과 위치 기반 편의시설 안내 선택 약관의 버전별 결정을 저장한다.'
 }
 
 Table families {
@@ -843,6 +865,7 @@ Table chat_messages {
 
 // ---------- Relationships ----------
 Ref: user_refresh_tokens.user_id > users.id
+Ref: user_consents.user_id > users.id
 
 Ref: families.owner_user_id > users.id
 Ref: family_members.family_id > families.id

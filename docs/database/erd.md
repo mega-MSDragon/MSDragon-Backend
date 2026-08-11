@@ -17,7 +17,7 @@
 - **F10**: 부모 프로필은 확정 플로우 기준으로 걷는 속도, 이동 도움 필요 여부, 여행 취향 7종, 음식 취향 3종을 단계별 draft 저장합니다.
 - **F11**: 앱 도시 선택용 `travel_destinations`와 공공데이터 행정 구역 `regions`를 분리하고, 코스 생성 job/API 사용 이력/티맵 경로 구간을 저장합니다.
 - **F12**: 여행모드는 여행 기간으로 계산하고, 주변 화장실/의료시설 캐시와 여행모드 AI 챗봇 컨텍스트를 저장합니다.
-- **F13**: PDF 확정본 기준으로 동의/알림/위치 권한 설정은 앱 로컬/OS 권한으로 관리하고 백엔드 ERD에서 제외합니다.
+- **F13**: 회원가입 약관 결정은 서버에 버전별로 저장하고, 알림 설정과 실제 OS 위치 권한 상태는 앱 로컬/OS에서 관리합니다.
 - **F14**: PDF 확정본 기준으로 여행 도시는 준비 중 정보 편집에서 변경 가능하며, 변경 저장 후 코스 재추천/덮어쓰기 확인 플로우를 거칩니다. 여행 중에는 도시와 제목을 고정합니다.
 - **F15**: 후속 확정 기준으로 10계명 PDF 공유는 자녀와 여행 참여 부모 최소 1명 서명 완료 후 가능합니다.
 - **F16**: 회원 탈퇴는 사용자 soft delete와 익명화로 처리합니다. 가족 연결은 해제하되 완료 여행 참여 이력은 유지합니다.
@@ -40,6 +40,7 @@ CREATE TYPE oauth_provider     AS ENUM ('kakao', 'apple');
 CREATE TYPE age_band           AS ENUM ('10s', '20s', '30s', '40s', '50s', '60s', '60s_plus', '70s', '80s', '90s_plus', 'undisclosed');
 CREATE TYPE gender_type        AS ENUM ('female', 'male', 'undisclosed');
 CREATE TYPE device_platform    AS ENUM ('ios', 'android', 'web');
+CREATE TYPE user_consent_type  AS ENUM ('privacy_collection', 'location_based_facility');
 CREATE TYPE parent_profile_status AS ENUM ('draft', 'completed');
 CREATE TYPE walking_pace       AS ENUM ('slow', 'normal', 'fast');          -- 천천히/보통/빠르게
 CREATE TYPE travel_theme_code  AS ENUM ('nature_scenery', 'history_culture', 'shopping', 'activity', 'culture_life', 'landmark', 'experience');
@@ -109,6 +110,18 @@ CREATE TABLE user_refresh_tokens (
 CREATE INDEX ix_user_refresh_tokens_user_id ON user_refresh_tokens(user_id);
 CREATE INDEX ix_user_refresh_tokens_expires_at ON user_refresh_tokens(expires_at);
 
+CREATE TABLE user_consents (
+    id            BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    user_id       BIGINT NOT NULL REFERENCES users(id),
+    consent_type  user_consent_type NOT NULL,
+    terms_version VARCHAR(20) NOT NULL,
+    agreed        BOOLEAN NOT NULL,
+    decided_at    TIMESTAMPTZ NOT NULL,
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (user_id, consent_type, terms_version)
+);
+
 CREATE TABLE families (
     id            BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     owner_user_id BIGINT NOT NULL REFERENCES users(id),  -- 대표 자녀
@@ -153,8 +166,8 @@ CREATE TABLE family_code_usages (
 );
 CREATE INDEX ix_family_code_usages_family_id ON family_code_usages(family_id);
 
--- F13: 동의 체크, 알림 수신, 위치 권한은 앱 로컬/OS 권한 상태로 관리한다.
--- 백엔드 ERD에는 별도 user_consents/user_settings 테이블을 두지 않는다.
+-- 회원가입 약관은 user_consents에 버전별로 저장한다.
+-- 알림 수신과 실제 OS 위치 권한 상태는 앱 로컬/OS에서 관리한다.
 ```
 
 ---
@@ -719,6 +732,7 @@ erDiagram
     families ||--o{ family_members : "구성"
     users ||--o{ families : "소유(자녀)"
     users ||--o{ user_refresh_tokens : "토큰"
+    users ||--o{ user_consents : "약관결정"
     users ||--o| family_codes : "고정코드"
     family_codes ||--o{ family_code_usages : "입력"
     users ||--o{ family_code_usages : "입력자"
@@ -788,6 +802,7 @@ erDiagram
 | 관계 | 카디널리티 | 강제 위치 |
 |---|---|---|
 | users → family_members | 1유저=1가족 | `UNIQUE(user_id)` (C7) |
+| users → user_consents | 약관 종류·버전별 결정 | `UNIQUE(user_id, consent_type, terms_version)` |
 | families → family_members | 자녀 1 + 부모 ≤2 | 자녀 `uq_family_one_child`, 부모 최대 2명 DB trigger |
 | users → family_codes | 사용자별 고정 매칭 코드 | `UNIQUE(user_id)`, `UNIQUE(code)` |
 | family_codes → family_code_usages | 한 코드 여러 명 입력 가능 | `UNIQUE(family_code_id, requester_user_id)` |

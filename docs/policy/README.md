@@ -8,6 +8,7 @@
 
 | 문서 | 설명 |
 |------|------|
+| [signup-onboarding.md](./signup-onboarding.md) | 소셜 로그인 이후 약관, 회원가입, 가족 연결 온보딩 정책 |
 | [account-withdrawal.md](./account-withdrawal.md) | 회원 탈퇴 시 익명화, 인증 폐기, 가족 연결과 여행 기록 처리 정책 |
 | [parent-travel-mbti.md](./parent-travel-mbti.md) | 부모님 여행 MBTI 타입과 가중치 계산 정책 |
 | [course-recommendation.md](./course-recommendation.md) | TourAPI 기반 여행 코스 추천 API 사용처와 가중치 정책 |

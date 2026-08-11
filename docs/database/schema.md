@@ -13,6 +13,7 @@ DB 스키마와 공통 엔티티 규칙을 기록합니다.
 | Entity | Table | 설명 |
 |--------|-------|------|
 | `User` | `users` | 소셜 로그인 사용자와 회원가입 완료 프로필 |
+| `UserConsent` | `user_consents` | 회원가입 약관 종류·버전별 동의 결정 |
 | `UserRefreshToken` | `user_refresh_tokens` | 해시로 저장하는 refresh token 세션 |
 | `Family` | `families` | 대표 자녀 기준 가족 |
 | `FamilyMember` | `family_members` | 가족 구성원 |
@@ -58,6 +59,13 @@ DB 스키마와 공통 엔티티 규칙을 기록합니다.
 - DB 저장 enum 값은 DBML과 맞춰 소문자 문자열을 사용합니다.
 - 회원가입 전 사용자는 저장하지 않습니다. 소셜 로그인 후 `signupToken`을 발급하고, 회원가입 완료 시 `users` row를 생성합니다.
 - 회원 탈퇴는 soft delete로 처리합니다. `deleted_at`을 기록하고 소셜 식별자와 기본 프로필을 익명화해 같은 소셜 계정의 새 가입을 허용합니다.
+
+### user_consents
+
+- 개인정보 수집 및 이용은 필수, 위치 기반 편의시설 안내는 선택 약관입니다.
+- 최초 약관 버전은 각각 `v1`이며 서버가 결정합니다.
+- `(user_id, consent_type, terms_version)`은 unique이며 약관 개정 시 기존 행을 덮어쓰지 않고 새 버전 결정을 추가합니다.
+- 선택 약관에 동의하지 않은 경우도 `agreed=false`로 결정을 기록합니다.
 
 ### user_refresh_tokens
 

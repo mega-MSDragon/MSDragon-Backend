@@ -14,6 +14,9 @@
 - 탈퇴한 계정의 소셜 식별자는 익명화되므로 같은 소셜 계정으로 로그인하면 미가입 사용자 응답을 반환합니다.
   - 이유: `users.role`은 필수 컬럼이므로 역할 선택 전 row를 만들면 스키마와 충돌합니다.
 - 회원가입 완료 시 `users`를 생성하고 access/refresh token을 발급합니다.
+- 개인정보 수집 및 이용 약관은 필수이며, 위치 기반 편의시설 안내 약관은 선택입니다.
+- 두 약관의 결정은 서버가 관리하는 버전과 함께 `user_consents`에 저장합니다. 최초 버전은 각각 `v1`입니다.
+- 성별을 생략하면 `undisclosed`로 저장합니다.
 - access token 만료 시간은 1시간, refresh token 만료 시간은 14일, signup token 만료 시간은 30분입니다.
 - refresh token은 원문을 저장하지 않고 SHA-256 해시로 저장하며, 재발급 시 회전합니다.
 - 로그아웃은 현재 세션의 refresh token 하나만 폐기하며, 이미 폐기되었거나 서버에 없는 토큰도 성공으로 처리합니다.
@@ -120,6 +123,8 @@ access token이 없거나, 형식이 다르거나, 만료/변조된 경우 HTTP 
   "displayName": "최혜린",
   "ageBand": "20s",
   "gender": "female",
+  "privacyConsentAgreed": true,
+  "locationBasedFacilityConsentAgreed": false,
   "platform": "android"
 }
 ```
@@ -130,7 +135,9 @@ access token이 없거나, 형식이 다르거나, 만료/변조된 경우 HTTP 
 |-------|------|----------|---------|
 | `role` | enum | true | `child`, `parent` |
 | `ageBand` | enum | true | `10s`, `20s`, `30s`, `40s`, `50s`, `60s`, `60s_plus`, `70s`, `80s`, `90s_plus`, `undisclosed` |
-| `gender` | enum | true | `female`, `male`, `undisclosed` |
+| `gender` | enum | false | `female`, `male`, `undisclosed`. 생략 시 `undisclosed` |
+| `privacyConsentAgreed` | boolean | true | 개인정보 수집 및 이용 필수 약관. `true`만 허용 |
+| `locationBasedFacilityConsentAgreed` | boolean | false | 위치 기반 편의시설 안내 선택 약관. 기본값 `false` |
 | `platform` | enum | false | `ios`, `android`, `web` |
 
 역할별 연령대 검증:
@@ -138,7 +145,9 @@ access token이 없거나, 형식이 다르거나, 만료/변조된 경우 HTTP 
 | role | 허용 ageBand |
 |------|--------------|
 | `child` | `10s`, `20s`, `30s`, `40s`, `50s`, `60s_plus`, `undisclosed` |
-| `parent` | `50s`, `60s`, `70s`, `80s`, `90s_plus`, `undisclosed` |
+| `parent` | `30s`, `40s`, `50s`, `60s`, `70s`, `80s`, `90s_plus`, `undisclosed` |
+
+앱은 약관·역할·이름·연령대·성별을 화면별로 보관한 뒤 마지막 `가입 완료`에서 이 API를 한 번 호출합니다. 단계별 서버 저장 API는 두지 않습니다.
 
 ### Response
 
@@ -208,3 +217,15 @@ access token이 없거나, 형식이 다르거나, 만료/변조된 경우 HTTP 
 ```
 
 클라이언트는 응답을 받은 뒤 로컬에 저장한 access token과 refresh token을 모두 삭제합니다.
+
+---
+
+## 가입 후 가족 연결
+
+회원가입 완료 후 가족 연결 전에는 홈으로 진입하지 않습니다. 클라이언트는 `GET /api/v1/family`로 연결 여부를 확인하고, `familyId=null`이면 가족 연결 화면을 유지합니다.
+
+가족 연결은 다음 API를 순서에 맞게 사용합니다.
+
+1. `POST /api/v1/family/code`: 내 고정 초대 코드 발급 또는 조회
+2. `POST /api/v1/family/matches`: 상대방 코드로 가족 연결
+3. `GET /api/v1/family`: 다른 사용자가 내 코드를 입력한 경우 연결 완료 여부 확인

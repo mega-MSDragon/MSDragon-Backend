@@ -6,6 +6,7 @@ import com.msdragon.backend.auth.entity.GenderType
 import com.msdragon.backend.auth.entity.OAuthProvider
 import com.msdragon.backend.auth.entity.UserRole
 import io.swagger.v3.oas.annotations.media.Schema
+import jakarta.validation.constraints.AssertTrue
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotNull
 import jakarta.validation.constraints.Size
@@ -43,9 +44,15 @@ data class CompleteSignupRequest(
 	@field:NotNull(message = "연령대를 선택해주세요.")
 	val ageBand: AgeBand,
 
-	@field:Schema(description = "성별", example = "female", allowableValues = ["female", "male", "undisclosed"])
-	@field:NotNull(message = "성별을 선택해주세요.")
-	val gender: GenderType,
+	@field:Schema(description = "성별. 생략하면 undisclosed로 저장합니다.", example = "female", allowableValues = ["female", "male", "undisclosed"], nullable = true, requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+	val gender: GenderType? = null,
+
+	@field:Schema(description = "개인정보 수집 및 이용 필수 약관 동의 여부. 반드시 true여야 합니다.", example = "true", requiredMode = Schema.RequiredMode.REQUIRED)
+	@field:AssertTrue(message = "개인정보 수집 및 이용에 동의해주세요.")
+	val privacyConsentAgreed: Boolean,
+
+	@field:Schema(description = "위치 기반 편의시설 안내 선택 약관 동의 여부", example = "false", defaultValue = "false", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+	val locationBasedFacilityConsentAgreed: Boolean = false,
 
 	@field:Schema(description = "요청이 발생한 앱 플랫폼. 통계/디버깅용 선택 값입니다.", example = "ios", allowableValues = ["ios", "android", "web"], nullable = true)
 	val platform: DevicePlatform? = null,

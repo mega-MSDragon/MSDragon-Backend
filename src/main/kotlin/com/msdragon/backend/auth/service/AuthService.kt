@@ -7,8 +7,12 @@ import com.msdragon.backend.auth.dto.LogoutRequest
 import com.msdragon.backend.auth.dto.RefreshTokenRequest
 import com.msdragon.backend.auth.dto.SocialLoginRequest
 import com.msdragon.backend.auth.entity.DevicePlatform
+import com.msdragon.backend.auth.entity.GenderType
 import com.msdragon.backend.auth.entity.User
+import com.msdragon.backend.auth.entity.UserConsent
+import com.msdragon.backend.auth.entity.UserConsentType
 import com.msdragon.backend.auth.entity.UserRefreshToken
+import com.msdragon.backend.auth.repository.UserConsentRepository
 import com.msdragon.backend.auth.repository.UserRefreshTokenRepository
 import com.msdragon.backend.auth.repository.UserRepository
 import com.msdragon.backend.common.exception.BadRequestException
@@ -20,6 +24,7 @@ import java.time.LocalDateTime
 @Service
 class AuthService(
 	private val userRepository: UserRepository,
+	private val userConsentRepository: UserConsentRepository,
 	private val userRefreshTokenRepository: UserRefreshTokenRepository,
 	private val oAuthClientResolver: OAuthClientResolver,
 	private val tokenService: TokenService,
@@ -47,6 +52,7 @@ class AuthService(
 	@Transactional
 	fun completeSignup(request: CompleteSignupRequest): AuthResponse {
 		val signupClaims = tokenService.parseSignupToken(request.signupToken)
+		val gender = request.gender ?: GenderType.UNDISCLOSED
 
 		userProfilePolicy.validateAgeBand(request.role, request.ageBand)
 
@@ -58,8 +64,9 @@ class AuthService(
 			if (existingUser.isSignupCompleted()) {
 				throw BadRequestException("이미 가입 완료된 사용자입니다.")
 			}
-			existingUser.completeSignup(request.role, request.displayName.trim(), request.ageBand, request.gender)
+			existingUser.completeSignup(request.role, request.displayName.trim(), request.ageBand, gender)
 			existingUser.updateLastLogin()
+			saveSignupConsents(existingUser, request)
 			return createLoginResponse(existingUser, request.platform)
 		}
 
@@ -69,11 +76,12 @@ class AuthService(
 			oauthSubject = signupClaims.subject,
 			displayName = request.displayName.trim(),
 			ageBand = request.ageBand,
-			gender = request.gender,
+			gender = gender,
 			signupCompletedAt = LocalDateTime.now(),
 			lastLoginAt = LocalDateTime.now(),
 		)
 		val savedUser = userRepository.save(user)
+		saveSignupConsents(savedUser, request)
 		return createLoginResponse(savedUser, request.platform)
 	}
 
@@ -108,6 +116,28 @@ class AuthService(
 		}
 	}
 
+	private fun saveSignupConsents(user: User, request: CompleteSignupRequest) {
+		val decidedAt = LocalDateTime.now()
+		userConsentRepository.saveAll(
+			listOf(
+				UserConsent(
+					user = user,
+					consentType = UserConsentType.PRIVACY_COLLECTION,
+					termsVersion = PRIVACY_CONSENT_VERSION,
+					agreed = true,
+					decidedAt = decidedAt,
+				),
+				UserConsent(
+					user = user,
+					consentType = UserConsentType.LOCATION_BASED_FACILITY,
+					termsVersion = LOCATION_BASED_FACILITY_CONSENT_VERSION,
+					agreed = request.locationBasedFacilityConsentAgreed,
+					decidedAt = decidedAt,
+				),
+			),
+		)
+	}
+
 	private fun createLoginResponse(
 		user: User,
 		platform: DevicePlatform?,
@@ -135,4 +165,8 @@ class AuthService(
 		)
 	}
 
+	companion object {
+		private const val PRIVACY_CONSENT_VERSION = "v1"
+		private const val LOCATION_BASED_FACILITY_CONSENT_VERSION = "v1"
+	}
 }

@@ -1,6 +1,8 @@
 package com.msdragon.backend.auth.controller
 
 import org.hamcrest.Matchers.containsInAnyOrder
+import org.hamcrest.Matchers.hasItem
+import org.hamcrest.Matchers.not
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
@@ -53,6 +55,22 @@ class AuthOpenApiTest {
 					"$.components.schemas.SocialLoginRequest.properties.provider.enum",
 					containsInAnyOrder("kakao", "apple"),
 				),
+			)
+			.andExpect(
+				jsonPath(
+					"$.components.schemas.CompleteSignupRequest.required",
+					hasItem("privacyConsentAgreed"),
+				),
+			)
+			.andExpect(
+				jsonPath(
+					"$.components.schemas.CompleteSignupRequest.required",
+					not(hasItem("gender")),
+				),
+			)
+			.andExpect(
+				jsonPath("$.components.schemas.CompleteSignupRequest.properties.locationBasedFacilityConsentAgreed.default")
+					.value(false),
 			)
 			.andExpect(
 				jsonPath(

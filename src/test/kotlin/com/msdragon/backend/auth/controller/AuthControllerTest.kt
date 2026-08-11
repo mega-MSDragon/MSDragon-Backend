@@ -2,6 +2,8 @@ package com.msdragon.backend.auth.controller
 
 import com.jayway.jsonpath.JsonPath
 import com.msdragon.backend.auth.entity.OAuthProvider
+import com.msdragon.backend.auth.entity.UserConsentType
+import com.msdragon.backend.auth.repository.UserConsentRepository
 import com.msdragon.backend.auth.repository.UserRefreshTokenRepository
 import com.msdragon.backend.auth.repository.UserRepository
 import com.msdragon.backend.auth.service.KakaoOAuthClient
@@ -16,6 +18,8 @@ import com.msdragon.backend.parentprofile.repository.ParentProfileRepository
 import com.msdragon.backend.trip.repository.TripDayRepository
 import com.msdragon.backend.trip.repository.TripParticipantRepository
 import com.msdragon.backend.trip.repository.TripRepository
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.BDDMockito.given
@@ -40,6 +44,9 @@ class AuthControllerTest {
 
 	@Autowired
 	private lateinit var userRefreshTokenRepository: UserRefreshTokenRepository
+
+	@Autowired
+	private lateinit var userConsentRepository: UserConsentRepository
 
 	@Autowired
 	private lateinit var familyCodeUsageRepository: FamilyCodeUsageRepository
@@ -79,7 +86,13 @@ class AuthControllerTest {
 		familyCodeRepository.deleteAll()
 		familyRepository.deleteAll()
 		userRefreshTokenRepository.deleteAll()
+		userConsentRepository.deleteAll()
 		userRepository.deleteAll()
+	}
+
+	@AfterEach
+	fun tearDown() {
+		userConsentRepository.deleteAll()
 	}
 
 	@Test
@@ -121,6 +134,7 @@ class AuthControllerTest {
 					  "displayName": "최혜린",
 					  "ageBand": "20s",
 					  "gender": "female",
+					  "privacyConsentAgreed": true,
 					  "platform": "android"
 					}
 					""".trimIndent(),
@@ -159,7 +173,8 @@ class AuthControllerTest {
 					  "role": "parent",
 					  "displayName": "부모",
 					  "ageBand": "20s",
-					  "gender": "undisclosed"
+					  "gender": "undisclosed",
+					  "privacyConsentAgreed": true
 					}
 					""".trimIndent(),
 				),
@@ -234,7 +249,8 @@ class AuthControllerTest {
 					  "role": "child",
 					  "displayName": "최혜린",
 					  "ageBand": "20s",
-					  "gender": "female"
+					  "gender": "female",
+					  "privacyConsentAgreed": true
 					}
 					""".trimIndent(),
 				),
@@ -274,7 +290,8 @@ class AuthControllerTest {
 					  "role": "child",
 					  "displayName": "최혜린",
 					  "ageBand": "20s",
-					  "gender": "female"
+					  "gender": "female",
+					  "privacyConsentAgreed": true
 					}
 					""".trimIndent(),
 				),
@@ -301,5 +318,83 @@ class AuthControllerTest {
 			.andExpect(status().isOk)
 			.andExpect(jsonPath("$.status").value(401))
 			.andExpect(jsonPath("$.success").value(false))
+	}
+
+	@Test
+	fun `부모는 30대를 선택하고 성별을 생략할 수 있으며 약관 결정을 저장한다`() {
+		given(kakaoOAuthClient.verify("parent-token"))
+			.willReturn(OAuthUserInfo(OAuthProvider.KAKAO, "parent-30s", "카카오이름"))
+
+		val loginResponse = mockMvc.perform(
+			post("/api/v1/auth/social-login")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""{"provider":"kakao","token":"parent-token"}"""),
+		).andReturn().response.contentAsString
+		val signupToken = JsonPath.read<String>(loginResponse, "$.data.signupToken")
+
+		val signupResponse = mockMvc.perform(
+			post("/api/v1/auth/signup/complete")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(
+					"""
+					{
+					  "signupToken": "$signupToken",
+					  "role": "parent",
+					  "displayName": "엄마",
+					  "ageBand": "30s",
+					  "privacyConsentAgreed": true,
+					  "locationBasedFacilityConsentAgreed": true
+					}
+					""".trimIndent(),
+				),
+		)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(201))
+			.andExpect(jsonPath("$.data.user.ageBand").value("30s"))
+			.andExpect(jsonPath("$.data.user.gender").value("undisclosed"))
+			.andReturn()
+			.response
+			.contentAsString
+
+		val userId = JsonPath.read<Int>(signupResponse, "$.data.user.id").toLong()
+		val consents = userConsentRepository.findAllByUserIdOrderByIdAsc(userId)
+		assertEquals(
+			listOf(UserConsentType.PRIVACY_COLLECTION, UserConsentType.LOCATION_BASED_FACILITY),
+			consents.map { it.consentType },
+		)
+		assertEquals(listOf(true, true), consents.map { it.agreed })
+		assertEquals(listOf("v1", "v1"), consents.map { it.termsVersion })
+	}
+
+	@Test
+	fun `개인정보 수집 약관에 동의하지 않으면 회원가입을 거절한다`() {
+		given(kakaoOAuthClient.verify("no-consent-token"))
+			.willReturn(OAuthUserInfo(OAuthProvider.KAKAO, "no-consent", "카카오이름"))
+
+		val loginResponse = mockMvc.perform(
+			post("/api/v1/auth/social-login")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""{"provider":"kakao","token":"no-consent-token"}"""),
+		).andReturn().response.contentAsString
+		val signupToken = JsonPath.read<String>(loginResponse, "$.data.signupToken")
+
+		mockMvc.perform(
+			post("/api/v1/auth/signup/complete")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(
+					"""
+					{
+					  "signupToken": "$signupToken",
+					  "role": "child",
+					  "displayName": "혜린",
+					  "ageBand": "20s",
+					  "privacyConsentAgreed": false
+					}
+					""".trimIndent(),
+				),
+		)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(400))
+			.andExpect(jsonPath("$.message").value("개인정보 수집 및 이용에 동의해주세요."))
 	}
 }

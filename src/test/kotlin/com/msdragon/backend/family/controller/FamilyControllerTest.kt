@@ -119,7 +119,7 @@ class FamilyControllerTest {
 			post("/api/v1/family/matches")
 				.header("Authorization", "Bearer ${tokenService.createAccessToken(parent)}")
 				.contentType(MediaType.APPLICATION_JSON)
-				.content("""{"code":"$childCode"}"""),
+				.content("""{"code":"${childCode.replace("-", "")}"}"""),
 		)
 			.andExpect(status().isOk)
 			.andExpect(jsonPath("$.data.familyId").isNumber)
