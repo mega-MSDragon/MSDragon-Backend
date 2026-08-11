@@ -19,6 +19,7 @@ app:
         client-id: ${APP_AUTH_APPLE_CLIENT_ID:}
   tour-api:
     base-uri: https://apis.data.go.kr/B551011/KorWithService2
+    general-base-uri: https://apis.data.go.kr/B551011/KorService2
     service-key: ${TOUR_API_SERVICE_KEY:}
     mobile-os: ETC
     mobile-app: ${TOUR_API_MOBILE_APP:MSDragon}

@@ -66,8 +66,9 @@ Compose로 실행하면 PostgreSQL도 host port로 publish됩니다. 기본 포�
 
 ## 외부 API 환경 변수
 
-여행 추천 코스 생성 API를 호출하려면 한국관광공사 TourAPI 서비스키가 필요합니다.
-서비스키가 비어 있으면 애플리케이션은 실행되지만, 추천 코스 생성 API는 설정 오류로 실패합니다.
+여행 추천 코스와 홈 추천 콘텐츠를 조회하려면 한국관광공사 TourAPI 서비스키가 필요합니다.
+같은 키에 `한국관광공사_무장애 여행 정보`와 `한국관광공사_국문 관광정보 서비스_GW` 활용신청이 모두 승인되어 있어야 합니다.
+서비스키가 비어 있으면 애플리케이션은 실행됩니다. 추천 코스 생성 API는 설정 오류로 실패하고, 홈 API는 도시 이미지를 `null`, 축제를 빈 목록으로 반환합니다.
 여행 경로 최적화 API를 호출하려면 Tmap 앱키가 필요합니다.
 Tmap 앱키가 비어 있으면 애플리케이션은 실행되지만, 경로 최적화 API는 설정 오류로 실패합니다.
 여행 모드 AI 챗봇을 호출하려면 OpenAI API 키가 필요합니다.
@@ -75,7 +76,7 @@ OpenAI API 키가 비어 있어도 애플리케이션은 실행되지만, 질문
 
 | Name | 설명 |
 |------|------|
-| `TOUR_API_SERVICE_KEY` | 한국관광공사 TourAPI 서비스키 |
+| `TOUR_API_SERVICE_KEY` | 한국관광공사 무장애 여행 정보와 국문 관광정보 서비스에 사용할 TourAPI 서비스키 |
 | `TOUR_API_MOBILE_APP` | TourAPI `MobileApp` 파라미터. 기본값 `MSDragon` |
 | `TOUR_API_CONNECT_TIMEOUT` | TourAPI 연결 timeout. ISO-8601 Duration, 기본값 `PT5S` |
 | `TOUR_API_REQUEST_TIMEOUT` | TourAPI 요청 timeout. ISO-8601 Duration, 기본값 `PT10S` |

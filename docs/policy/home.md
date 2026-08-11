@@ -1,0 +1,101 @@
+# 홈 화면 정책
+
+확정된 홈 디자인에 맞춰 사용자별 안내 상태와 여행 카드, 월별 추천 도시, 축제 데이터를 구성하는 정책입니다.
+
+## 권한과 노출 상태
+
+- 가족 여행 생성 권한은 자녀에게만 있습니다.
+- 자녀 홈은 여행이 없을 때 `새 여행 추가하기`를 노출합니다.
+- 부모 홈은 여행이 없어도 여행 생성 버튼을 노출하지 않습니다.
+- 부모 본인의 프로필이 완료되지 않았다면 `complete_my_profile` 안내를 반환합니다.
+- 자녀에게 연결된 부모 중 프로필이 완료되지 않은 부모가 있다면 `request_parent_profile` 안내와 대상 부모 목록을 반환합니다.
+- `부모님께 부탁드리기` 실제 푸시는 기기 토큰과 알림 정책이 확정될 때까지 보류합니다.
+- `나중에 하기`는 앱 로컬 상태로 처리하며 DB에 저장하지 않습니다.
+
+## 홈 여행 목록
+
+- 홈에는 `in_progress`, `planning`, `ready` 여행만 노출합니다.
+- `completed`, `archived` 여행은 기록 탭에서 조회하므로 홈에서 제외합니다.
+- `in_progress` 여행을 먼저 표시하고, 이후 예정 여행을 시작일과 ID 오름차순으로 표시합니다.
+- 서울 날짜 기준으로 조회 시점에 여행 상태를 동기화합니다.
+- 미래 여행의 `dDay`는 `시작일 - 오늘`의 날짜 차이입니다. 진행 중인 여행은 `null`입니다.
+
+## 여행 카드 대표 테마
+
+- 여행 생성 당시 `recommendationSnapshot.parents[].travelThemes`를 사용합니다.
+- 참여 부모 전체에서 선택 빈도가 가장 높은 테마 하나를 `primaryTheme`으로 반환합니다.
+- 동률이면 아래 고정 우선순위에서 앞선 테마를 사용합니다.
+
+1. `nature_scenery`
+2. `history_culture`
+3. `shopping`
+4. `activity`
+5. `culture_life`
+6. `landmark`
+7. `experience`
+
+추천 스냅샷이 없는 기존 여행은 `primaryTheme=null`입니다.
+
+## 여행 강도
+
+부모가 두 명이면 가장 천천히 걷는 부모를 기준으로 계산합니다.
+
+| walkingPace | intensity | 화면 표시 |
+|-------------|-----------|-----------|
+| `slow` | `low` | 여행 강도 낮음 |
+| `normal` | `normal` | 여행 강도 보통 |
+| `fast` | `high` | 여행 강도 높음 |
+
+추천 스냅샷이 없는 기존 여행은 `intensity=null`입니다.
+
+## 월별 추천 도시
+
+추천 도시는 서버 정책으로 월마다 3개를 고정합니다. 앱은 `code`를 화면 이동 값으로 사용하고 `imageUrl`이 없으면 로컬 기본 이미지를 사용합니다.
+
+| 월 | 추천 도시 코드 |
+|----|----------------|
+| 1월 | `gangneung_sokcho`, `incheon`, `seoul` |
+| 2월 | `busan`, `jeju`, `yeosu` |
+| 3월 | `gyeongju`, `jeonju`, `daegu` |
+| 4월 | `jeju`, `suwon_yongin`, `gyeongju` |
+| 5월 | `gangneung_sokcho`, `gyeongju`, `busan` |
+| 6월 | `busan`, `yeosu`, `jeju` |
+| 7월 | `gangneung_sokcho`, `tongyeong_geoje_namhae`, `busan` |
+| 8월 | `gangneung_sokcho`, `jeju`, `incheon` |
+| 9월 | `gyeongju`, `jeonju`, `pohang_andong` |
+| 10월 | `gyeongju`, `suwon_yongin`, `daegu` |
+| 11월 | `jeju`, `yeosu`, `tongyeong_geoje_namhae` |
+| 12월 | `seoul`, `gangneung_sokcho`, `busan` |
+
+대표 이미지는 국문 관광정보 서비스 `KorService2/areaBasedList2`를 이미지 우선 정렬 `arrange=Q`로 조회합니다.
+
+## 추천 축제
+
+국문 관광정보 서비스의 아래 API를 사용합니다.
+
+| 목적 | Operation | URL |
+|------|-----------|-----|
+| 축제 목록 | `searchFestival2` | `https://apis.data.go.kr/B551011/KorService2/searchFestival2` |
+| 축제 소개 | `detailCommon2` | `https://apis.data.go.kr/B551011/KorService2/detailCommon2` |
+
+- 서울 날짜 기준 오늘부터 30일 뒤까지 조회합니다.
+- 진행 중이거나 조회 기간 안에 시작하는 결과만 사용합니다.
+- 대표 이미지가 있는 결과를 우선하는 `arrange=Q`를 사용하고 최대 10개를 반환합니다.
+- 목록 결과마다 `detailCommon2`의 `overview`를 HTML 제거 후 최대 180자로 요약합니다.
+- 태그는 주소에서 추출한 지역명과 `축제`를 반환합니다.
+
+## 캐시와 장애 처리
+
+- 추천 도시 이미지와 축제는 모든 사용자에게 같은 데이터이므로 애플리케이션 메모리에 서울 날짜 단위로 캐시합니다.
+- 서울 날짜가 바뀐 뒤 첫 홈 조회 또는 서버 재시작 뒤 첫 홈 조회에서 TourAPI를 다시 호출합니다.
+- 새 날짜의 조회가 실패하면 직전 캐시를 사용합니다.
+- 직전 캐시도 없으면 도시 이미지는 `null`, 축제는 빈 목록을 반환합니다.
+- TourAPI 장애나 서비스키 누락 때문에 여행·프로필 영역까지 실패하지 않도록 홈 API는 축소 응답을 유지합니다.
+
+## DB 정책
+
+- 홈 전용 테이블은 추가하지 않습니다.
+- 여행 카드 값은 `trips.recommendation_snapshot`에서 계산합니다.
+- 추천 도시 정책은 서버 코드로 관리합니다.
+- 축제와 도시 이미지는 일 단위 메모리 캐시만 사용합니다.
+- 운영 도구에서 추천 콘텐츠를 편집해야 하는 요구가 생기면 그때 별도 마스터 테이블을 도입합니다.
