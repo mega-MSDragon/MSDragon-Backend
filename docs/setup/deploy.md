@@ -77,6 +77,7 @@ curl -k https://localhost/health
 
 ```env
 APP_AUTH_JWT_SECRET=<openssl rand -base64 48 결과값>
+APP_AUTH_ACCESS_TOKEN_EXPIRATION=P365D
 APP_AUTH_APPLE_CLIENT_ID=com.msdragon.ios
 TOUR_API_SERVICE_KEY=<한국관광공사 TourAPI 서비스키>
 TOUR_API_MOBILE_APP=MSDragon
@@ -96,6 +97,7 @@ OPENAI_MAX_OUTPUT_TOKENS=800
 ```
 
 `APP_AUTH_JWT_SECRET`은 의미 있는 단어가 아니라 충분히 긴 랜덤 문자열이어야 합니다. 이 값을 변경하면 기존 로그인 토큰은 모두 무효화됩니다.
+`APP_AUTH_ACCESS_TOKEN_EXPIRATION`은 ISO-8601 Duration 형식이며, 개발 테스트 기간에는 `P365D`를 사용합니다. 운영 전에는 `PT1H` 등 실제 인증 정책에 맞는 값으로 줄입니다. 설정을 변경해도 기존 토큰의 만료 시각은 바뀌지 않으므로 새 토큰을 발급받아야 합니다.
 `POSTGRES_HOST_PORT`는 EC2 host에서 publish할 PostgreSQL 포트입니다. DBeaver에서 직접 접속하려면 기본값 `5432`를 사용하고, 보안 그룹에서도 같은 포트를 허용합니다.
 `TOUR_API_SERVICE_KEY`는 같은 키에 한국관광공사 무장애 여행 정보와 국문 관광정보 서비스 활용신청이 모두 승인되어 있어야 합니다.
 값이 비어 있으면 서버는 실행되지만 추천 코스 생성 API는 설정 오류로 실패하고, 홈 API는 도시 이미지와 축제를 제외한 축소 응답을 반환합니다.
@@ -168,7 +170,7 @@ docker compose up -d --build
 - `DEPLOY_PATH` 디렉터리 존재
 - 해당 디렉터리에 Git repository clone 완료
 - `.env` 파일 존재
-- `.env`에 `APP_AUTH_JWT_SECRET`, `APP_AUTH_APPLE_CLIENT_ID` 설정 완료
+- `.env`에 `APP_AUTH_JWT_SECRET`, `APP_AUTH_ACCESS_TOKEN_EXPIRATION`, `APP_AUTH_APPLE_CLIENT_ID` 설정 완료
 - 추천 코스와 홈 추천 콘텐츠를 사용할 경우 `.env`에 `TOUR_API_SERVICE_KEY` 설정 완료 및 무장애 여행 정보·국문 관광정보 서비스 활용신청 승인
 - 경로 최적화·공중화장실 적재·주변 병원·약국 API를 사용할 경우 `.env`에 `TMAP_APP_KEY` 설정 완료
 - 여행 모드 AI 챗봇을 사용할 경우 `.env`에 `OPENAI_API_KEY` 설정 완료

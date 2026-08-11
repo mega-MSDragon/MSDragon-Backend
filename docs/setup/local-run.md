@@ -58,9 +58,11 @@ Compose로 실행하면 PostgreSQL도 host port로 publish됩니다. 기본 포�
 | Name | 설명 |
 |------|------|
 | `APP_AUTH_JWT_SECRET` | 서비스 access/signup JWT 서명 secret. 32바이트 이상 필요 |
+| `APP_AUTH_ACCESS_TOKEN_EXPIRATION` | Access token 만료 시간. ISO-8601 Duration, 개발 테스트 기본값 `P365D` |
 | `APP_AUTH_APPLE_CLIENT_ID` | Apple identity token의 audience 검증에 사용할 client id 또는 iOS Bundle ID |
 
 `APP_AUTH_APPLE_CLIENT_ID`가 비어 있으면 Apple 로그인 요청은 설정 오류로 실패합니다. 카카오 로그인은 앱에서 받은 access token으로 Kakao user info API를 호출합니다.
+현재 access token 기본값은 공모전 개발 테스트를 위해 365일로 길게 설정되어 있습니다. 운영 정책을 적용할 때는 `APP_AUTH_ACCESS_TOKEN_EXPIRATION=PT1H`처럼 줄입니다.
 
 ---
 

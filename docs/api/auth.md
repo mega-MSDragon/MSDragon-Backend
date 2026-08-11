@@ -17,7 +17,7 @@
 - 개인정보 수집 및 이용 약관은 필수이며, 위치 기반 편의시설 안내 약관은 선택입니다.
 - 두 약관의 결정은 서버가 관리하는 버전과 함께 `user_consents`에 저장합니다. 최초 버전은 각각 `v1`입니다.
 - 성별을 생략하면 `undisclosed`로 저장합니다.
-- access token 만료 시간은 1시간, refresh token 만료 시간은 14일, signup token 만료 시간은 30분입니다.
+- 개발 테스트 기간에는 access token 만료 시간을 365일로 설정합니다. `APP_AUTH_ACCESS_TOKEN_EXPIRATION`으로 조정할 수 있으며, refresh token은 14일, signup token은 30분입니다.
 - refresh token은 원문을 저장하지 않고 SHA-256 해시로 저장하며, 재발급 시 회전합니다.
 - 로그아웃은 현재 세션의 refresh token 하나만 폐기하며, 이미 폐기되었거나 서버에 없는 토큰도 성공으로 처리합니다.
 - 로그아웃 후 access token은 만료 전까지 유효하므로 클라이언트가 보관 중인 access/refresh token을 모두 삭제합니다.
@@ -96,7 +96,7 @@ access token이 없거나, 형식이 다르거나, 만료/변조된 경우 HTTP 
     "accessToken": "...",
     "refreshToken": "...",
     "tokenType": "Bearer",
-    "accessTokenExpiresInSeconds": 3600,
+    "accessTokenExpiresInSeconds": 31536000,
     "refreshTokenExpiresInSeconds": 1209600,
     "user": {
       "id": 1,
@@ -161,7 +161,7 @@ access token이 없거나, 형식이 다르거나, 만료/변조된 경우 HTTP 
     "accessToken": "...",
     "refreshToken": "...",
     "tokenType": "Bearer",
-    "accessTokenExpiresInSeconds": 3600,
+    "accessTokenExpiresInSeconds": 31536000,
     "refreshTokenExpiresInSeconds": 1209600,
     "user": {
       "id": 1,

@@ -7,7 +7,7 @@ app:
     jwt:
       issuer: msdragon
       secret: ${APP_AUTH_JWT_SECRET:local-dev-secret-for-msdragon-auth-token-must-be-over-32-bytes}
-      access-token-expiration: PT1H
+      access-token-expiration: ${APP_AUTH_ACCESS_TOKEN_EXPIRATION:P365D}
       refresh-token-expiration: P14D
       signup-token-expiration: PT30M
     oauth:

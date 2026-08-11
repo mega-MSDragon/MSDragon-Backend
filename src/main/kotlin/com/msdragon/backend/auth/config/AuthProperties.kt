@@ -11,7 +11,7 @@ data class AuthProperties(
 	data class Jwt(
 		val issuer: String = "msdragon",
 		val secret: String = "local-dev-secret-for-msdragon-auth-token-must-be-over-32-bytes",
-		val accessTokenExpiration: Duration = Duration.ofHours(1),
+		val accessTokenExpiration: Duration = Duration.ofDays(365),
 		val refreshTokenExpiration: Duration = Duration.ofDays(14),
 		val signupTokenExpiration: Duration = Duration.ofMinutes(30),
 	)

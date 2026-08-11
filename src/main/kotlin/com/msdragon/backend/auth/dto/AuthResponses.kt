@@ -20,7 +20,7 @@ data class AuthResponse(
 	@field:Schema(description = "토큰 타입", example = "Bearer")
 	val tokenType: String = "Bearer",
 
-	@field:Schema(description = "Access Token 만료까지 남은 초", example = "3600", nullable = true)
+	@field:Schema(description = "Access Token 만료까지 남은 초", example = "31536000", nullable = true)
 	val accessTokenExpiresInSeconds: Long? = null,
 
 	@field:Schema(description = "Refresh Token 만료까지 남은 초", example = "1209600", nullable = true)
