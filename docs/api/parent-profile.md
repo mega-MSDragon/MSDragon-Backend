@@ -67,6 +67,7 @@
   "data": {
     "id": 1,
     "parentUserId": 2,
+    "parentDisplayName": "영희",
     "profileExists": true,
     "status": "completed",
     "currentStep": 3,
@@ -75,11 +76,26 @@
     "travelThemes": ["nature_scenery", "history_culture"],
     "foodPreference": "korean",
     "personalityType": "heritage_walker",
+    "personalityResult": {
+      "code": "heritage_walker",
+      "name": "역사 산책가형",
+      "catchphrase": "이야기가 있는 길을 걷는 게 좋아.",
+      "description": "역사적인 장소와 자연풍경을 좋아하며 적당히 걸으면서 여유를 챙기는 타입이시네요. 익숙한 음식 안에서 지역의 특색도 함께 즐기시는 편이에요."
+    },
     "completionPercent": 100,
     "completedAt": "2026-07-01T12:00:00"
   }
 }
 ```
+
+결과 화면 제목은 `parentDisplayName`으로 구성합니다. 프로필을 완료하면 `personalityType`과 같은 코드의 `personalityResult`를 함께 반환하므로, 클라이언트는 유형명과 문구를 별도로 변환할 필요가 없습니다. 완료 전에는 두 필드 모두 `null`입니다.
+
+### 클라이언트 저장 흐름
+
+1. 각 단계에서 현재까지 선택한 값을 같은 `PUT` API로 보내 draft를 저장합니다.
+2. 마지막 음식 취향 선택 후 `complete=true`로 요청합니다.
+3. 성공 응답의 `parentDisplayName`과 `personalityResult`로 결과 화면을 구성합니다.
+4. 작성 도중 다시 진입하면 조회 응답의 기존 값을 각 단계에 복원합니다.
 
 ---
 
@@ -110,13 +126,13 @@
 
 ## 추천용 여행 MBTI
 
-현재 구현은 부모님 프로필 완료 시 `docs/policy/parent-travel-mbti.md`의 가중치 정책으로 아래 enum 중 하나를 `personalityType`에 저장합니다.
+현재 구현은 부모님 프로필 완료 시 `docs/policy/parent-travel-mbti.md`의 가중치 정책으로 아래 enum 중 하나를 `personalityType`에 저장합니다. 화면 표시용 이름, 한 줄 문구, 설명은 `personalityResult`로 반환합니다.
 
 | Value | 설명 |
 |-------|------|
-| `urban_explorer` | 도시 취향 탐험가 |
-| `culture_stroller` | 감성 문화 산책가 |
-| `healing_traveler` | 유유자적 힐링러 |
-| `heritage_walker` | 역사 산책가 |
-| `active_adventurer` | 액티비티 열정가 |
+| `urban_explorer` | 도시 취향 탐험가형 |
+| `culture_stroller` | 감성 문화 산책가형 |
+| `healing_traveler` | 유유자적 힐링러형 |
+| `heritage_walker` | 역사 산책가형 |
+| `active_adventurer` | 액티비티 열정가형 |
 | `local_challenger` | 로컬 도전가형 |

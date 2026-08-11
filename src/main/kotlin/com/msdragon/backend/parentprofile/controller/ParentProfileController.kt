@@ -30,7 +30,7 @@ class ParentProfileController(
 ) {
 	@Operation(
 		summary = "내 부모님 프로필 조회",
-		description = "부모 사용자가 본인의 상세 프로필을 조회합니다. 아직 저장된 프로필이 없으면 빈 draft 응답을 반환합니다.",
+		description = "부모 사용자가 본인의 상세 프로필을 조회합니다. 완료된 프로필은 여행 MBTI 결과 화면용 이름과 문구를 함께 반환하며, 아직 저장된 프로필이 없으면 빈 draft 응답을 반환합니다.",
 	)
 	@ApiResponses(
 		value = [
@@ -48,7 +48,7 @@ class ParentProfileController(
 
 	@Operation(
 		summary = "부모님 프로필 조회",
-		description = "자녀가 같은 가족으로 연결된 부모의 상세 프로필을 조회합니다. 부모 본인도 자기 프로필을 조회할 수 있습니다.",
+		description = "자녀가 같은 가족으로 연결된 부모의 상세 프로필과 여행 MBTI 결과 화면용 정보를 조회합니다. 부모 본인도 자기 프로필을 조회할 수 있습니다.",
 	)
 	@ApiResponses(
 		value = [
@@ -68,7 +68,7 @@ class ParentProfileController(
 
 	@Operation(
 		summary = "내 부모님 프로필 저장",
-		description = "부모 사용자가 본인의 상세 프로필을 작성하거나 수정합니다. 자녀는 호출할 수 없습니다.",
+		description = "부모 사용자가 본인의 상세 프로필을 작성하거나 수정합니다. complete=true이면 여행 MBTI를 계산하고 결과 화면용 이름과 문구를 반환합니다. 자녀는 호출할 수 없습니다.",
 	)
 	@ApiResponses(
 		value = [

@@ -106,11 +106,48 @@ class ParentProfileControllerTest {
 				),
 		)
 			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.data.parentDisplayName").value("엄마"))
 			.andExpect(jsonPath("$.data.profileExists").value(true))
 			.andExpect(jsonPath("$.data.status").value("completed"))
 			.andExpect(jsonPath("$.data.completionPercent").value(100))
 			.andExpect(jsonPath("$.data.personalityType").value("heritage_walker"))
+			.andExpect(jsonPath("$.data.personalityResult.code").value("heritage_walker"))
+			.andExpect(jsonPath("$.data.personalityResult.name").value("역사 산책가형"))
+			.andExpect(jsonPath("$.data.personalityResult.catchphrase").value("이야기가 있는 길을 걷는 게 좋아."))
 			.andExpect(jsonPath("$.data.travelThemes.length()").value(2))
+	}
+
+	@Test
+	fun `PDF 예시 입력은 유유자적 힐링러형 결과를 반환한다`() {
+		val parent = saveUser(UserRole.PARENT, "parent-healing", "영희")
+
+		mockMvc.perform(
+			put("/api/v1/parent-profiles/me")
+				.header("Authorization", "Bearer ${tokenService.createAccessToken(parent)}")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(
+					"""
+					{
+					  "walkingPace": "slow",
+					  "needsMobilityAssistance": true,
+					  "travelThemes": ["nature_scenery"],
+					  "foodPreference": "korean",
+					  "complete": true
+					}
+					""".trimIndent(),
+				),
+		)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.data.parentDisplayName").value("영희"))
+			.andExpect(jsonPath("$.data.personalityType").value("healing_traveler"))
+			.andExpect(jsonPath("$.data.personalityResult.code").value("healing_traveler"))
+			.andExpect(jsonPath("$.data.personalityResult.name").value("유유자적 힐링러형"))
+			.andExpect(jsonPath("$.data.personalityResult.catchphrase").value("여행은 쉬러 가는 거지."))
+			.andExpect(
+				jsonPath("$.data.personalityResult.description").value(
+					"자연풍경, 역사, 산책을 좋아하며 천천히 둘러보는 타입이시네요. 음식도 한식처럼 편안한 선택을 선호하시는 편이에요.",
+				),
+			)
 	}
 
 	@Test

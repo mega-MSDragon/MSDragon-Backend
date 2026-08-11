@@ -116,9 +116,10 @@ DB 스키마와 공통 엔티티 규칙을 기록합니다.
 - 하루 이동 성향은 `walking_pace`에 `slow`, `normal`, `fast` 중 하나로 저장합니다.
 - 음식 취향은 `food_preference`에 `korean`, `familiar`, `adventurous` 중 하나로 저장합니다.
 - 이동 도움 필요 여부는 `needs_mobility_assistance`에 저장합니다. 코스 추천 시 무장애 정보 가중치로 사용합니다.
-- MVP 구현은 추천용 여행 MBTI 현재값 1개를 `personality_type`에 저장합니다.
+- 추천용 여행 MBTI 현재값 1개를 `personality_type`에 저장하며, 프로필을 다시 완료하면 새 결과로 덮어씁니다.
 - 여행 MBTI 타입과 가중치 계산 정책은 `docs/policy/parent-travel-mbti.md`를 기준으로 합니다.
-- 상세 MBTI 이력과 점수 테이블은 DBML에 후속 설계로 남겨두고 아직 Entity로 구현하지 않았습니다.
+- 유형명과 결과 문구는 서버 정책에서 관리하므로 별도 유형 마스터, 진단 이력, 점수 테이블을 두지 않습니다.
+- 여행 생성 시점의 프로필 입력과 MBTI 결과는 `trips.recommendation_snapshot`에 보관합니다.
 
 ### parent_profile_themes
 

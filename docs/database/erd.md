@@ -1,12 +1,12 @@
-# 모셔용(MoSheoYong) — 정규화 ERD & DB 스키마 설계 (v3, Figma 와이어프레임 반영본)
+# 모셔용(MoSheoYong) — 정규화 ERD & DB 스키마 설계 (v4, 확정 디자인 PDF 반영본)
 
 > 대상 스택: PostgreSQL 15+ / Spring Data JPA
 > 명명 규칙: `snake_case`, 단수 컬럼 / 복수 테이블, 대리키 `id BIGINT`
 > 메타데이터 표준: 전 테이블 `created_at`, `updated_at`. 사용자 데이터는 `deleted_at` 추가.
 
-## v3 변경 요약 (Figma 와이어프레임 반영)
-- **F1**: Figma 와이어프레임을 DB 설계 기준으로 삼습니다.
-- **F2**: 로그인 provider는 와이어프레임 기준으로 `kakao`, `apple`만 유지합니다.
+## v4 변경 요약 (확정 디자인 PDF 반영)
+- **F1**: 섹션별 확정 디자인 PDF를 DB 설계 기준으로 삼습니다.
+- **F2**: 로그인 provider는 확정 가입 화면 기준으로 `kakao`, `apple`만 유지합니다.
 - **F3**: 연령대는 공통 `age_band` ENUM으로 관리하고 `undisclosed`를 허용합니다. 역할별 허용값은 서비스 레이어에서 검증합니다.
 - **F4**: 가족은 자녀 대표 1명, 부모 최대 2명을 앱 검증과 DB trigger로 함께 강제합니다.
 - **F5**: 10계명은 서버 후보군에서 랜덤 10개를 내려주고 여행별 확정본과 참여자별 PNG 서명 바이트를 저장합니다. 참여 부모 구성이 바뀌면 확정본과 모든 서명을 삭제하며, 완성 이미지/PDF는 요청 시 생성합니다.
@@ -21,6 +21,7 @@
 - **F14**: PDF 확정본 기준으로 여행 도시는 준비 중 정보 편집에서 변경 가능하며, 변경 저장 후 코스 재추천/덮어쓰기 확인 플로우를 거칩니다. 여행 중에는 도시와 제목을 고정합니다.
 - **F15**: 후속 확정 기준으로 10계명 PDF 공유는 자녀와 여행 참여 부모 최소 1명 서명 완료 후 가능합니다.
 - **F16**: 회원 탈퇴는 사용자 soft delete와 익명화로 처리합니다. 가족 연결은 해제하되 완료 여행 참여 이력은 유지합니다.
+- **F17**: 부모 여행 MBTI는 현재 결과 1개만 `parent_profiles.personality_type`에 저장합니다. 유형 표시 문구는 서버 정책으로 관리하고, 프로필 재작성 시 현재 결과를 덮어씁니다.
 
 ## v2 변경 요약 (결정 반영)
 - **A1**: 단일 `users` 유지 — 역할별 NULL 컬럼이 없어 분리 이득 없음.
@@ -45,6 +46,7 @@ CREATE TYPE parent_profile_status AS ENUM ('draft', 'completed');
 CREATE TYPE walking_pace       AS ENUM ('slow', 'normal', 'fast');          -- 천천히/보통/빠르게
 CREATE TYPE travel_theme_code  AS ENUM ('nature_scenery', 'history_culture', 'shopping', 'activity', 'culture_life', 'landmark', 'experience');
 CREATE TYPE food_preference_code AS ENUM ('korean', 'familiar', 'adventurous');
+CREATE TYPE travel_personality_type_code AS ENUM ('urban_explorer', 'culture_stroller', 'healing_traveler', 'heritage_walker', 'active_adventurer', 'local_challenger');
 CREATE TYPE trip_status        AS ENUM ('planning', 'ready', 'in_progress', 'completed', 'archived');
 CREATE TYPE trip_pledge_status AS ENUM ('draft', 'reviewed', 'signature_requested', 'completed');
 CREATE TYPE trip_companion_scope AS ENUM ('with_parents', 'whole_family', 'parents_only');
@@ -182,6 +184,7 @@ CREATE TABLE parent_profiles (
     walking_pace       walking_pace,       -- 천천히/보통/빠르게
     needs_mobility_assistance BOOLEAN,     -- 완료 시 true/false 필수
     food_preference    food_preference_code,
+    personality_type   travel_personality_type_code,
     completion_percent SMALLINT NOT NULL DEFAULT 0,
     completed_at       TIMESTAMPTZ,
     created_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -193,42 +196,13 @@ CREATE TABLE parent_profile_themes (
     theme_code        travel_theme_code NOT NULL,
     UNIQUE (parent_profile_id, theme_code)   -- 최대 3개: 서비스 레이어
 );
-
-CREATE TABLE travel_personality_types (
-    id                       BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    type_code                VARCHAR(40) NOT NULL UNIQUE, -- 예: CARE
-    name                     VARCHAR(40) NOT NULL,
-    description              TEXT,
-    recommendation_principle TEXT,
-    character_image_url      VARCHAR(500),
-    created_at               TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at               TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-CREATE TABLE parent_personality_results (
-    id                         BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    parent_profile_id          BIGINT NOT NULL REFERENCES parent_profiles(id),
-    travel_personality_type_id BIGINT NOT NULL REFERENCES travel_personality_types(id),
-    is_current                 BOOLEAN NOT NULL DEFAULT true,
-    profile_snapshot           JSONB,
-    completed_at               TIMESTAMPTZ NOT NULL DEFAULT now(),
-    created_at                 TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-CREATE UNIQUE INDEX uq_one_current_personality
-    ON parent_personality_results (parent_profile_id) WHERE is_current;
-CREATE TABLE parent_personality_scores (
-    id          BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    result_id   BIGINT NOT NULL REFERENCES parent_personality_results(id),
-    metric_code VARCHAR(40) NOT NULL,
-    score       SMALLINT NOT NULL,
-    UNIQUE (result_id, metric_code)
-);
 ```
 
 마이페이지의 기본 프로필 수정은 `users.display_name`, `age_band`, `gender`를 갱신합니다. 자녀/부모가 보는 가족 목록은 `family_members`와 연결된 `users`를 조회하고, 엄마/아빠 표시는 부모 `users.gender`가 `female`이면 `엄마`, `male`이면 `아빠`, `undisclosed`이면 `null`로 응답에서 계산합니다.
 
 회원 탈퇴 시 사용자의 refresh token과 가족 코드를 폐기합니다. 부모는 본인 가족 연결만 해제하고, 대표 자녀는 가족을 비활성화한 뒤 구성원 전체 연결을 해제합니다. 대표 자녀가 만든 미완료 여행은 `archived`로 전환하며 완료 여행과 `trip_participants`는 기록 조회를 위해 유지합니다.
 
-부모 프로필 카드와 MBTI 상세는 `parent_profiles`, `parent_profile_themes`, `parent_personality_results.is_current = true`, `travel_personality_types`, `parent_personality_scores`에서 조회합니다. 최종 타입과 가중치 정책은 `docs/policy/parent-travel-mbti.md`에서 관리합니다. `새로운 MBTI 뽑기`는 부모 프로필 작성 플로우를 다시 진행한 뒤 기존 current 결과를 false로 변경하고 새 결과를 current로 저장합니다. `profile_snapshot`에는 재진단 당시 입력값을 보관해 과거 진단 결과와 현재 수정된 프로필이 섞이지 않게 합니다.
+부모 프로필 카드와 MBTI 상세는 `parent_profiles`와 `parent_profile_themes`에서 조회합니다. 현재 MBTI 코드는 `parent_profiles.personality_type`에 저장하고, 유형명과 결과 문구는 `docs/policy/parent-travel-mbti.md`와 서버 정책 코드에서 관리합니다. `새로운 MBTI 뽑기`는 부모 프로필 작성 플로우를 다시 진행해 현재 결과를 덮어씁니다. 여행 추천에 사용한 당시 입력과 결과는 여행의 `recommendation_snapshot`에 따로 보관합니다.
 
 ---
 
@@ -439,7 +413,6 @@ CREATE TABLE course_generation_job_participants (
     course_generation_job_id BIGINT NOT NULL REFERENCES course_generation_jobs(id),
     parent_user_id           BIGINT NOT NULL REFERENCES users(id),
     parent_profile_id        BIGINT NOT NULL REFERENCES parent_profiles(id),
-    personality_result_id    BIGINT REFERENCES parent_personality_results(id),
     created_at               TIMESTAMPTZ NOT NULL DEFAULT now(),
     UNIQUE (course_generation_job_id, parent_user_id)
 );
@@ -740,9 +713,6 @@ erDiagram
 
     users ||--o| parent_profiles : "부모 1:1"
     parent_profiles ||--o{ parent_profile_themes : "여행취향"
-    parent_profiles ||--o{ parent_personality_results : "진단"
-    travel_personality_types ||--o{ parent_personality_results : ""
-    parent_personality_results ||--o{ parent_personality_scores : "근거"
 
     travel_destinations ||--o{ travel_destination_regions : "구성"
     regions ||--o{ travel_destination_regions : "행정구역"
@@ -761,7 +731,6 @@ erDiagram
     course_generation_jobs ||--o| trips : "완료결과"
     course_generation_jobs ||--o{ course_generation_job_participants : "부모스냅샷"
     parent_profiles ||--o{ course_generation_job_participants : "프로필스냅샷"
-    parent_personality_results ||--o{ course_generation_job_participants : "MBTI스냅샷"
     course_generation_jobs ||--o{ course_generation_api_usages : "API사용"
     trips ||--o{ trip_days : "일자"
     trip_days ||--o{ trip_stops : "방문지"
@@ -818,7 +787,7 @@ erDiagram
 | trip_days → trip_daily_checklist_items | 1:N | 여행 모드/마지막 날 체크리스트 |
 | trip_stops → trip_route_segments | 방문지 간 이동거리/시간 | Tmap 등 외부 경로 API 결과 |
 | parent_profiles ↔ parent_profile_themes | N:M-like enum rows | 여행 취향 1~3개 링크 테이블 |
-| parent_profiles → parent_personality_results | MBTI 재진단 이력 | `is_current=true` partial unique |
+| parent_profiles.personality_type | 부모별 현재 여행 MBTI 1개 | 프로필 재작성 시 덮어쓰기, 여행 당시 값은 추천 스냅샷에 보관 |
 | pledge_templates → pledge_items | 후보군에서 여행별 확정본 복사 | `pledge_template_id` nullable |
 | trips → trip_pledges → pledge_signatures | 여행별 10계명과 자녀·부모 서명 진행 상태 | `trip_pledges.status`, `UNIQUE(trip_id)`, `UNIQUE(trip_pledge_id, user_id)` |
 | trips → trip_feedback_requests | 종료일 00:00부터 자녀의 미제출 부모 전체 평가 요청 | `UNIQUE(trip_id, parent_user_id)` |

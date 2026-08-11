@@ -11,12 +11,9 @@ import com.msdragon.backend.common.exception.UnAuthorizedException
 import com.msdragon.backend.family.repository.FamilyMemberRepository
 import com.msdragon.backend.parentprofile.dto.ParentProfileResponse
 import com.msdragon.backend.parentprofile.dto.UpsertParentProfileRequest
-import com.msdragon.backend.parentprofile.entity.FoodPreference
 import com.msdragon.backend.parentprofile.entity.ParentProfile
 import com.msdragon.backend.parentprofile.entity.ParentProfileStatus
-import com.msdragon.backend.parentprofile.entity.TravelPersonalityTypeCode
 import com.msdragon.backend.parentprofile.entity.TravelThemeCode
-import com.msdragon.backend.parentprofile.entity.WalkingPace
 import com.msdragon.backend.parentprofile.repository.ParentProfileRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -68,7 +65,12 @@ class ParentProfileService(
 			profile.currentStep = COMPLETED_STEP
 			profile.completionPercent = 100
 			profile.completedAt = profile.completedAt ?: LocalDateTime.now()
-			profile.personalityType = resolvePersonalityType(profile)
+			profile.personalityType = TravelPersonalityPolicy.resolve(
+				walkingPace = requireNotNull(profile.walkingPace),
+				needsMobilityAssistance = requireNotNull(profile.needsMobilityAssistance),
+				travelThemes = profile.travelThemes.map(TravelThemeCode::from),
+				foodPreference = requireNotNull(profile.foodPreference),
+			)
 		} else {
 			profile.status = ParentProfileStatus.DRAFT
 			profile.completionPercent = calculateDraftCompletionPercent(profile)
@@ -133,113 +135,6 @@ class ParentProfileService(
 		}
 	}
 
-	private fun resolvePersonalityType(profile: ParentProfile): TravelPersonalityTypeCode {
-		val scores = TravelPersonalityTypeCode.entries
-			.associateWith { PersonalityScore() }
-			.toMutableMap()
-
-		fun addScore(
-			type: TravelPersonalityTypeCode,
-			points: Int,
-			axis: ScoreAxis,
-		) {
-			scores[type] = scores.getValue(type).plus(points, axis)
-		}
-
-		when (profile.walkingPace) {
-			WalkingPace.SLOW -> {
-				addScore(TravelPersonalityTypeCode.HEALING_TRAVELER, 3, ScoreAxis.MOBILITY)
-				addScore(TravelPersonalityTypeCode.CULTURE_STROLLER, 1, ScoreAxis.MOBILITY)
-				addScore(TravelPersonalityTypeCode.HERITAGE_WALKER, 1, ScoreAxis.MOBILITY)
-			}
-			WalkingPace.NORMAL -> {
-				addScore(TravelPersonalityTypeCode.CULTURE_STROLLER, 2, ScoreAxis.MOBILITY)
-				addScore(TravelPersonalityTypeCode.HERITAGE_WALKER, 2, ScoreAxis.MOBILITY)
-				addScore(TravelPersonalityTypeCode.URBAN_EXPLORER, 1, ScoreAxis.MOBILITY)
-			}
-			WalkingPace.FAST -> {
-				addScore(TravelPersonalityTypeCode.ACTIVE_ADVENTURER, 3, ScoreAxis.MOBILITY)
-				addScore(TravelPersonalityTypeCode.LOCAL_CHALLENGER, 2, ScoreAxis.MOBILITY)
-				addScore(TravelPersonalityTypeCode.URBAN_EXPLORER, 1, ScoreAxis.MOBILITY)
-			}
-			null -> Unit
-		}
-
-		when (profile.needsMobilityAssistance) {
-			true -> {
-				addScore(TravelPersonalityTypeCode.HEALING_TRAVELER, 2, ScoreAxis.MOBILITY)
-				addScore(TravelPersonalityTypeCode.HERITAGE_WALKER, 1, ScoreAxis.MOBILITY)
-				addScore(TravelPersonalityTypeCode.CULTURE_STROLLER, 1, ScoreAxis.MOBILITY)
-			}
-			false -> {
-				addScore(TravelPersonalityTypeCode.ACTIVE_ADVENTURER, 1, ScoreAxis.MOBILITY)
-				addScore(TravelPersonalityTypeCode.LOCAL_CHALLENGER, 1, ScoreAxis.MOBILITY)
-				addScore(TravelPersonalityTypeCode.URBAN_EXPLORER, 1, ScoreAxis.MOBILITY)
-			}
-			null -> Unit
-		}
-
-		profile.travelThemes.map(TravelThemeCode::from).forEach { theme ->
-			when (theme) {
-				TravelThemeCode.NATURE_SCENERY -> {
-					addScore(TravelPersonalityTypeCode.HEALING_TRAVELER, 4, ScoreAxis.THEME)
-					addScore(TravelPersonalityTypeCode.HERITAGE_WALKER, 2, ScoreAxis.THEME)
-				}
-				TravelThemeCode.HISTORY_CULTURE -> {
-					addScore(TravelPersonalityTypeCode.HERITAGE_WALKER, 4, ScoreAxis.THEME)
-					addScore(TravelPersonalityTypeCode.HEALING_TRAVELER, 1, ScoreAxis.THEME)
-					addScore(TravelPersonalityTypeCode.CULTURE_STROLLER, 1, ScoreAxis.THEME)
-				}
-				TravelThemeCode.SHOPPING -> {
-					addScore(TravelPersonalityTypeCode.URBAN_EXPLORER, 4, ScoreAxis.THEME)
-					addScore(TravelPersonalityTypeCode.CULTURE_STROLLER, 2, ScoreAxis.THEME)
-				}
-				TravelThemeCode.ACTIVITY -> {
-					addScore(TravelPersonalityTypeCode.ACTIVE_ADVENTURER, 4, ScoreAxis.THEME)
-					addScore(TravelPersonalityTypeCode.LOCAL_CHALLENGER, 2, ScoreAxis.THEME)
-				}
-				TravelThemeCode.CULTURE_LIFE -> {
-					addScore(TravelPersonalityTypeCode.CULTURE_STROLLER, 4, ScoreAxis.THEME)
-					addScore(TravelPersonalityTypeCode.URBAN_EXPLORER, 2, ScoreAxis.THEME)
-				}
-				TravelThemeCode.LANDMARK -> {
-					addScore(TravelPersonalityTypeCode.URBAN_EXPLORER, 3, ScoreAxis.THEME)
-					addScore(TravelPersonalityTypeCode.CULTURE_STROLLER, 2, ScoreAxis.THEME)
-					addScore(TravelPersonalityTypeCode.HERITAGE_WALKER, 1, ScoreAxis.THEME)
-				}
-				TravelThemeCode.EXPERIENCE -> {
-					addScore(TravelPersonalityTypeCode.LOCAL_CHALLENGER, 4, ScoreAxis.THEME)
-					addScore(TravelPersonalityTypeCode.ACTIVE_ADVENTURER, 2, ScoreAxis.THEME)
-				}
-			}
-		}
-
-		when (profile.foodPreference) {
-			FoodPreference.KOREAN -> {
-				addScore(TravelPersonalityTypeCode.HEALING_TRAVELER, 3, ScoreAxis.FOOD)
-				addScore(TravelPersonalityTypeCode.HERITAGE_WALKER, 1, ScoreAxis.FOOD)
-			}
-			FoodPreference.FAMILIAR -> {
-				addScore(TravelPersonalityTypeCode.URBAN_EXPLORER, 2, ScoreAxis.FOOD)
-				addScore(TravelPersonalityTypeCode.CULTURE_STROLLER, 2, ScoreAxis.FOOD)
-				addScore(TravelPersonalityTypeCode.HERITAGE_WALKER, 2, ScoreAxis.FOOD)
-			}
-			FoodPreference.ADVENTUROUS -> {
-				addScore(TravelPersonalityTypeCode.LOCAL_CHALLENGER, 3, ScoreAxis.FOOD)
-				addScore(TravelPersonalityTypeCode.ACTIVE_ADVENTURER, 2, ScoreAxis.FOOD)
-			}
-			null -> Unit
-		}
-
-		return PERSONALITY_TIE_BREAKERS.maxWith(
-			compareBy<TravelPersonalityTypeCode> { scores.getValue(it).total }
-				.thenBy { scores.getValue(it).theme }
-				.thenBy { scores.getValue(it).mobility }
-				.thenBy { scores.getValue(it).food }
-				.thenBy { -PERSONALITY_TIE_BREAKERS.indexOf(it) },
-		)
-	}
-
 	private fun validateParentProfileReadable(requester: User, parent: User) {
 		val requesterId = requireNotNull(requester.id)
 		val parentId = requireNotNull(parent.id)
@@ -279,34 +174,5 @@ class ParentProfileService(
 	companion object {
 		private const val COMPLETED_STEP = 3
 		private const val MAX_THEME_COUNT = 3
-
-		private val PERSONALITY_TIE_BREAKERS = listOf(
-			TravelPersonalityTypeCode.URBAN_EXPLORER,
-			TravelPersonalityTypeCode.CULTURE_STROLLER,
-			TravelPersonalityTypeCode.HEALING_TRAVELER,
-			TravelPersonalityTypeCode.HERITAGE_WALKER,
-			TravelPersonalityTypeCode.ACTIVE_ADVENTURER,
-			TravelPersonalityTypeCode.LOCAL_CHALLENGER,
-		)
 	}
-}
-
-private enum class ScoreAxis {
-	THEME,
-	MOBILITY,
-	FOOD,
-}
-
-private data class PersonalityScore(
-	val total: Int = 0,
-	val theme: Int = 0,
-	val mobility: Int = 0,
-	val food: Int = 0,
-) {
-	fun plus(points: Int, axis: ScoreAxis): PersonalityScore =
-		when (axis) {
-			ScoreAxis.THEME -> copy(total = total + points, theme = theme + points)
-			ScoreAxis.MOBILITY -> copy(total = total + points, mobility = mobility + points)
-			ScoreAxis.FOOD -> copy(total = total + points, food = food + points)
-		}
 }
