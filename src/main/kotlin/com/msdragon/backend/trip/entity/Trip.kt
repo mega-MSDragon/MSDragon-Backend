@@ -29,7 +29,7 @@ class Trip(
 	@Column(name = "destination_code", nullable = false, length = 60)
 	var destinationCode: TripDestinationCode,
 
-	@Column(name = "title", nullable = false, length = 80)
+	@Column(name = "title", nullable = false, length = 15)
 	var title: String,
 
 	@Column(name = "start_date", nullable = false)

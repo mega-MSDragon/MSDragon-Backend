@@ -4,6 +4,7 @@ import com.msdragon.backend.auth.entity.GenderType
 import com.msdragon.backend.auth.entity.User
 import com.msdragon.backend.auth.entity.UserRole
 import com.msdragon.backend.family.entity.FamilyMember
+import com.msdragon.backend.parentprofile.dto.TravelPersonalityResultResponse
 import com.msdragon.backend.parentprofile.entity.FoodPreference
 import com.msdragon.backend.parentprofile.entity.ParentProfile
 import com.msdragon.backend.parentprofile.entity.ParentProfileStatus
@@ -71,6 +72,12 @@ data class TripParentCandidateResponse(
 
 	@field:Schema(description = "부모 상세 프로필 작성률", example = "100")
 	val profileCompletionPercent: Int,
+
+	@field:Schema(description = "부모 상세 프로필 현재 작성 단계. 프로필 미입력 상태이면 null입니다.", example = "1", nullable = true)
+	val profileCurrentStep: Int?,
+
+	@field:Schema(description = "여행 MBTI 결과 화면 표시 정보. 프로필 완료 전이면 null입니다.", nullable = true)
+	val personalityResult: TravelPersonalityResultResponse?,
 ) {
 	companion object {
 		fun of(member: FamilyMember, profile: ParentProfile?): TripParentCandidateResponse =
@@ -83,6 +90,8 @@ data class TripParentCandidateResponse(
 				profileCompleted = profile?.status == ParentProfileStatus.COMPLETED,
 				profileStatus = profile?.status,
 				profileCompletionPercent = profile?.completionPercent ?: 0,
+				profileCurrentStep = profile?.currentStep,
+				personalityResult = profile?.personalityType?.let(TravelPersonalityResultResponse::from),
 			)
 	}
 }
@@ -93,16 +102,16 @@ data class TripDestinationResponse(
 		description = "여행 도시 코드",
 		example = "gyeongju",
 		allowableValues = [
-			"daegu",
 			"gangneung_sokcho",
 			"gyeongju",
+			"daegu",
 			"busan",
+			"seoul",
+			"suwon_yongin",
 			"yeosu",
 			"incheon",
 			"jeonju",
 			"jeju",
-			"seoul",
-			"suwon_yongin",
 			"tongyeong_geoje_namhae",
 			"pohang_andong",
 		],
@@ -112,10 +121,10 @@ data class TripDestinationResponse(
 	@field:Schema(description = "화면 표시 이름", example = "경주")
 	val displayName: String,
 
-	@field:Schema(description = "화면 표시 순서", example = "3")
+	@field:Schema(description = "화면 표시 순서", example = "2")
 	val displayOrder: Int,
 
-	@field:Schema(description = "배지 문구", example = "인기", nullable = true)
+	@field:Schema(description = "배지 문구", example = "Hot!", nullable = true)
 	val badgeLabel: String?,
 ) {
 	companion object {

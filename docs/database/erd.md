@@ -15,7 +15,7 @@
 - **F8**: 효도 리포트는 고정 지표 컬럼으로 관리하고, 기록 탭은 완료 여행·코스·피드백을 조회 시 집계합니다.
 - **F9**: 가족 매칭 코드는 사용자별 고정 코드로 관리하고, 실제 매칭 이력은 별도 테이블에 기록합니다.
 - **F10**: 부모 프로필은 확정 플로우 기준으로 걷는 속도, 이동 도움 필요 여부, 여행 취향 7종, 음식 취향 3종을 단계별 draft 저장합니다.
-- **F11**: 앱 도시 선택용 `travel_destinations`와 공공데이터 행정 구역 `regions`를 분리하고, 코스 생성 job/API 사용 이력/티맵 경로 구간을 저장합니다.
+- **F11**: 앱 도시 선택용 `travel_destinations`와 공공데이터 행정 구역 `regions`를 분리하고, 확정 코스와 티맵 경로 결과를 저장합니다. 코스 생성은 별도 job 없이 동기 API 조합으로 처리합니다.
 - **F12**: 여행모드는 여행 기간으로 계산하고, 주변 화장실/의료시설 캐시와 여행모드 AI 챗봇 컨텍스트를 저장합니다.
 - **F13**: 회원가입 약관 결정은 서버에 버전별로 저장하고, 알림 설정과 실제 OS 위치 권한 상태는 앱 로컬/OS에서 관리합니다.
 - **F14**: PDF 확정본 기준으로 여행 도시는 준비 중 정보 편집에서 변경 가능하며, 변경 저장 후 코스 재추천/덮어쓰기 확인 플로우를 거칩니다. 여행 중에는 도시와 제목을 고정합니다.
@@ -51,7 +51,6 @@ CREATE TYPE trip_status        AS ENUM ('planning', 'ready', 'in_progress', 'com
 CREATE TYPE trip_pledge_status AS ENUM ('draft', 'reviewed', 'signature_requested', 'completed');
 CREATE TYPE trip_companion_scope AS ENUM ('with_parents', 'whole_family', 'parents_only');
 CREATE TYPE stop_type          AS ENUM ('sightseeing', 'meal', 'rest', 'cafe');
-CREATE TYPE course_generation_status AS ENUM ('pending', 'collecting_data', 'routing', 'generating', 'completed', 'failed');
 CREATE TYPE external_api_provider AS ENUM ('tour_api', 'tmap', 'kakao_map', 'public_data', 'local_excel', 'internal');
 CREATE TYPE support_facility_type AS ENUM ('restroom', 'hospital', 'pharmacy');
 CREATE TYPE chat_session_scope AS ENUM ('travel_mode', 'place_detail', 'general');
@@ -357,7 +356,7 @@ CREATE TABLE trips (
     family_id          BIGINT NOT NULL REFERENCES families(id),
     created_by_user_id BIGINT NOT NULL REFERENCES users(id),
     destination_code   VARCHAR(60) NOT NULL,       -- 준비 중 정보 편집에서 변경 가능, 여행 중 고정
-    title              VARCHAR(80) NOT NULL,
+    title              VARCHAR(15) NOT NULL,       -- 필수, 최대 15자
     start_date         DATE NOT NULL,
     end_date           DATE NOT NULL,
     status             trip_status NOT NULL DEFAULT 'planning',
@@ -376,6 +375,7 @@ CREATE TABLE trips (
 -- 여행모드는 start_date 00:00부터 end_date 23:59까지 노출하고 별도 여행 종료 버튼은 두지 않는다.
 -- 서울 날짜 기준 start_date부터 status=in_progress, end_date 다음 날부터 status=completed로 동기화한다.
 -- 여행 참여자 선택 여부와 관계없이 같은 family_id의 구성원은 여행모드에 접근할 수 있다.
+-- 코스 생성은 TourAPI 추천과 일자별 Tmap 최적화를 동기 호출하며 별도 생성 job이나 진행률은 저장하지 않는다.
 
 CREATE TABLE trip_participants (
     id         BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -384,53 +384,6 @@ CREATE TABLE trip_participants (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     UNIQUE (trip_id, user_id)
 );
-
--- F11: 코스 생성 진행 상태와 외부 API 연동 이력. 후보 코스 전체는 저장하지 않고 완료 후 확정 일정만 저장한다.
-CREATE TABLE course_generation_jobs (
-    id                    BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    family_id             BIGINT NOT NULL REFERENCES families(id),
-    requested_by_user_id  BIGINT NOT NULL REFERENCES users(id),
-    destination_code      VARCHAR(60) NOT NULL,
-    trip_id               BIGINT UNIQUE REFERENCES trips(id),
-    start_date            DATE NOT NULL,
-    end_date              DATE NOT NULL,
-    companion_scope       trip_companion_scope NOT NULL DEFAULT 'with_parents',
-    status                course_generation_status NOT NULL DEFAULT 'pending',
-    progress_percent      SMALLINT NOT NULL DEFAULT 0,
-    input_snapshot        JSONB,
-    failure_reason        VARCHAR(500),
-    started_at            TIMESTAMPTZ,
-    completed_at          TIMESTAMPTZ,
-    created_at            TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at            TIMESTAMPTZ NOT NULL DEFAULT now(),
-    CHECK (end_date >= start_date)
-);
-CREATE INDEX ix_course_generation_jobs_family_status
-    ON course_generation_jobs(family_id, status);
-
-CREATE TABLE course_generation_job_participants (
-    id                       BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    course_generation_job_id BIGINT NOT NULL REFERENCES course_generation_jobs(id),
-    parent_user_id           BIGINT NOT NULL REFERENCES users(id),
-    parent_profile_id        BIGINT NOT NULL REFERENCES parent_profiles(id),
-    created_at               TIMESTAMPTZ NOT NULL DEFAULT now(),
-    UNIQUE (course_generation_job_id, parent_user_id)
-);
-
-CREATE TABLE course_generation_api_usages (
-    id                       BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    course_generation_job_id BIGINT NOT NULL REFERENCES course_generation_jobs(id),
-    provider                 external_api_provider NOT NULL,
-    purpose                  VARCHAR(60) NOT NULL,
-    status                   VARCHAR(30) NOT NULL,
-    request_hash             VARCHAR(64),
-    result_count             INTEGER,
-    duration_ms              INTEGER,
-    error_message            VARCHAR(500),
-    created_at               TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-CREATE INDEX ix_course_generation_api_usages_job_provider
-    ON course_generation_api_usages(course_generation_job_id, provider);
 
 -- B4: courses 제거. 일자는 trip에 직접 매단다.
 CREATE TABLE trip_days (
@@ -727,11 +680,6 @@ erDiagram
     users ||--o{ trips : "생성(자녀)"
     trips ||--o{ trip_participants : "대상"
     users ||--o{ trip_participants : "참여자"
-    families ||--o{ course_generation_jobs : "생성요청"
-    course_generation_jobs ||--o| trips : "완료결과"
-    course_generation_jobs ||--o{ course_generation_job_participants : "부모스냅샷"
-    parent_profiles ||--o{ course_generation_job_participants : "프로필스냅샷"
-    course_generation_jobs ||--o{ course_generation_api_usages : "API사용"
     trips ||--o{ trip_days : "일자"
     trip_days ||--o{ trip_stops : "방문지"
     trip_days ||--o{ trip_daily_checklist_items : "체크리스트"
@@ -781,8 +729,6 @@ erDiagram
 | places → place_images | 장소별 이미지 N개 | `UNIQUE(place_id, sort_order)` |
 | support_facilities | 여행모드 주변 화장실/의료시설 좌표 캐시 | `UNIQUE(facility_type, provider, source_id)` |
 | users ↔ trips | N:M(`trip_participants`) | PDF 여행 대상 기준 실제 함께 가는 가족만 저장. 생성자는 `created_by_user_id`로 별도 보존 |
-| course_generation_jobs → trips | 생성 job 완료 후 확정 여행 연결 | `trip_id` nullable unique |
-| course_generation_jobs → course_generation_api_usages | 공공데이터/Tmap 호출 이력 | provider/purpose별 기록 |
 | trips → trip_days → trip_stops | 1:N:N | 확정 일정과 장소 스냅샷만 보존(B4) |
 | trip_days → trip_daily_checklist_items | 1:N | 여행 모드/마지막 날 체크리스트 |
 | trip_stops → trip_route_segments | 방문지 간 이동거리/시간 | Tmap 등 외부 경로 API 결과 |

@@ -49,7 +49,7 @@ class TripController(
 ) {
 	@Operation(
 		summary = "여행 대상 부모 후보 조회",
-		description = "자녀 사용자가 같은 가족에 연결된 부모 목록과 부모 상세 프로필 완료 여부를 조회합니다.",
+		description = "자녀 사용자가 같은 가족에 연결된 부모 목록, 상세 프로필 작성 단계와 여행 MBTI 결과를 조회합니다.",
 	)
 	@ApiResponses(
 		value = [
@@ -269,7 +269,7 @@ class TripController(
 
 	@Operation(
 		summary = "여행 생성",
-		description = "자녀 사용자가 여행 대상 부모, 도시, 날짜를 선택해 여행 기본 정보를 생성합니다. 추천 코스는 별도 추천 생성 API에서 생성합니다.",
+		description = "자녀 사용자가 여행 대상 부모, 도시, 날짜와 15자 이하의 제목을 입력해 여행 기본 정보를 생성합니다. 추천 코스는 별도 추천 생성 API에서 생성합니다.",
 	)
 	@ApiResponses(
 		value = [

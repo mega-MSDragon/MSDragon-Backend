@@ -50,8 +50,8 @@
         "destination": {
           "code": "gyeongju",
           "displayName": "경주",
-          "displayOrder": 3,
-          "badgeLabel": "인기"
+          "displayOrder": 2,
+          "badgeLabel": null
         },
         "startDate": "2026-05-10",
         "endDate": "2026-05-11",

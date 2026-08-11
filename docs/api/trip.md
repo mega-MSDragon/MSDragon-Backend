@@ -13,9 +13,12 @@
 - 여행 생성은 현재 자녀 사용자만 가능합니다.
 - 여행 대상은 같은 가족에 연결된 부모만 선택할 수 있습니다.
 - 선택한 부모의 상세 프로필이 `completed` 상태여야 여행을 생성할 수 있습니다.
+- 부모 후보 응답은 프로필 작성 단계와 현재 여행 MBTI 결과 표시 정보를 함께 내려줍니다. 결과 유형명은 부모 프로필 정책의 기존 명칭을 그대로 사용합니다.
 - 여행 기간 상한은 두지 않습니다. 시작일은 오늘 또는 이후여야 하고, 종료일은 시작일과 같거나 이후여야 합니다.
 - 같은 가족에서 날짜가 겹치는 여행은 생성할 수 없습니다.
 - 도시 목록은 현재 서버 고정 catalog로 내려주고, 여행에는 `destinationCode` 문자열을 저장합니다.
+- 여행 제목은 필수이며 공백을 제외한 15자 이하로 입력합니다.
+- 날짜 선택 화면은 별도 캘린더 API 없이 `GET /api/v1/trips`의 비보관 여행 기간을 사용합니다. 날짜 중복은 여행 생성 시 서버에서도 다시 검증합니다.
 - 여행 생성 시 선택한 부모의 추천 입력값을 `recommendationSnapshot`으로 저장합니다. 이후 부모 프로필이 수정되어도 생성 당시 추천 기준은 유지됩니다.
 - 여행 기본정보 수정은 여행을 만든 자녀만 할 수 있습니다. `planning`, `ready`에서는 전체 항목을, `in_progress`에서는 오늘을 포함하는 기간과 참여 부모만 변경할 수 있습니다.
 - 여행 중 제목과 도시는 고정입니다. 준비 중 제목만 수정하면 기존 추천 스냅샷과 코스를 유지하고, 도시·날짜·참여 부모를 수정하면 현재 부모 프로필로 추천 스냅샷을 다시 만들고 기존 코스와 경로를 초기화합니다.
@@ -65,6 +68,7 @@
 
 자녀 사용자가 같은 가족에 연결된 부모와 부모 상세 프로필 완료 여부를 조회합니다.
 가족 매칭 전이면 `familyId=null`, `parents=[]`를 반환합니다.
+`profileExists=false`이면 프로필 미입력, `profileExists=true`이면서 `profileCompleted=false`이면 `profileCurrentStep`과 `profileCompletionPercent`로 작성 중 상태를 표시합니다.
 
 ### Response
 
@@ -84,7 +88,14 @@
         "profileExists": true,
         "profileCompleted": true,
         "profileStatus": "completed",
-        "profileCompletionPercent": 100
+        "profileCompletionPercent": 100,
+        "profileCurrentStep": 3,
+        "personalityResult": {
+          "code": "healing_traveler",
+          "name": "유유자적 힐링러형",
+          "catchphrase": "여행은 쉬러 가는 거지.",
+          "description": "자연풍경, 역사, 산책을 좋아하며 천천히 둘러보는 타입이시네요. 음식도 한식처럼 편안한 선택을 선호하시는 편이에요."
+        }
       }
     ]
   }
@@ -106,24 +117,35 @@
   "message": "여행 도시 목록 조회 성공",
   "data": [
     {
-      "code": "gyeongju",
-      "displayName": "경주",
-      "displayOrder": 3,
-      "badgeLabel": "인기"
+      "code": "busan",
+      "displayName": "부산",
+      "displayOrder": 4,
+      "badgeLabel": "Hot!"
     }
   ]
 }
 ```
 
-현재 허용 `code`:
-
-`daegu`, `gangneung_sokcho`, `gyeongju`, `busan`, `yeosu`, `incheon`, `jeonju`, `jeju`, `seoul`, `suwon_yongin`, `tongyeong_geoje_namhae`, `pohang_andong`
+| 순서 | `code` | 표시 이름 | 배지 |
+|------|--------|-----------|------|
+| 1 | `gangneung_sokcho` | 강릉·속초 | - |
+| 2 | `gyeongju` | 경주 | - |
+| 3 | `daegu` | 대구 | - |
+| 4 | `busan` | 부산 | `Hot!` |
+| 5 | `seoul` | 서울 | - |
+| 6 | `suwon_yongin` | 수원·용인 | - |
+| 7 | `yeosu` | 여수 | - |
+| 8 | `incheon` | 인천 | - |
+| 9 | `jeonju` | 전주 | - |
+| 10 | `jeju` | 제주 | - |
+| 11 | `tongyeong_geoje_namhae` | 통영·거제·남해 | - |
+| 12 | `pohang_andong` | 포항·안동 | - |
 
 ---
 
 ## POST /api/v1/trips
 
-자녀 사용자가 여행 대상 부모, 도시, 날짜를 선택해 여행 기본 정보를 생성합니다.
+자녀 사용자가 여행 대상 부모, 도시, 날짜와 제목을 선택해 여행 기본 정보를 생성합니다.
 
 ### Request
 
@@ -133,7 +155,7 @@
   "destinationCode": "gyeongju",
   "startDate": "2026-07-10",
   "endDate": "2026-07-11",
-  "title": "경주 가족 여행"
+  "title": "아빠와 단둘이 경주"
 }
 ```
 
@@ -143,7 +165,7 @@
 | `destinationCode` | enum | true | 여행 도시 코드 |
 | `startDate` | date | true | 여행 시작일 |
 | `endDate` | date | true | 여행 종료일. 시작일과 같거나 이후 |
-| `title` | string | false | 최대 80자. 없으면 `{도시명} 여행` |
+| `title` | string | true | 공백을 제외하고 필수. 최대 15자 |
 
 ### Response
 
@@ -155,12 +177,12 @@
   "data": {
     "id": 1,
     "familyId": 1,
-    "title": "경주 여행",
+    "title": "아빠와 단둘이 경주",
     "destination": {
       "code": "gyeongju",
       "displayName": "경주",
-      "displayOrder": 3,
-      "badgeLabel": "인기"
+      "displayOrder": 2,
+      "badgeLabel": null
     },
     "startDate": "2026-07-10",
     "endDate": "2026-07-11",
@@ -222,6 +244,20 @@
 서울 날짜 기준 시작일부터 `in_progress`, 종료일 다음 날부터 `completed`로 자동 전환합니다.
 `recommendationSnapshot.policyVersion`은 부모 여행 MBTI 정책 버전을 의미합니다.
 
+### 클라이언트 생성 플로우
+
+확정 화면은 별도 비동기 job이나 진행률 조회 API 없이 아래 API를 순서대로 호출합니다.
+
+1. `GET /api/v1/trips/parent-candidates`로 선택 가능한 부모와 프로필 상태를 조회합니다.
+2. `GET /api/v1/trips/destinations`로 서버가 정한 도시 순서와 배지를 표시합니다.
+3. `GET /api/v1/trips`에서 `status != archived`인 여행 기간을 캘린더의 `다른 여행` 범위로 표시합니다.
+4. 제목과 날짜를 확정하면 `POST /api/v1/trips`로 여행과 일자를 생성합니다.
+5. 반환된 `tripId`로 `POST /api/v1/trips/{tripId}/course/recommendation`을 호출해 모든 일자의 장소를 생성합니다.
+6. 추천 응답의 각 `dayNumber`에 대해 `POST /api/v1/trips/{tripId}/days/{dayNumber}/route-optimization`을 호출합니다.
+7. 모든 일자의 경로 최적화가 성공하면 `홈으로 가기`를 활성화합니다. 실패한 호출은 같은 `tripId`, `dayNumber`로 재시도할 수 있습니다.
+
+`코스 생성 중` 화면의 단계와 퍼센트는 위 동기 호출 상태를 클라이언트가 표현하는 값입니다. 서버는 별도 생성 job, 진행률, 화면 문구를 저장하지 않습니다.
+
 ---
 
 ## PUT /api/v1/trips/{tripId}
@@ -245,7 +281,7 @@
 
 | Field | Type | Required | 설명 |
 |-------|------|----------|------|
-| `title` | string | true | 여행 제목. 최대 80자. 여행 중에는 기존 값과 같아야 함 |
+| `title` | string | true | 여행 제목. 최대 15자. 여행 중에는 기존 값과 같아야 함 |
 | `destinationCode` | enum | true | 여행 도시 코드. 여행 중에는 기존 값과 같아야 함 |
 | `startDate` | date | true | 여행 시작일. 여행 중에는 변경 기간에 오늘이 포함되어야 함 |
 | `endDate` | date | true | 여행 종료일. 시작일과 같거나 이후이며 여행 중에는 변경 기간에 오늘이 포함되어야 함 |
@@ -296,8 +332,8 @@
         "destination": {
           "code": "gyeongju",
           "displayName": "경주",
-          "displayOrder": 3,
-          "badgeLabel": "인기"
+          "displayOrder": 2,
+          "badgeLabel": null
         },
         "startDate": "2026-07-10",
         "endDate": "2026-07-11",
@@ -342,8 +378,8 @@
     "destination": {
       "code": "gyeongju",
       "displayName": "경주",
-      "displayOrder": 3,
-      "badgeLabel": "인기"
+      "displayOrder": 2,
+      "badgeLabel": null
     },
     "status": "planning",
     "days": [
@@ -428,8 +464,8 @@
     "destination": {
       "code": "gyeongju",
       "displayName": "경주",
-      "displayOrder": 3,
-      "badgeLabel": "인기"
+      "displayOrder": 2,
+      "badgeLabel": null
     },
     "startDate": "2026-07-10",
     "endDate": "2026-07-11",
@@ -493,8 +529,8 @@
     "destination": {
       "code": "gyeongju",
       "displayName": "경주",
-      "displayOrder": 3,
-      "badgeLabel": "인기"
+      "displayOrder": 2,
+      "badgeLabel": null
     },
     "status": "ready",
     "days": [
@@ -574,8 +610,8 @@ TourAPI 서비스키가 서버에 설정되어 있지 않거나 TourAPI 호출�
     "destination": {
       "code": "gyeongju",
       "displayName": "경주",
-      "displayOrder": 3,
-      "badgeLabel": "인기"
+      "displayOrder": 2,
+      "badgeLabel": null
     },
     "status": "ready",
     "days": [
@@ -657,8 +693,8 @@ TourAPI 서비스키가 서버에 설정되어 있지 않거나 TourAPI 호출�
     "destination": {
       "code": "gyeongju",
       "displayName": "경주",
-      "displayOrder": 3,
-      "badgeLabel": "인기"
+      "displayOrder": 2,
+      "badgeLabel": null
     },
     "keyword": "경주 맛집",
     "contentTypeId": "39",

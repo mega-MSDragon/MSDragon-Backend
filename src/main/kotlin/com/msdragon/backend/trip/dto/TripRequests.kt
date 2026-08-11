@@ -29,16 +29,16 @@ data class CreateTripRequest(
 		description = "여행 도시 코드",
 		example = "gyeongju",
 		allowableValues = [
-			"daegu",
 			"gangneung_sokcho",
 			"gyeongju",
+			"daegu",
 			"busan",
+			"seoul",
+			"suwon_yongin",
 			"yeosu",
 			"incheon",
 			"jeonju",
 			"jeju",
-			"seoul",
-			"suwon_yongin",
 			"tongyeong_geoje_namhae",
 			"pohang_andong",
 		],
@@ -54,32 +54,33 @@ data class CreateTripRequest(
 	@field:NotNull(message = "여행 종료일을 선택해주세요.")
 	val endDate: LocalDate,
 
-	@field:Schema(description = "여행 제목. 입력하지 않으면 '{도시명} 여행'으로 생성합니다.", example = "경주 가족 여행", nullable = true)
-	@field:Size(max = 80, message = "여행 제목은 80자 이하로 입력해주세요.")
-	val title: String? = null,
+	@field:Schema(description = "여행 제목. 공백을 제외하고 필수이며 최대 15자입니다.", example = "아빠와 단둘이 경주")
+	@field:NotBlank(message = "여행 제목을 입력해주세요.")
+	@field:Size(max = 15, message = "여행 제목은 15자 이하로 입력해주세요.")
+	val title: String,
 )
 
 @Schema(description = "여행 기본정보 수정 요청")
 data class UpdateTripRequest(
-	@field:Schema(description = "여행 제목. 여행 중에는 기존 제목과 같은 값을 전달해야 합니다.", example = "경주 가족 여행")
+	@field:Schema(description = "여행 제목. 최대 15자이며 여행 중에는 기존 제목과 같은 값을 전달해야 합니다.", example = "경주 가족 여행")
 	@field:NotBlank(message = "여행 제목을 입력해주세요.")
-	@field:Size(max = 80, message = "여행 제목은 80자 이하로 입력해주세요.")
+	@field:Size(max = 15, message = "여행 제목은 15자 이하로 입력해주세요.")
 	val title: String,
 
 	@field:Schema(
 		description = "여행 도시 코드. 여행 중에는 기존 도시와 같은 값을 전달해야 합니다.",
 		example = "gyeongju",
 		allowableValues = [
-			"daegu",
 			"gangneung_sokcho",
 			"gyeongju",
+			"daegu",
 			"busan",
+			"seoul",
+			"suwon_yongin",
 			"yeosu",
 			"incheon",
 			"jeonju",
 			"jeju",
-			"seoul",
-			"suwon_yongin",
 			"tongyeong_geoje_namhae",
 			"pohang_andong",
 		],

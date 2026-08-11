@@ -173,6 +173,13 @@ class TripControllerTest {
 		val father = saveUser(UserRole.PARENT, "parent-2", "아빠", GenderType.MALE)
 		connectFamily(child, mother, father)
 		saveCompletedParentProfile(mother)
+		parentProfileRepository.save(
+			ParentProfile(
+				user = father,
+				currentStep = 1,
+				completionPercent = 33,
+			),
+		)
 
 		mockMvc.perform(
 			get("/api/v1/trips/parent-candidates")
@@ -183,8 +190,14 @@ class TripControllerTest {
 			.andExpect(jsonPath("$.data.parents.length()").value(2))
 			.andExpect(jsonPath("$.data.parents[0].relationLabel").value("엄마"))
 			.andExpect(jsonPath("$.data.parents[0].profileCompleted").value(true))
+			.andExpect(jsonPath("$.data.parents[0].profileCurrentStep").value(3))
+			.andExpect(jsonPath("$.data.parents[0].personalityResult.code").value("healing_traveler"))
+			.andExpect(jsonPath("$.data.parents[0].personalityResult.name").value("유유자적 힐링러형"))
 			.andExpect(jsonPath("$.data.parents[1].relationLabel").value("아빠"))
 			.andExpect(jsonPath("$.data.parents[1].profileCompleted").value(false))
+			.andExpect(jsonPath("$.data.parents[1].profileCurrentStep").value(1))
+			.andExpect(jsonPath("$.data.parents[1].profileCompletionPercent").value(33))
+			.andExpect(jsonPath("$.data.parents[1].personalityResult").doesNotExist())
 	}
 
 	@Test
@@ -197,8 +210,11 @@ class TripControllerTest {
 		)
 			.andExpect(status().isOk)
 			.andExpect(jsonPath("$.data.length()").value(12))
-			.andExpect(jsonPath("$.data[2].code").value("gyeongju"))
-			.andExpect(jsonPath("$.data[2].displayName").value("경주"))
+			.andExpect(jsonPath("$.data[0].code").value("gangneung_sokcho"))
+			.andExpect(jsonPath("$.data[1].code").value("gyeongju"))
+			.andExpect(jsonPath("$.data[2].code").value("daegu"))
+			.andExpect(jsonPath("$.data[3].code").value("busan"))
+			.andExpect(jsonPath("$.data[3].badgeLabel").value("Hot!"))
 	}
 
 	@Test
@@ -220,14 +236,15 @@ class TripControllerTest {
 					  "parentUserIds": [${requireNotNull(mother.id)}],
 					  "destinationCode": "gyeongju",
 					  "startDate": "$startDate",
-					  "endDate": "$endDate"
+					  "endDate": "$endDate",
+					  "title": "엄마와 경주 여행"
 					}
 					""".trimIndent(),
 				),
 		)
 			.andExpect(status().isOk)
 			.andExpect(jsonPath("$.status").value(201))
-			.andExpect(jsonPath("$.data.title").value("경주 여행"))
+			.andExpect(jsonPath("$.data.title").value("엄마와 경주 여행"))
 			.andExpect(jsonPath("$.data.destination.code").value("gyeongju"))
 			.andExpect(jsonPath("$.data.status").value("planning"))
 			.andExpect(jsonPath("$.data.participants.length()").value(2))
@@ -265,7 +282,8 @@ class TripControllerTest {
 					  "parentUserIds": [${requireNotNull(mother.id)}],
 					  "destinationCode": "busan",
 					  "startDate": "$startDate",
-					  "endDate": "$endDate"
+					  "endDate": "$endDate",
+					  "title": "부산 가족 여행"
 					}
 					""".trimIndent(),
 				),
@@ -294,7 +312,8 @@ class TripControllerTest {
 					  "parentUserIds": [${requireNotNull(mother.id)}],
 					  "destinationCode": "gyeongju",
 					  "startDate": "$startDate",
-					  "endDate": "$startDate"
+					  "endDate": "$startDate",
+					  "title": "경주 여행"
 					}
 					""".trimIndent(),
 				),
@@ -323,7 +342,8 @@ class TripControllerTest {
 					  "parentUserIds": [${requireNotNull(mother.id)}],
 					  "destinationCode": "busan",
 					  "startDate": "${startDate.plusDays(1)}",
-					  "endDate": "${startDate.plusDays(1)}"
+					  "endDate": "${startDate.plusDays(1)}",
+					  "title": "부산 여행"
 					}
 					""".trimIndent(),
 				),
@@ -331,6 +351,44 @@ class TripControllerTest {
 			.andExpect(status().isOk)
 			.andExpect(jsonPath("$.status").value(400))
 			.andExpect(jsonPath("$.message").value("선택한 날짜에 이미 등록된 여행이 있습니다."))
+	}
+
+	@Test
+	fun `여행 제목은 필수이고 15자를 넘을 수 없다`() {
+		val child = saveUser(UserRole.CHILD, "child-1", "혜린")
+		val mother = saveUser(UserRole.PARENT, "parent-1", "엄마", GenderType.FEMALE)
+		connectFamily(child, mother)
+		saveCompletedParentProfile(mother)
+		val startDate = futureDate(10)
+		val accessToken = tokenService.createAccessToken(child)
+
+		fun createWithTitle(title: String) =
+			mockMvc.perform(
+				post("/api/v1/trips")
+					.header("Authorization", "Bearer $accessToken")
+					.contentType(MediaType.APPLICATION_JSON)
+					.content(
+						"""
+						{
+						  "parentUserIds": [${requireNotNull(mother.id)}],
+						  "destinationCode": "gyeongju",
+						  "startDate": "$startDate",
+						  "endDate": "$startDate",
+						  "title": "$title"
+						}
+						""".trimIndent(),
+					),
+			)
+
+		createWithTitle(" ")
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(400))
+			.andExpect(jsonPath("$.message").value("여행 제목을 입력해주세요."))
+
+		createWithTitle("1234567890123456")
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(400))
+			.andExpect(jsonPath("$.message").value("여행 제목은 15자 이하로 입력해주세요."))
 	}
 
 	@Test
@@ -1389,7 +1447,8 @@ class TripControllerTest {
 					  "parentUserIds": [${requireNotNull(parent.id)}],
 					  "destinationCode": "gyeongju",
 					  "startDate": "${futureDate(10)}",
-					  "endDate": "${futureDate(10)}"
+					  "endDate": "${futureDate(10)}",
+					  "title": "경주 여행"
 					}
 					""".trimIndent(),
 				),
@@ -1462,7 +1521,8 @@ class TripControllerTest {
 					  "parentUserIds": [${requireNotNull(parent.id)}],
 					  "destinationCode": "gyeongju",
 					  "startDate": "$startDate",
-					  "endDate": "$endDate"
+					  "endDate": "$endDate",
+					  "title": "경주 여행"
 					}
 					""".trimIndent(),
 				),

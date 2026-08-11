@@ -3,6 +3,17 @@
 여행 생성 시 저장한 부모님 프로필 스냅샷과 한국관광공사 TourAPI 무장애여행 정보를 기반으로 일자별 방문지를 추천하는 정책입니다.
 이번 정책은 장소 추천까지만 다루며, Tmap 경로/거리/소요시간 계산은 `docs/policy/route-optimization.md`에서 별도로 다룹니다.
 
+## 확정 생성 화면 연동
+
+코스 생성은 비동기 job 없이 기존 API를 순서대로 호출합니다.
+
+1. `POST /api/v1/trips`로 제목, 부모, 도시, 기간과 일자를 저장합니다.
+2. 응답의 `tripId`로 `POST /api/v1/trips/{tripId}/course/recommendation`을 호출합니다.
+3. 추천 응답에 포함된 모든 `dayNumber`에 대해 `POST /api/v1/trips/{tripId}/days/{dayNumber}/route-optimization`을 호출합니다.
+4. 모든 일자의 최적화가 성공하면 클라이언트가 홈 이동을 활성화합니다.
+
+화면의 단계와 퍼센트는 서버에 저장하거나 조회하지 않고 클라이언트가 동기 호출 상태로 표시합니다. 관광정보와 무장애 정보 반영은 추천 API 한 번에 처리하며, 현행 추천 정책에는 별도 방문 트렌드·혼잡도 API나 가중치가 없습니다.
+
 ## 권한과 상태
 
 - API: `POST /api/v1/trips/{tripId}/course/recommendation`
@@ -137,6 +148,7 @@ TourAPI 분류체계 대분류 기준으로 부모 프로필 신호를 매핑합
 - `sourcePayload`에는 TourAPI 목록 응답, 상세 응답, 무장애 응답, 추천 점수를 저장합니다.
 - 추천 생성이 완료되면 여행 상태가 `planning`인 경우 `ready`로 변경합니다.
 - 추천 생성 자체는 도착시간, 이동거리, 경로 순서 최적화를 수행하지 않습니다. 해당 값은 경로 최적화 API에서 별도로 계산합니다.
+- 추천 및 일자별 경로 최적화 결과는 `trip_stops`, `trip_days.route_*`에 바로 저장합니다. 별도 `course_generation_jobs`나 API 호출 이력 테이블은 사용하지 않습니다.
 
 ## 코스 편집 검색 규칙
 

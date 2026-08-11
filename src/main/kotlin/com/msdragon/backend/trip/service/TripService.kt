@@ -201,7 +201,7 @@ class TripService(
 				family = family,
 				createdByUser = child,
 				destinationCode = destination,
-				title = request.title?.trim()?.takeIf { it.isNotBlank() } ?: "${destination.displayName} 여행",
+				title = request.title.trim(),
 				startDate = request.startDate,
 				endDate = request.endDate,
 				recommendationSnapshot = objectMapper.writeValueAsString(recommendationSnapshot),
