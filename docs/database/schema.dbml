@@ -465,8 +465,8 @@ Table trips {
   id bigint [pk, increment]
   family_id bigint [not null]
   created_by_user_id bigint [not null]
-  destination_code travel_destination_code [not null, note: '준비 중 정보 편집 시 변경 가능하고 여행 중에는 고정. 변경 저장 후 코스 재추천 필요']
-  title varchar(15) [not null, note: '필수, 최대 15자']
+  destination_code travel_destination_code [not null, note: '생성 후 변경 불가']
+  title varchar(15) [not null, note: '필수, 최대 15자, 생성 후 변경 불가']
   start_date date [not null]
   end_date date [not null]
   status trip_status [not null, default: 'planning']
@@ -477,7 +477,7 @@ Table trips {
   updated_at datetime [not null, default: `now()`]
   deleted_at datetime
 
-  Note: '여행 제목은 필수이며 최대 15자다. 여행 도시는 준비 중 정보 편집에서 변경 가능하고 여행 중에는 제목과 함께 고정한다. 여행 중에는 오늘을 포함하는 기간, 참여 부모, 코스만 생성 자녀가 수정할 수 있다. completed/archived 상태에서는 기본정보와 코스를 수정할 수 없다. 도시, 날짜, 함께 가는 가족, 추천 기준을 바꾸면 코스 재추천/덮어쓰기 확인 플로우를 거친다. 여행 기간 상한은 두지 않는다. 코스 생성은 TourAPI 추천과 일자별 Tmap 최적화를 동기 호출하고 별도 job은 저장하지 않는다. 서울 날짜 기준 start_date부터 in_progress, end_date 다음 날부터 completed로 동기화하며 여행모드는 start_date 00:00부터 end_date 23:59까지 같은 가족 구성원에게 노출한다.'
+  Note: '여행 제목과 도시는 생성 후 변경할 수 없다. 생성 자녀는 planning/ready에서 기간, 참여 부모, 코스를 수정할 수 있고 in_progress에서는 오늘을 포함하는 기간, 참여 부모, 코스를 수정할 수 있다. completed/archived 상태에서는 기본정보와 코스를 수정할 수 없다. 날짜나 함께 가는 가족을 바꾸면 코스 재추천/덮어쓰기 확인 플로우를 거친다. 여행 기간 상한은 두지 않는다. 코스 생성은 TourAPI 추천과 일자별 Tmap 최적화를 동기 호출하고 별도 job은 저장하지 않는다. 서울 날짜 기준 start_date부터 in_progress, end_date 다음 날부터 completed로 동기화하며 여행모드는 start_date 00:00부터 end_date 23:59까지 같은 가족 구성원에게 노출한다.'
 }
 
 Table trip_participants {
@@ -533,7 +533,7 @@ Table trip_stops {
   overview text
   arrival_time time
   dwell_minutes smallint
-  note varchar(255)
+  note varchar(255) [note: '방문지 메모 단건 API에서 저장하며 null은 메모 없음']
   recommendation_reason varchar(255)
   recommendation_tags jsonb
   source_payload jsonb

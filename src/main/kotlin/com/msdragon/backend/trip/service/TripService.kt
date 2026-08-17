@@ -19,9 +19,11 @@ import com.msdragon.backend.pledge.service.TripPledgeService
 import com.msdragon.backend.trip.dto.CreateTripRequest
 import com.msdragon.backend.trip.dto.MyTripsResponse
 import com.msdragon.backend.trip.dto.SaveTripCourseRequest
+import com.msdragon.backend.trip.dto.SaveTripStopRequest
 import com.msdragon.backend.trip.dto.TripCourseDayResponse
 import com.msdragon.backend.trip.dto.TripCourseResponse
 import com.msdragon.backend.trip.dto.TripParentProfileSnapshotResponse
+import com.msdragon.backend.trip.dto.TripParticipantResponse
 import com.msdragon.backend.trip.dto.TripDestinationResponse
 import com.msdragon.backend.trip.dto.TripDetailResponse
 import com.msdragon.backend.trip.dto.TripParentCandidateResponse
@@ -32,6 +34,7 @@ import com.msdragon.backend.trip.dto.TripStopResponse
 import com.msdragon.backend.trip.dto.TripSummaryResponse
 import com.msdragon.backend.trip.dto.TripTravelModeResponse
 import com.msdragon.backend.trip.dto.UpdateTripRequest
+import com.msdragon.backend.trip.dto.UpdateTripStopNoteRequest
 import com.msdragon.backend.trip.dto.relationLabelOf
 import com.msdragon.backend.trip.entity.Trip
 import com.msdragon.backend.trip.entity.TripDay
@@ -47,6 +50,7 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import tools.jackson.databind.JsonNode
 import tools.jackson.databind.ObjectMapper
+import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -238,14 +242,6 @@ class TripService(
 		val today = currentDate()
 		trip.synchronizeStatus(today)
 		validateTripEditable(child, trip)
-		val editingInProgress = trip.status == TripStatus.IN_PROGRESS
-		val normalizedTitle = request.title.trim()
-		if (editingInProgress && normalizedTitle != trip.title) {
-			throw BadRequestException("여행 중에는 여행 제목을 수정할 수 없습니다.")
-		}
-		if (editingInProgress && request.destinationCode != trip.destinationCode) {
-			throw BadRequestException("여행 중에는 여행 도시를 수정할 수 없습니다.")
-		}
 
 		val familyId = requireNotNull(trip.family.id)
 		val selectedParents = resolveSelectedParents(familyId, request.parentUserIds)
@@ -255,10 +251,9 @@ class TripService(
 			.map { requireNotNull(it.user.id) }
 			.toSet()
 		val requestedParentIds = request.parentUserIds.toSet()
-		val destinationChanged = trip.destinationCode != request.destinationCode
 		val datesChanged = trip.startDate != request.startDate || trip.endDate != request.endDate
 		val participantsChanged = existingParentIds != requestedParentIds
-		val recommendationInputsChanged = destinationChanged || datesChanged || participantsChanged
+		val recommendationInputsChanged = datesChanged || participantsChanged
 
 		val dayCount = if (datesChanged) {
 			validateUpdateDateRange(trip.status, request.startDate, request.endDate, today).also {
@@ -282,7 +277,7 @@ class TripService(
 		val existingStops = tripStopRepository.findAllByTripDayTripIdOrderByTripDayDayNumberAscSortOrderAsc(tripId)
 		val hasSavedCourse = existingStops.isNotEmpty() || tripDays.any { it.routeOptimizedAt != null }
 		if (recommendationInputsChanged && hasSavedCourse && !request.courseResetConfirmed) {
-			throw BadRequestException("도시, 날짜 또는 참여 부모를 변경하면 기존 코스가 삭제됩니다. 코스 초기화에 동의해주세요.")
+			throw BadRequestException("날짜 또는 참여 부모를 변경하면 기존 코스가 삭제됩니다. 코스 초기화에 동의해주세요.")
 		}
 
 		if (recommendationInputsChanged) {
@@ -303,7 +298,7 @@ class TripService(
 			val selectedParentProfiles = resolveSelectedParentProfiles(selectedParents)
 			objectMapper.writeValueAsString(
 				buildRecommendationSnapshot(
-					destination = request.destinationCode,
+					destination = trip.destinationCode,
 					startDate = request.startDate,
 					endDate = request.endDate,
 					selectedParents = selectedParents,
@@ -314,8 +309,6 @@ class TripService(
 			trip.recommendationSnapshot
 		}
 		trip.updateInfo(
-			title = normalizedTitle,
-			destinationCode = request.destinationCode,
 			startDate = request.startDate,
 			endDate = request.endDate,
 			recommendationSnapshot = recommendationSnapshot,
@@ -324,6 +317,29 @@ class TripService(
 		trip.synchronizeStatus(today)
 
 		return tripDetail(trip)
+	}
+
+	@Transactional
+	fun updateTripStopNote(
+		currentUser: AuthenticatedUser,
+		tripId: Long,
+		stopId: Long,
+		request: UpdateTripStopNoteRequest,
+	): TripStopResponse {
+		val child = getLoginUser(currentUser.id)
+		val trip = tripRepository.findByIdAndDeletedAtIsNull(tripId)
+			?: throw NotFoundException("여행을 찾을 수 없습니다.")
+		validateTripReadable(currentUser.id, trip)
+		validateCourseEditable(child, trip)
+		val stop = tripStopRepository.findByIdAndTripDayTripId(stopId, tripId)
+			?: throw NotFoundException("방문지를 찾을 수 없습니다.")
+
+		stop.note = request.note.trimToNull()
+		return TripStopResponse.of(
+			stop = stop,
+			recommendationTags = readRecommendationTags(stop.recommendationTags),
+			sourcePayload = readSourcePayload(stop.sourcePayload),
+		)
 	}
 
 	@Transactional
@@ -348,47 +364,83 @@ class TripService(
 		if (invalidDayNumber != null) {
 			throw BadRequestException("여행에 존재하지 않는 일자입니다: ${invalidDayNumber}일차")
 		}
-		tripDays.forEach { it.clearRouteOptimization() }
-
 		val existingStops = tripStopRepository.findAllByTripDayTripIdOrderByTripDayDayNumberAscSortOrderAsc(tripId)
-		if (existingStops.isNotEmpty()) {
-			tripStopRepository.deleteAllInBatch(existingStops)
+		val existingStopsByDayId = existingStops.groupBy { requireNotNull(it.tripDay.id) }
+		val requestsByDayNumber = request.days.associateBy { it.dayNumber }
+		val changedDays = tripDays.mapNotNull { tripDay ->
+			val stopRequests = requestsByDayNumber[tripDay.dayNumber]?.stops.orEmpty()
+			val dayStops = existingStopsByDayId[requireNotNull(tripDay.id)].orEmpty()
+			if (hasSameCourse(dayStops, stopRequests)) null else ChangedTripDay(tripDay, dayStops, stopRequests)
+		}
+
+		changedDays.forEach { it.tripDay.clearRouteOptimization() }
+		val changedExistingStops = changedDays.flatMap { it.existingStops }
+		if (changedExistingStops.isNotEmpty()) {
+			tripStopRepository.deleteAllInBatch(changedExistingStops)
 			tripStopRepository.flush()
 		}
 
-		request.days.forEach { dayRequest ->
-			val tripDay = requireNotNull(tripDaysByNumber[dayRequest.dayNumber])
-			val stops = dayRequest.stops.mapIndexed { index, stopRequest ->
-				TripStop(
-					tripDay = tripDay,
-					sortOrder = index + 1,
-					stopType = stopRequest.stopType,
-					sourceProvider = stopRequest.sourceProvider,
-					externalPlaceId = stopRequest.externalPlaceId.trimToNull(),
-					contentTypeId = stopRequest.contentTypeId.trimToNull(),
-					name = stopRequest.name.trim(),
-					category = stopRequest.category.trimToNull(),
-					address = stopRequest.address.trimToNull(),
-					latitude = stopRequest.latitude,
-					longitude = stopRequest.longitude,
-					phone = stopRequest.phone.trimToNull(),
-					homepageUrl = stopRequest.homepageUrl.trimToNull(),
-					imageUrl = stopRequest.imageUrl.trimToNull(),
-					overview = stopRequest.overview.trimToNull(),
-					arrivalTime = stopRequest.arrivalTime,
-					dwellMinutes = stopRequest.dwellMinutes,
-					note = stopRequest.note.trimToNull(),
-					recommendationReason = stopRequest.recommendationReason.trimToNull(),
-					recommendationTags = writeRecommendationTags(stopRequest.recommendationTags),
-					sourcePayload = stopRequest.sourcePayload?.let { objectMapper.writeValueAsString(it) },
-					isManualAdded = stopRequest.isManualAdded,
-				)
+		changedDays.forEach { changedDay ->
+			val stops = changedDay.stopRequests.mapIndexed { index, stopRequest ->
+				toTripStop(changedDay.tripDay, index, stopRequest)
 			}
 			tripStopRepository.saveAll(stops)
 		}
 
 		return tripCourse(trip, tripDays)
 	}
+
+	private fun hasSameCourse(existingStops: List<TripStop>, stopRequests: List<SaveTripStopRequest>): Boolean =
+		existingStops.size == stopRequests.size && existingStops.zip(stopRequests).withIndex().all { (index, pair) ->
+			val (stop, request) = pair
+			stop.sortOrder == index + 1 &&
+				stop.stopType == request.stopType &&
+				stop.sourceProvider == request.sourceProvider &&
+				stop.externalPlaceId == request.externalPlaceId.trimToNull() &&
+				stop.contentTypeId == request.contentTypeId.trimToNull() &&
+				stop.name == request.name.trim() &&
+				stop.category == request.category.trimToNull() &&
+				stop.address == request.address.trimToNull() &&
+				stop.latitude.sameValueAs(request.latitude) &&
+				stop.longitude.sameValueAs(request.longitude) &&
+				stop.phone == request.phone.trimToNull() &&
+				stop.homepageUrl == request.homepageUrl.trimToNull() &&
+				stop.imageUrl == request.imageUrl.trimToNull() &&
+				stop.overview == request.overview.trimToNull() &&
+				stop.arrivalTime == request.arrivalTime &&
+				stop.dwellMinutes == request.dwellMinutes &&
+				stop.note == request.note.trimToNull() &&
+				stop.recommendationReason == request.recommendationReason.trimToNull() &&
+				readRecommendationTags(stop.recommendationTags) == normalizeTags(request.recommendationTags) &&
+				readSourcePayload(stop.sourcePayload) == request.sourcePayload &&
+				stop.isManualAdded == request.isManualAdded
+		}
+
+	private fun toTripStop(tripDay: TripDay, index: Int, request: SaveTripStopRequest): TripStop =
+		TripStop(
+			tripDay = tripDay,
+			sortOrder = index + 1,
+			stopType = request.stopType,
+			sourceProvider = request.sourceProvider,
+			externalPlaceId = request.externalPlaceId.trimToNull(),
+			contentTypeId = request.contentTypeId.trimToNull(),
+			name = request.name.trim(),
+			category = request.category.trimToNull(),
+			address = request.address.trimToNull(),
+			latitude = request.latitude,
+			longitude = request.longitude,
+			phone = request.phone.trimToNull(),
+			homepageUrl = request.homepageUrl.trimToNull(),
+			imageUrl = request.imageUrl.trimToNull(),
+			overview = request.overview.trimToNull(),
+			arrivalTime = request.arrivalTime,
+			dwellMinutes = request.dwellMinutes,
+			note = request.note.trimToNull(),
+			recommendationReason = request.recommendationReason.trimToNull(),
+			recommendationTags = writeRecommendationTags(request.recommendationTags),
+			sourcePayload = request.sourcePayload?.let { objectMapper.writeValueAsString(it) },
+			isManualAdded = request.isManualAdded,
+		)
 
 	private fun resolveSelectedParents(familyId: Long, parentUserIds: List<Long>): List<FamilyMember> {
 		val distinctParentUserIds = parentUserIds.distinct()
@@ -577,7 +629,12 @@ class TripService(
 			tripId = tripId,
 			title = trip.title,
 			destination = TripDestinationResponse.from(trip.destinationCode),
+			startDate = trip.startDate,
+			endDate = trip.endDate,
 			status = trip.status,
+			participants = tripParticipantRepository.findAllByTripIdOrderByIdAsc(tripId)
+				.map(TripParticipantResponse::from),
+			pledgeStatus = tripPledgeService.getProgressStatus(tripId),
 			days = tripDays.map { day ->
 				TripCourseDayResponse(
 					tripDayId = requireNotNull(day.id),
@@ -603,9 +660,11 @@ class TripService(
 	}
 
 	private fun writeRecommendationTags(tags: List<String>): String? =
-		tags.mapNotNull { it.trimToNull() }
+		normalizeTags(tags)
 			.takeIf { it.isNotEmpty() }
 			?.let { objectMapper.writeValueAsString(it) }
+
+	private fun normalizeTags(tags: List<String>): List<String> = tags.mapNotNull { it.trimToNull() }
 
 	private fun readRecommendationTags(value: String?): List<String> =
 		value?.let { objectMapper.readValue(it, Array<String>::class.java).toList() }
@@ -633,7 +692,16 @@ class TripService(
 		private const val MAX_PARENT_COUNT = 2
 		private const val PARENT_TRAVEL_MBTI_POLICY_VERSION = "parent-travel-mbti-v1"
 	}
+
+	private data class ChangedTripDay(
+		val tripDay: TripDay,
+		val existingStops: List<TripStop>,
+		val stopRequests: List<SaveTripStopRequest>,
+	)
 }
 
 private fun String?.trimToNull(): String? =
 	this?.trim()?.takeIf { it.isNotEmpty() }
+
+private fun BigDecimal?.sameValueAs(other: BigDecimal?): Boolean =
+	if (this == null || other == null) this == other else compareTo(other) == 0

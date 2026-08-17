@@ -62,32 +62,6 @@ data class CreateTripRequest(
 
 @Schema(description = "여행 기본정보 수정 요청")
 data class UpdateTripRequest(
-	@field:Schema(description = "여행 제목. 최대 15자이며 여행 중에는 기존 제목과 같은 값을 전달해야 합니다.", example = "경주 가족 여행")
-	@field:NotBlank(message = "여행 제목을 입력해주세요.")
-	@field:Size(max = 15, message = "여행 제목은 15자 이하로 입력해주세요.")
-	val title: String,
-
-	@field:Schema(
-		description = "여행 도시 코드. 여행 중에는 기존 도시와 같은 값을 전달해야 합니다.",
-		example = "gyeongju",
-		allowableValues = [
-			"gangneung_sokcho",
-			"gyeongju",
-			"daegu",
-			"busan",
-			"seoul",
-			"suwon_yongin",
-			"yeosu",
-			"incheon",
-			"jeonju",
-			"jeju",
-			"tongyeong_geoje_namhae",
-			"pohang_andong",
-		],
-	)
-	@field:NotNull(message = "여행 도시를 선택해주세요.")
-	val destinationCode: TripDestinationCode,
-
 	@field:Schema(description = "여행 시작일. 여행 중 변경하는 경우 시작일과 종료일 사이에 오늘이 포함되어야 합니다.", example = "2026-07-10")
 	@field:NotNull(message = "여행 시작일을 선택해주세요.")
 	val startDate: LocalDate,
@@ -102,10 +76,17 @@ data class UpdateTripRequest(
 	val parentUserIds: List<Long>,
 
 	@field:Schema(
-		description = "도시, 날짜 또는 참여 부모 변경으로 기존 코스가 삭제되는 것에 동의했는지 여부. 기존 코스가 있을 때만 true가 필요합니다.",
+		description = "날짜 또는 참여 부모 변경으로 기존 코스가 삭제되는 것에 동의했는지 여부. 기존 코스가 있을 때만 true가 필요합니다.",
 		example = "false",
 	)
 	val courseResetConfirmed: Boolean = false,
+)
+
+@Schema(description = "여행 방문지 메모 수정 요청")
+data class UpdateTripStopNoteRequest(
+	@field:Schema(description = "방문지 메모. null 또는 공백이면 기존 메모를 삭제합니다.", example = "부모님과 사진 찍기", nullable = true)
+	@field:Size(max = 255, message = "메모는 255자 이하로 입력해주세요.")
+	val note: String? = null,
 )
 
 @Schema(description = "여행 코스 전체 저장 요청")

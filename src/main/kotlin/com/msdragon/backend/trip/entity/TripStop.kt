@@ -75,7 +75,7 @@ class TripStop(
 	var dwellMinutes: Int? = null,
 
 	@Column(name = "note", length = 255)
-	val note: String? = null,
+	var note: String? = null,
 
 	@Column(name = "recommendation_reason", length = 255)
 	val recommendationReason: String? = null,

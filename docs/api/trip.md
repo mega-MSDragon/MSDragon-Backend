@@ -20,8 +20,8 @@
 - 여행 제목은 필수이며 공백을 제외한 15자 이하로 입력합니다.
 - 날짜 선택 화면은 별도 캘린더 API 없이 `GET /api/v1/trips`의 비보관 여행 기간을 사용합니다. 날짜 중복은 여행 생성 시 서버에서도 다시 검증합니다.
 - 여행 생성 시 선택한 부모의 추천 입력값을 `recommendationSnapshot`으로 저장합니다. 이후 부모 프로필이 수정되어도 생성 당시 추천 기준은 유지됩니다.
-- 여행 기본정보 수정은 여행을 만든 자녀만 할 수 있습니다. `planning`, `ready`에서는 전체 항목을, `in_progress`에서는 오늘을 포함하는 기간과 참여 부모만 변경할 수 있습니다.
-- 여행 중 제목과 도시는 고정입니다. 준비 중 제목만 수정하면 기존 추천 스냅샷과 코스를 유지하고, 도시·날짜·참여 부모를 수정하면 현재 부모 프로필로 추천 스냅샷을 다시 만들고 기존 코스와 경로를 초기화합니다.
+- 여행 기본정보 수정은 여행을 만든 자녀만 할 수 있습니다. 제목과 도시는 생성 이후 고정하며, 모든 수정 가능 상태에서 기간과 참여 부모만 변경합니다.
+- 날짜나 참여 부모를 수정하면 현재 부모 프로필로 추천 스냅샷을 다시 만들고 기존 코스와 경로를 초기화합니다.
 - 참여 부모 구성이 바뀌면 저장된 여행 10계명, 문구 10개, 모든 참여자 서명을 함께 삭제하고 처음부터 다시 작성하도록 합니다.
 - 여행 기간 또는 참여 부모 구성이 바뀌면 기존 부모 평가 요청, 제출된 피드백, 효도 리포트도 함께 삭제합니다.
 - 기존 코스나 경로가 있는 상태에서 추천 입력을 바꾸려면 `courseResetConfirmed=true`를 전달해야 합니다.
@@ -31,10 +31,11 @@
 - 추천 코스 생성은 한국관광공사 TourAPI 무장애여행 서비스로 장소 후보를 조회하고, 부모 프로필 스냅샷으로 점수를 계산해 `trip_stops`에 저장합니다.
 - 추천 코스 생성은 장소 추천까지만 수행합니다. Tmap 경로/거리/소요시간은 별도 경로 최적화 API를 호출해 계산합니다.
 - 추천 코스 생성이 완료되면 여행 상태가 `planning`인 경우 `ready`로 변경됩니다.
-- 코스 편집 중 방문지 검색/상세 조회는 TourAPI를 조회해 후보를 내려주며, 실제 코스 반영은 클라이언트가 선택한 장소를 `PUT /api/v1/trips/{tripId}/course`로 전체 저장할 때 이루어집니다.
+- 코스 편집 중 부모 프로필 기반 추천, 키워드 검색, 상세 조회는 TourAPI를 사용하며, 실제 코스 반영은 클라이언트가 선택한 장소를 `PUT /api/v1/trips/{tripId}/course`로 전체 저장할 때 이루어집니다.
+- 방문지 메모는 코스 전체 저장과 별개로 단건 저장하거나 삭제합니다.
 - 방문지 검색/상세 조회에서도 숙박은 제외하고, TourAPI 원본 응답 일부는 코스 저장 시 `sourcePayload`로 보관할 수 있게 내려줍니다.
 - 일자별 경로 최적화는 Tmap 경유지 순서 최적화 10 API를 사용합니다. 사용자가 시작점/도착점을 입력하지 않으므로 서버가 모든 시작/도착 조합을 조회해 가장 짧은 결과를 선택합니다.
-- 코스 저장 또는 추천 코스 재생성 시 기존 경로 캐시는 무효화됩니다.
+- 코스 전체 저장은 방문지 구성이 달라진 일자의 경로 캐시만 무효화합니다. 추천 코스 재생성은 모든 일자의 경로 캐시를 무효화합니다.
 - 서울 날짜 기준 시작일이 되면 준비 여부와 관계없이 여행 상태를 `in_progress`, 종료일 다음 날부터 `completed`로 자동 동기화합니다.
 - 여행 모드는 시작일 00:00부터 종료일 23:59까지 같은 가족 구성원 모두가 이용할 수 있습니다. 여행 참여자로 선택되지 않은 가족 구성원도 포함합니다.
 - 여행 모드 주변 공중화장실은 DB 적재 데이터를 조회하고, 병원·약국은 Tmap POI 주변 카테고리 검색 결과를 실시간으로 조회합니다.
@@ -54,6 +55,7 @@
 | `GET` | `/api/v1/trips/{tripId}/nearby-restrooms` | 현재 위치 주변 공중화장실 조회 |
 | `GET` | `/api/v1/trips/{tripId}/nearby-hospitals` | 현재 위치 주변 병원 조회 |
 | `GET` | `/api/v1/trips/{tripId}/nearby-pharmacies` | 현재 위치 주변 약국 조회 |
+| `GET` | `/api/v1/trips/{tripId}/places/recommendations` | 코스 편집용 부모 프로필 기반 방문지 추천 |
 | `GET` | `/api/v1/trips/{tripId}/places/search` | 코스 편집용 방문지 검색 |
 | `GET` | `/api/v1/trips/{tripId}/places/{contentId}` | 코스 편집용 방문지 상세 조회 |
 | `POST` | `/api/v1/trips` | 여행 생성 |
@@ -61,6 +63,7 @@
 | `POST` | `/api/v1/trips/{tripId}/days/{dayNumber}/route-optimization` | 여행 일자 경로 최적화 |
 | `PUT` | `/api/v1/trips/{tripId}` | 여행 기본정보 수정 |
 | `PUT` | `/api/v1/trips/{tripId}/course` | 여행 코스 전체 저장 |
+| `PUT` | `/api/v1/trips/{tripId}/stops/{stopId}/note` | 방문지 메모 저장·삭제 |
 
 ---
 
@@ -262,16 +265,14 @@
 
 ## PUT /api/v1/trips/{tripId}
 
-여행을 만든 자녀가 여행 정보 편집 화면의 제목, 도시, 날짜, 참여 부모를 한 번에 저장합니다.
-`planning`, `ready`에서는 모든 항목을 수정할 수 있습니다. `in_progress`에서는 제목과 도시를 기존 값 그대로 보내고, 서울 기준 오늘을 포함하는 기간과 참여 부모만 수정할 수 있습니다.
+여행을 만든 자녀가 여행 정보 편집 화면의 날짜와 참여 부모를 한 번에 저장합니다.
+제목과 도시는 생성 후 변경할 수 없으므로 요청에 포함하지 않습니다. `in_progress`에서는 서울 기준 오늘을 포함하는 기간만 선택할 수 있습니다.
 `completed`, `archived` 상태에서는 수정할 수 없습니다.
 
 ### Request
 
 ```json
 {
-  "title": "부산 가족 여행",
-  "destinationCode": "busan",
   "startDate": "2026-07-15",
   "endDate": "2026-07-17",
   "parentUserIds": [2, 3],
@@ -281,19 +282,15 @@
 
 | Field | Type | Required | 설명 |
 |-------|------|----------|------|
-| `title` | string | true | 여행 제목. 최대 15자. 여행 중에는 기존 값과 같아야 함 |
-| `destinationCode` | enum | true | 여행 도시 코드. 여행 중에는 기존 값과 같아야 함 |
 | `startDate` | date | true | 여행 시작일. 여행 중에는 변경 기간에 오늘이 포함되어야 함 |
 | `endDate` | date | true | 여행 종료일. 시작일과 같거나 이후이며 여행 중에는 변경 기간에 오늘이 포함되어야 함 |
 | `parentUserIds` | number array | true | 같은 가족의 프로필 작성 완료 부모. 1명 이상, 최대 2명. 기존 참여 부모 구성이 바뀌면 10계명과 모든 서명 삭제 |
-| `courseResetConfirmed` | boolean | false | 기존 코스가 있는 상태에서 도시, 날짜 또는 참여 부모를 바꿀 때 `true`. 기본값 `false` |
+| `courseResetConfirmed` | boolean | false | 기존 코스가 있는 상태에서 날짜 또는 참여 부모를 바꿀 때 `true`. 기본값 `false` |
 
 변경 영향:
 
 | 변경 항목 | 기존 코스 | 추천 스냅샷 | 10계명/서명 | 평가 요청/피드백/리포트 | 상태 |
 |-----------|-----------|-----------------|-------------|--------------------------|------|
-| 제목만 변경 (`planning`, `ready`) | 유지 | 유지 | 유지 | 유지 | 유지 |
-| 도시 변경 (`planning`, `ready`) | 삭제 | 현재 부모 프로필로 재생성 | 유지 | 유지 | `planning` |
 | 날짜 변경 | 삭제 후 여행 일자 재생성 | 현재 부모 프로필로 재생성 | 유지 | 전체 삭제 | 준비 중이면 `planning`, 여행 중이면 `in_progress` |
 | 참여 부모 변경 | 삭제 후 참여자 갱신 | 현재 부모 프로필로 재생성 | 전체 삭제 | 전체 삭제 | 준비 중이면 `planning`, 여행 중이면 `in_progress` |
 
@@ -381,7 +378,26 @@
       "displayOrder": 2,
       "badgeLabel": null
     },
+    "startDate": "2026-07-10",
+    "endDate": "2026-07-11",
     "status": "planning",
+    "participants": [
+      {
+        "userId": 1,
+        "role": "child",
+        "displayName": "최혜린",
+        "gender": "female",
+        "relationLabel": null
+      },
+      {
+        "userId": 2,
+        "role": "parent",
+        "displayName": "김영희",
+        "gender": "female",
+        "relationLabel": "엄마"
+      }
+    ],
+    "pledgeStatus": "awaiting_parent_signature",
     "days": [
       {
         "tripDayId": 1,
@@ -438,6 +454,15 @@
   }
 }
 ```
+
+`pledgeStatus`는 코스 화면의 10계명 배너를 결정합니다.
+
+| 값 | 화면 상태 |
+|----|-----------|
+| `not_created` | 10계명 만들기 |
+| `awaiting_child_signature` | 자녀 서명 필요 |
+| `awaiting_parent_signature` | 부모 서명 필요 |
+| `completed` | 서명 완료 |
 
 ---
 
@@ -654,6 +679,61 @@ TourAPI 서비스키가 서버에 설정되어 있지 않거나 TourAPI 호출�
 
 ---
 
+## GET /api/v1/trips/{tripId}/places/recommendations
+
+코스 편집의 기본 화면에서 여행 도시와 여행 생성 당시 부모 프로필 스냅샷을 기준으로 추천 장소를 조회합니다.
+현재 코스에 이미 저장된 TourAPI `contentId`는 제외하며 DB에는 추천 조회 결과를 저장하지 않습니다.
+
+### Query Parameters
+
+| Parameter | Type | Required | 설명 |
+|-----------|------|----------|------|
+| `category` | enum | true | `restaurant` 또는 `attraction` |
+| `size` | number | false | 추천 개수. 기본값 `20`, 최대 `50` |
+
+- `restaurant`: 음식점(`contentTypeId=39`)
+- `attraction`: 관광지, 문화시설, 행사, 레포츠, 쇼핑(`12`, `14`, `15`, `28`, `38`)
+
+### Response
+
+```json
+{
+  "status": 200,
+  "success": true,
+  "message": "방문지 추천 성공",
+  "data": {
+    "tripId": 1,
+    "destination": {
+      "code": "gyeongju",
+      "displayName": "경주",
+      "displayOrder": 2,
+      "badgeLabel": null
+    },
+    "category": "restaurant",
+    "places": [
+      {
+        "sourceProvider": "tour_api",
+        "externalPlaceId": "988449",
+        "contentTypeId": "39",
+        "contentTypeName": "음식점",
+        "stopType": "meal",
+        "name": "경주 한식당",
+        "category": "한식",
+        "categoryCode": "A05020100",
+        "address": "경상북도 경주시",
+        "latitude": 35.8562,
+        "longitude": 129.2247,
+        "phone": "054-000-0000",
+        "imageUrl": "https://example.com/place.jpg",
+        "lclsSystm1": "FD"
+      }
+    ]
+  }
+}
+```
+
+---
+
 ## GET /api/v1/trips/{tripId}/places/search
 
 코스 편집 화면에서 여행 도시 범위 안의 TourAPI 방문지를 키워드로 검색합니다.
@@ -666,20 +746,11 @@ TourAPI 서비스키가 서버에 설정되어 있지 않거나 TourAPI 호출�
 | Parameter | Type | Required | 설명 |
 |-----------|------|----------|------|
 | `keyword` | string | true | 검색어. 공백 제거 후 1자 이상, 50자 이하 |
-| `contentTypeId` | string | false | TourAPI 콘텐츠 타입 필터. 생략하면 숙박을 제외한 지원 타입 전체 |
+| `category` | enum | true | `restaurant` 또는 `attraction` |
 | `page` | number | false | 페이지 번호. 기본값 `1` |
 | `size` | number | false | 페이지 크기. 기본값 `20`, 최대 `50` |
 
-지원 `contentTypeId`:
-
-| contentTypeId | 의미 | 저장 시 기본 stopType |
-|---------------|------|----------------------|
-| `12` | 관광지 | `sightseeing` |
-| `14` | 문화시설 | `sightseeing` |
-| `15` | 행사/공연/축제 | `sightseeing` |
-| `28` | 레포츠 | `sightseeing` |
-| `38` | 쇼핑 | `sightseeing` |
-| `39` | 음식점 | `meal` |
+`category`별 콘텐츠 타입은 방문지 추천 API와 같습니다.
 
 ### Response
 
@@ -697,7 +768,7 @@ TourAPI 서비스키가 서버에 설정되어 있지 않거나 TourAPI 호출�
       "badgeLabel": null
     },
     "keyword": "경주 맛집",
-    "contentTypeId": "39",
+    "category": "restaurant",
     "page": 1,
     "size": 20,
     "places": [
@@ -708,7 +779,8 @@ TourAPI 서비스키가 서버에 설정되어 있지 않거나 TourAPI 호출�
         "contentTypeName": "음식점",
         "stopType": "meal",
         "name": "경주 한식당",
-        "category": "음식점",
+        "category": "한식",
+        "categoryCode": "A05020100",
         "address": "경상북도 경주시",
         "latitude": 35.8562,
         "longitude": 129.2247,
@@ -749,13 +821,21 @@ TourAPI 서비스키가 서버에 설정되어 있지 않거나 TourAPI 호출�
     "stopType": "sightseeing",
     "name": "오도리 공원",
     "category": "관광지",
+    "categoryCode": "NA010100",
     "address": "경상북도 경주시",
     "latitude": 35.8562,
     "longitude": 129.2247,
     "phone": "054-000-0000",
     "homepageUrl": "https://example.com",
     "imageUrl": "https://example.com/place.jpg",
+    "imageUrls": [
+      "https://example.com/place.jpg",
+      "https://example.com/place-sub.jpg"
+    ],
     "overview": "산책하기 좋은 공원입니다.",
+    "operatingHours": "09:00~18:00",
+    "closedDays": "매주 월요일",
+    "admissionFee": "무료",
     "lclsSystm1": "NA",
     "accessibility": {
       "parking": "장애인 주차장 있음",
@@ -772,6 +852,14 @@ TourAPI 서비스키가 서버에 설정되어 있지 않거나 TourAPI 호출�
       "detailCommon": {
         "contentid": "988449"
       },
+      "detailIntro": {
+        "usetime": "09:00~18:00"
+      },
+      "detailImages": [
+        {
+          "originimgurl": "https://example.com/place-sub.jpg"
+        }
+      ],
       "accessibility": {
         "route": "출입구까지 경사로 있음"
       }
@@ -787,10 +875,11 @@ TourAPI 서비스키가 서버에 설정되어 있지 않거나 TourAPI 호출�
 여행을 만든 자녀가 일자별 방문지 코스를 전체 저장합니다.
 요청 배열 순서가 해당 일자의 방문 순서가 됩니다.
 기존 코스는 저장 요청 기준으로 덮어쓰며, 요청에 포함하지 않은 일자는 빈 코스로 저장됩니다.
-코스를 저장하면 기존 Tmap 경로 최적화 캐시는 무효화됩니다.
+코스를 저장하면 방문지 구성이 달라진 일자의 Tmap 경로 최적화 캐시만 무효화됩니다.
 `planning`, `ready`, `in_progress` 상태에서 저장할 수 있고 `completed`, `archived` 상태에서는 저장할 수 없습니다.
 
 > 이 엔드포인트가 방문지 추가·수정·삭제·순서 변경을 모두 처리합니다. 단건 편집 API가 아닌 전체 덮어쓰기이므로 클라이언트는 화면에서 임시 편집한 뒤, 변경하지 않은 일자를 포함한 최종 코스 전체를 `저장하기` 시점에 전송해야 합니다.
+> 저장 성공 후 응답에서 `route`가 `null`인 변경 일자마다 `POST /api/v1/trips/{tripId}/days/{dayNumber}/route-optimization`을 호출한 뒤 코스 화면으로 돌아갑니다. 방문지 구성이 같은 일자의 방문지 ID와 기존 경로는 유지됩니다.
 
 ### Request
 
@@ -858,6 +947,26 @@ TourAPI 서비스키가 서버에 설정되어 있지 않거나 TourAPI 호출�
 
 같은 가족의 부모는 코스를 조회할 수 있지만 저장, 추천 재생성, 경로 최적화는 할 수 없습니다.
 방문지 편집 흐름과 전체 덮어쓰기 기준은 `docs/policy/trip-edit.md`를 따릅니다.
+
+---
+
+## PUT /api/v1/trips/{tripId}/stops/{stopId}/note
+
+여행을 만든 자녀가 방문지 메모를 즉시 저장하거나 삭제합니다. 코스 순서와 경로에는 영향을 주지 않습니다.
+
+### Request
+
+```json
+{
+  "note": "부모님과 사진 찍기"
+}
+```
+
+| Field | Type | Required | 설명 |
+|-------|------|----------|------|
+| `note` | string | false | 최대 255자. `null` 또는 공백이면 기존 메모 삭제 |
+
+응답 `data`는 수정된 `TripStopResponse`입니다. 여행을 만든 자녀만 `planning`, `ready`, `in_progress` 상태에서 호출할 수 있습니다.
 
 ---
 

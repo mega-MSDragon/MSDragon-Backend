@@ -31,6 +31,8 @@
 | 지역별 장소 후보 조회 | `areaBasedList2` | `https://apis.data.go.kr/B551011/KorWithService2/areaBasedList2` | 추천 코스 생성 시 도시, 콘텐츠 타입별 후보 수집 |
 | 키워드 장소 검색 | `searchKeyword2` | `https://apis.data.go.kr/B551011/KorWithService2/searchKeyword2` | 코스 편집 화면에서 도시 범위 안의 방문지 후보 검색 |
 | 장소 공통 상세 조회 | `detailCommon2` | `https://apis.data.go.kr/B551011/KorWithService2/detailCommon2` | 최종 선택된 장소의 홈페이지, 소개 문구 보강 |
+| 장소 콘텐츠별 상세 조회 | `detailIntro2` | `https://apis.data.go.kr/B551011/KorWithService2/detailIntro2` | 상세 화면의 운영시간, 휴무일, 이용요금 보강 |
+| 장소 이미지 조회 | `detailImage2` | `https://apis.data.go.kr/B551011/KorWithService2/detailImage2` | 상세 화면의 대표·추가 이미지 목록 구성 |
 | 무장애 정보 조회 | `detailWithTour2` | `https://apis.data.go.kr/B551011/KorWithService2/detailWithTour2` | 이동 도움 필요 부모가 있으면 후보 점수 계산에 반영하고, 최종 선택 장소 스냅샷에 저장 |
 | 법정동 코드 확인 | `ldongCode2` | `https://apis.data.go.kr/B551011/KorWithService2/ldongCode2` | 여행 도시 catalog를 TourAPI 법정동 코드로 매핑할 때 기준으로 사용 |
 | 분류체계 코드 확인 | `lclsSystmCode2` | `https://apis.data.go.kr/B551011/KorWithService2/lclsSystmCode2` | 부모님 취향/MBTI를 TourAPI 분류체계 대분류로 매핑할 때 기준으로 사용 |
@@ -152,8 +154,12 @@ TourAPI 분류체계 대분류 기준으로 부모 프로필 신호를 매핑합
 
 ## 코스 편집 검색 규칙
 
+- 화면 진입 시 `GET /api/v1/trips/{tripId}/places/recommendations`로 추천 목록을 조회합니다.
+- 추천 구분은 `restaurant`, `attraction` 두 가지입니다. 음식점은 `contentTypeId=39`, 관광지는 `12`, `14`, `15`, `28`, `38`을 사용합니다.
+- 추천 목록도 여행 생성 당시 부모 프로필 스냅샷과 기존 코스 추천 가중치를 사용하며, 이미 현재 코스에 저장된 `contentId`는 제외합니다.
 - 방문지 검색 API는 여행의 `destinationCode`를 TourAPI 법정동 코드로 변환한 뒤 `searchKeyword2`를 호출합니다.
 - 여러 지역을 묶은 destination은 각 지역을 조회한 뒤 `contentId` 기준으로 중복 제거합니다.
-- 검색 결과는 `contentTypeId`가 지원 타입인 장소만 내려줍니다. 숙박은 제외합니다.
-- 검색 상세 API는 `detailCommon2`와 `detailWithTour2`를 조회해 장소 표시 정보, 무장애 주요 문자열, 원본 응답 일부를 내려줍니다.
+- 검색 요청의 `category`도 `restaurant`, `attraction` 중 하나이며 해당 콘텐츠 타입만 내려줍니다. 숙박은 제외합니다.
+- 검색 상세 API는 `detailCommon2`, `detailIntro2`, `detailImage2`, `detailWithTour2`를 조회해 장소 표시 정보, 이미지 목록, 운영시간, 휴무일, 이용요금, 무장애 주요 문자열과 원본 응답 일부를 내려줍니다.
+- 외부 API가 특정 상세값을 제공하지 않으면 해당 필드는 `null`, 이미지가 없으면 `imageUrls=[]`로 반환합니다.
 - 검색/상세 API는 `trip_stops`를 직접 수정하지 않습니다. 실제 반영은 클라이언트가 선택한 장소들을 `PUT /api/v1/trips/{tripId}/course`로 저장할 때 이루어집니다.

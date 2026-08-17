@@ -11,16 +11,20 @@ import com.msdragon.backend.parentprofile.entity.ParentProfileStatus
 import com.msdragon.backend.parentprofile.entity.TravelPersonalityTypeCode
 import com.msdragon.backend.parentprofile.entity.TravelThemeCode
 import com.msdragon.backend.parentprofile.entity.WalkingPace
+import com.msdragon.backend.pledge.entity.TripPledgeProgressStatus
 import com.msdragon.backend.trip.entity.ExternalApiProvider
 import com.msdragon.backend.trip.entity.StopType
 import com.msdragon.backend.trip.entity.Trip
 import com.msdragon.backend.trip.entity.TripDay
 import com.msdragon.backend.trip.entity.TripDestinationCode
 import com.msdragon.backend.trip.entity.TripParticipant
+import com.msdragon.backend.trip.entity.TripPlaceCategory
 import com.msdragon.backend.trip.entity.TripStatus
 import com.msdragon.backend.trip.entity.TripStop
 import com.msdragon.backend.trip.tourapi.TourApiAccessibility
 import com.msdragon.backend.trip.tourapi.TourApiContentType
+import com.msdragon.backend.trip.tourapi.TourApiPlaceImage
+import com.msdragon.backend.trip.tourapi.TourApiPlaceIntro
 import com.msdragon.backend.trip.tourapi.TourApiPlaceDetail
 import com.msdragon.backend.trip.tourapi.TourApiPlaceSummary
 import io.swagger.v3.oas.annotations.media.Schema
@@ -357,8 +361,24 @@ data class TripCourseResponse(
 	@field:Schema(description = "여행 도시")
 	val destination: TripDestinationResponse,
 
+	@field:Schema(description = "여행 시작일", example = "2026-07-10")
+	val startDate: LocalDate,
+
+	@field:Schema(description = "여행 종료일", example = "2026-07-11")
+	val endDate: LocalDate,
+
 	@field:Schema(description = "여행 상태", example = "planning", allowableValues = ["planning", "ready", "in_progress", "completed", "archived"])
 	val status: TripStatus,
+
+	@field:Schema(description = "여행 참여자")
+	val participants: List<TripParticipantResponse>,
+
+	@field:Schema(
+		description = "여행 10계명 배너 상태",
+		example = "not_created",
+		allowableValues = ["not_created", "awaiting_child_signature", "awaiting_parent_signature", "completed"],
+	)
+	val pledgeStatus: TripPledgeProgressStatus,
 
 	@field:Schema(description = "일자별 코스")
 	val days: List<TripCourseDayResponse>,
@@ -569,13 +589,8 @@ data class TripPlaceSearchResponse(
 	@field:Schema(description = "검색 키워드", example = "경주 맛집")
 	val keyword: String,
 
-	@field:Schema(
-		description = "필터링한 TourAPI 콘텐츠 타입 ID",
-		example = "39",
-		nullable = true,
-		allowableValues = ["12", "14", "15", "28", "38", "39"],
-	)
-	val contentTypeId: String?,
+	@field:Schema(description = "검색 결과 구분", example = "restaurant", allowableValues = ["restaurant", "attraction"])
+	val category: TripPlaceCategory,
 
 	@field:Schema(description = "페이지 번호", example = "1")
 	val page: Int,
@@ -584,6 +599,21 @@ data class TripPlaceSearchResponse(
 	val size: Int,
 
 	@field:Schema(description = "검색된 방문지 목록")
+	val places: List<TripPlaceSummaryResponse>,
+)
+
+@Schema(description = "방문지 추천 응답")
+data class TripPlaceRecommendationsResponse(
+	@field:Schema(description = "여행 ID", example = "1")
+	val tripId: Long,
+
+	@field:Schema(description = "여행 도시")
+	val destination: TripDestinationResponse,
+
+	@field:Schema(description = "추천 결과 구분", example = "attraction", allowableValues = ["restaurant", "attraction"])
+	val category: TripPlaceCategory,
+
+	@field:Schema(description = "현재 코스에 포함되지 않은 부모 프로필 기반 추천 장소")
 	val places: List<TripPlaceSummaryResponse>,
 )
 
@@ -614,6 +644,9 @@ data class TripPlaceSummaryResponse(
 	@field:Schema(description = "장소 카테고리", example = "관광지", nullable = true)
 	val category: String?,
 
+	@field:Schema(description = "TourAPI 세부 분류 코드", example = "A05020100", nullable = true)
+	val categoryCode: String?,
+
 	@field:Schema(description = "주소", example = "경상북도 경주시", nullable = true)
 	val address: String?,
 
@@ -642,7 +675,8 @@ data class TripPlaceSummaryResponse(
 				contentTypeName = contentType?.displayName,
 				stopType = contentType?.stopType ?: StopType.SIGHTSEEING,
 				name = place.title,
-				category = contentType?.displayName,
+				category = place.categoryName(contentType),
+				categoryCode = place.lclsSystm3 ?: place.raw["cat3"]?.toString(),
 				address = place.address,
 				latitude = place.latitude,
 				longitude = place.longitude,
@@ -682,6 +716,9 @@ data class TripPlaceDetailResponse(
 	@field:Schema(description = "장소 카테고리", example = "관광지", nullable = true)
 	val category: String?,
 
+	@field:Schema(description = "TourAPI 세부 분류 코드", example = "A05020100", nullable = true)
+	val categoryCode: String?,
+
 	@field:Schema(description = "주소", example = "경상북도 경주시", nullable = true)
 	val address: String?,
 
@@ -700,8 +737,20 @@ data class TripPlaceDetailResponse(
 	@field:Schema(description = "대표 이미지 URL", example = "https://example.com/image.jpg", nullable = true)
 	val imageUrl: String?,
 
+	@field:Schema(description = "상세 화면 이미지 목록. 대표 이미지를 포함하고 중복을 제거합니다.")
+	val imageUrls: List<String>,
+
 	@field:Schema(description = "장소 소개", example = "짧은 산책을 즐기기 좋은 공원입니다.", nullable = true)
 	val overview: String?,
+
+	@field:Schema(description = "운영시간", example = "09:00~18:00", nullable = true)
+	val operatingHours: String?,
+
+	@field:Schema(description = "휴무일", example = "매주 월요일", nullable = true)
+	val closedDays: String?,
+
+	@field:Schema(description = "입장료 또는 이용요금", example = "무료", nullable = true)
+	val admissionFee: String?,
 
 	@field:Schema(description = "TourAPI 분류체계 대분류", example = "NA", nullable = true)
 	val lclsSystm1: String?,
@@ -719,6 +768,8 @@ data class TripPlaceDetailResponse(
 		fun of(
 			contentId: String,
 			detail: TourApiPlaceDetail,
+			intro: TourApiPlaceIntro?,
+			images: List<TourApiPlaceImage>,
 			accessibility: TourApiAccessibility?,
 			requestedContentTypeId: String?,
 		): TripPlaceDetailResponse {
@@ -731,14 +782,21 @@ data class TripPlaceDetailResponse(
 				contentTypeName = contentType?.displayName,
 				stopType = contentType?.stopType ?: StopType.SIGHTSEEING,
 				name = detail.title ?: contentId,
-				category = contentType?.displayName,
+				category = detail.categoryName(contentType),
+				categoryCode = detail.lclsSystm3 ?: detail.raw["cat3"]?.toString(),
 				address = detail.address,
 				latitude = detail.latitude,
 				longitude = detail.longitude,
 				phone = detail.tel,
 				homepageUrl = detail.homepage,
-				imageUrl = detail.firstImage ?: detail.firstImageThumbnail,
+				imageUrl = detail.firstImage ?: detail.firstImageThumbnail ?: images.firstOrNull()?.imageUrl,
+				imageUrls = listOfNotNull(detail.firstImage ?: detail.firstImageThumbnail)
+					.plus(images.mapNotNull { it.imageUrl ?: it.thumbnailUrl })
+					.distinct(),
 				overview = detail.overview,
+				operatingHours = intro?.operatingHours,
+				closedDays = intro?.closedDays,
+				admissionFee = intro?.admissionFee,
 				lclsSystm1 = detail.lclsSystm1,
 				accessibility = TripPlaceAccessibilityResponse.from(accessibility),
 				recommendationTags = listOfNotNull(
@@ -750,12 +808,33 @@ data class TripPlaceDetailResponse(
 				sourcePayload = mapOf(
 					"provider" to "tour_api",
 					"detailCommon" to detail.raw,
+					"detailIntro" to intro?.raw,
+					"detailImages" to images.map(TourApiPlaceImage::raw),
 					"accessibility" to accessibility?.raw,
 				),
 			)
 		}
 	}
 }
+
+private fun TourApiPlaceSummary.categoryName(contentType: TourApiContentType?): String? =
+	foodCategoryName(raw["cat3"]?.toString()) ?: contentType?.displayName
+
+private fun TourApiPlaceDetail.categoryName(contentType: TourApiContentType?): String? =
+	foodCategoryName(raw["cat3"]?.toString()) ?: contentType?.displayName
+
+private fun foodCategoryName(categoryCode: String?): String? =
+	when (categoryCode) {
+		"A05020100" -> "한식"
+		"A05020200" -> "서양식"
+		"A05020300" -> "일식"
+		"A05020400" -> "중식"
+		"A05020500" -> "패밀리레스토랑"
+		"A05020600" -> "이색음식점"
+		"A05020700" -> "채식"
+		"A05020900" -> "카페/전통찻집"
+		else -> null
+	}
 
 @Schema(description = "방문지 무장애 주요 정보")
 data class TripPlaceAccessibilityResponse(

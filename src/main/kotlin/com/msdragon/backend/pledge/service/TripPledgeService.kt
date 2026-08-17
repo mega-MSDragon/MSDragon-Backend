@@ -18,6 +18,7 @@ import com.msdragon.backend.pledge.entity.PledgeItem
 import com.msdragon.backend.pledge.entity.PledgeSignature
 import com.msdragon.backend.pledge.entity.PledgeTemplate
 import com.msdragon.backend.pledge.entity.TripPledge
+import com.msdragon.backend.pledge.entity.TripPledgeProgressStatus
 import com.msdragon.backend.pledge.entity.TripPledgeStatus
 import com.msdragon.backend.pledge.repository.PledgeItemRepository
 import com.msdragon.backend.pledge.repository.PledgeSignatureRepository
@@ -87,9 +88,12 @@ class TripPledgeService(
 		}
 
 		val pledgeId = requireNotNull(pledge.id)
+		val documentDate = requireNotNull(pledge.reviewedAt).toLocalDate()
 		val pdfContent = tripPledgePdfRenderer.render(
 			TripPledgePdfData(
 				tripId = tripId,
+				documentNumber = "${documentDate.year}-${pledgeId.toString().padStart(2, '0')}",
+				documentDate = documentDate,
 				documentTitle = pledge.title ?: DEFAULT_TITLE,
 				tripTitle = trip.title,
 				startDate = trip.startDate,
@@ -116,6 +120,15 @@ class TripPledgeService(
 	@Transactional(readOnly = true)
 	fun isCompleted(tripId: Long): Boolean =
 		tripPledgeRepository.findByTripId(tripId)?.status == TripPledgeStatus.COMPLETED
+
+	@Transactional(readOnly = true)
+	fun getProgressStatus(tripId: Long): TripPledgeProgressStatus =
+		when (tripPledgeRepository.findByTripId(tripId)?.status) {
+			null -> TripPledgeProgressStatus.NOT_CREATED
+			TripPledgeStatus.DRAFT, TripPledgeStatus.REVIEWED -> TripPledgeProgressStatus.AWAITING_CHILD_SIGNATURE
+			TripPledgeStatus.SIGNATURE_REQUESTED -> TripPledgeProgressStatus.AWAITING_PARENT_SIGNATURE
+			TripPledgeStatus.COMPLETED -> TripPledgeProgressStatus.COMPLETED
+		}
 
 	@Transactional
 	fun saveReviewedPledge(

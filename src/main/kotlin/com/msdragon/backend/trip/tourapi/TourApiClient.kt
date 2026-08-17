@@ -7,5 +7,9 @@ interface TourApiClient {
 
 	fun getPlaceDetail(contentId: String): TourApiPlaceDetail?
 
+	fun getPlaceIntro(contentId: String, contentTypeId: String): TourApiPlaceIntro?
+
+	fun getPlaceImages(contentId: String): List<TourApiPlaceImage>
+
 	fun getAccessibility(contentId: String): TourApiAccessibility?
 }

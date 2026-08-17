@@ -12,9 +12,13 @@ import com.msdragon.backend.trip.dto.TripDestinationResponse
 import com.msdragon.backend.trip.dto.TripDetailResponse
 import com.msdragon.backend.trip.dto.TripParentCandidatesResponse
 import com.msdragon.backend.trip.dto.TripPlaceDetailResponse
+import com.msdragon.backend.trip.dto.TripPlaceRecommendationsResponse
 import com.msdragon.backend.trip.dto.TripPlaceSearchResponse
+import com.msdragon.backend.trip.dto.TripStopResponse
 import com.msdragon.backend.trip.dto.TripTravelModeResponse
 import com.msdragon.backend.trip.dto.UpdateTripRequest
+import com.msdragon.backend.trip.dto.UpdateTripStopNoteRequest
+import com.msdragon.backend.trip.entity.TripPlaceCategory
 import com.msdragon.backend.trip.service.TripCourseRecommendationService
 import com.msdragon.backend.trip.service.TripPlaceService
 import com.msdragon.backend.trip.service.TripRouteOptimizationService
@@ -206,8 +210,33 @@ class TripController(
 		)
 
 	@Operation(
+		summary = "방문지 추천",
+		description = "코스 편집 화면 진입 시 여행 도시와 부모 프로필 추천 스냅샷을 기준으로 현재 코스에 없는 맛집 또는 관광지를 추천합니다.",
+	)
+	@ApiResponses(
+		value = [
+			SwaggerApiResponse(responseCode = "200", description = "처리 완료: 추천 성공(status=200) 또는 요청·인증·정책 오류(status=400/401/403/404)"),
+			SwaggerApiResponse(responseCode = "500", description = "TourAPI 설정 또는 호출 실패"),
+		],
+	)
+	@GetMapping("/{tripId}/places/recommendations")
+	fun recommendTripPlaces(
+		@CurrentUser currentUser: AuthenticatedUser,
+		@Parameter(description = "여행 ID", example = "1")
+		@PathVariable tripId: Long,
+		@Parameter(description = "추천 장소 구분", example = "attraction", schema = Schema(allowableValues = ["restaurant", "attraction"]))
+		@RequestParam category: String,
+		@Parameter(description = "추천 장소 수. 최대 50", example = "20")
+		@RequestParam(defaultValue = "20") size: Int,
+	): ApiResponse<TripPlaceRecommendationsResponse> =
+		ApiResponse.success(
+			message = "방문지 추천 성공",
+			data = tripCourseRecommendationService.recommendPlaces(currentUser, tripId, TripPlaceCategory.from(category), size),
+		)
+
+	@Operation(
 		summary = "방문지 검색",
-		description = "코스 편집 화면에서 여행 도시 범위 안의 TourAPI 방문지를 키워드로 검색합니다. 숙박은 검색 결과에서 제외합니다.",
+		description = "코스 편집 화면에서 여행 도시 범위 안의 TourAPI 맛집 또는 관광지를 키워드로 검색합니다. 숙박은 검색 결과에서 제외합니다.",
 	)
 	@ApiResponses(
 		value = [
@@ -222,12 +251,8 @@ class TripController(
 		@PathVariable tripId: Long,
 		@Parameter(description = "검색어", example = "경주 맛집")
 		@RequestParam keyword: String,
-		@Parameter(
-			description = "TourAPI 콘텐츠 타입 ID. 생략하면 숙박을 제외한 지원 타입 전체를 검색합니다.",
-			example = "39",
-			schema = Schema(allowableValues = ["12", "14", "15", "28", "38", "39"]),
-		)
-		@RequestParam(required = false) contentTypeId: String?,
+		@Parameter(description = "검색 결과 구분", example = "restaurant", schema = Schema(allowableValues = ["restaurant", "attraction"]))
+		@RequestParam category: String,
 		@Parameter(description = "페이지 번호", example = "1")
 		@RequestParam(defaultValue = "1") page: Int,
 		@Parameter(description = "페이지 크기. 최대 50", example = "20")
@@ -235,7 +260,7 @@ class TripController(
 	): ApiResponse<TripPlaceSearchResponse> =
 		ApiResponse.success(
 			message = "방문지 검색 성공",
-			data = tripPlaceService.searchPlaces(currentUser, tripId, keyword, contentTypeId, page, size),
+			data = tripPlaceService.searchPlaces(currentUser, tripId, keyword, TripPlaceCategory.from(category), page, size),
 		)
 
 	@Operation(
@@ -289,7 +314,7 @@ class TripController(
 
 	@Operation(
 		summary = "여행 기본정보 수정",
-		description = "여행을 만든 자녀가 여행 정보를 전체 수정합니다. 준비 중에는 모든 항목, 여행 중에는 오늘을 포함하는 기간과 참여 부모만 변경할 수 있습니다. 날짜 또는 참여 부모가 바뀌면 기존 코스와 경로를 초기화하며, 참여 부모가 바뀌면 10계명과 모든 서명도 삭제합니다.",
+		description = "여행을 만든 자녀가 기간과 참여 부모를 수정합니다. 제목과 도시는 생성 후 변경할 수 없습니다. 날짜 또는 참여 부모가 바뀌면 기존 코스와 경로를 초기화하며, 참여 부모가 바뀌면 10계명과 모든 서명도 삭제합니다.",
 	)
 	@ApiResponses(
 		value = [
@@ -310,7 +335,7 @@ class TripController(
 
 	@Operation(
 		summary = "여행 코스 저장",
-		description = "여행을 만든 자녀가 준비 중 또는 여행 중인 방문지를 편집한 뒤 최종 일자별 코스를 전체 저장합니다. 방문지 단건 추가·수정·삭제 API가 아니므로 변경하지 않은 일자도 함께 보내야 하며, 포함하지 않은 일자는 빈 코스로 저장됩니다. 요청 배열 순서가 방문 순서가 되고 완료·보관 여행은 수정할 수 없습니다.",
+		description = "여행을 만든 자녀가 준비 중 또는 여행 중인 방문지를 편집한 뒤 최종 일자별 코스를 전체 저장합니다. 방문지 단건 추가·수정·삭제 API가 아니므로 변경하지 않은 일자도 함께 보내야 하며, 포함하지 않은 일자는 빈 코스로 저장됩니다. 요청 배열 순서가 방문 순서가 됩니다. 방문지 구성이 바뀐 일자의 기존 경로만 초기화되므로 응답에서 route가 null인 변경 일자를 다시 최적화해야 합니다. 완료·보관 여행은 수정할 수 없습니다.",
 	)
 	@ApiResponses(
 		value = [
@@ -327,5 +352,28 @@ class TripController(
 		ApiResponse.success(
 			message = "여행 코스 저장 성공",
 			data = tripService.saveTripCourse(currentUser, tripId, request),
+		)
+
+	@Operation(
+		summary = "방문지 메모 수정",
+		description = "여행을 만든 자녀가 코스 전체를 다시 저장하지 않고 방문지 메모를 저장하거나 삭제합니다. null 또는 공백 메모는 삭제로 처리합니다.",
+	)
+	@ApiResponses(
+		value = [
+			SwaggerApiResponse(responseCode = "200", description = "처리 완료: 수정 성공(status=200) 또는 요청·인증·정책 오류(status=400/401/403/404)"),
+		],
+	)
+	@PutMapping("/{tripId}/stops/{stopId}/note")
+	fun updateTripStopNote(
+		@CurrentUser currentUser: AuthenticatedUser,
+		@Parameter(description = "여행 ID", example = "1")
+		@PathVariable tripId: Long,
+		@Parameter(description = "방문지 ID", example = "1")
+		@PathVariable stopId: Long,
+		@Valid @RequestBody request: UpdateTripStopNoteRequest,
+	): ApiResponse<TripStopResponse> =
+		ApiResponse.success(
+			message = "방문지 메모 수정 성공",
+			data = tripService.updateTripStopNote(currentUser, tripId, stopId, request),
 		)
 }

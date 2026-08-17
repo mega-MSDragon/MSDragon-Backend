@@ -11,12 +11,16 @@ import com.msdragon.backend.family.repository.FamilyMemberRepository
 import com.msdragon.backend.parentprofile.entity.FoodPreference
 import com.msdragon.backend.parentprofile.entity.WalkingPace
 import com.msdragon.backend.trip.dto.TripCourseResponse
+import com.msdragon.backend.trip.dto.TripDestinationResponse
 import com.msdragon.backend.trip.dto.TripParentProfileSnapshotResponse
+import com.msdragon.backend.trip.dto.TripPlaceRecommendationsResponse
+import com.msdragon.backend.trip.dto.TripPlaceSummaryResponse
 import com.msdragon.backend.trip.dto.TripRecommendationSnapshotResponse
 import com.msdragon.backend.trip.entity.ExternalApiProvider
 import com.msdragon.backend.trip.entity.StopType
 import com.msdragon.backend.trip.entity.Trip
 import com.msdragon.backend.trip.entity.TripDay
+import com.msdragon.backend.trip.entity.TripPlaceCategory
 import com.msdragon.backend.trip.entity.TripStatus
 import com.msdragon.backend.trip.entity.TripStop
 import com.msdragon.backend.trip.repository.TripDayRepository
@@ -45,6 +49,48 @@ class TripCourseRecommendationService(
 	private val tourApiClient: TourApiClient,
 	private val objectMapper: ObjectMapper,
 ) {
+	@Transactional
+	fun recommendPlaces(
+		currentUser: AuthenticatedUser,
+		tripId: Long,
+		category: TripPlaceCategory,
+		size: Int,
+	): TripPlaceRecommendationsResponse {
+		val child = getLoginUser(currentUser.id)
+		val trip = tripRepository.findByIdAndDeletedAtIsNull(tripId)
+			?: throw NotFoundException("여행을 찾을 수 없습니다.")
+		validateTripReadable(currentUser.id, trip)
+		tripService.validateCourseEditable(child, trip)
+		if (size !in 1..MAX_RECOMMENDATION_SIZE) {
+			throw BadRequestException("추천 장소 수는 1 이상 ${MAX_RECOMMENDATION_SIZE} 이하이어야 합니다.")
+		}
+
+		val snapshot = trip.recommendationSnapshot
+			?.let { objectMapper.readValue(it, TripRecommendationSnapshotResponse::class.java) }
+			?: throw BadRequestException("여행 추천 입력 스냅샷이 없습니다.")
+		val existingContentIds = tripStopRepository
+			.findAllByTripDayTripIdOrderByTripDayDayNumberAscSortOrderAsc(tripId)
+			.mapNotNull(TripStop::externalPlaceId)
+			.toSet()
+		val places = scoreCandidates(
+			candidates = collectCandidates(
+				trip = trip,
+				parents = snapshot.parents,
+				requiredTotal = size,
+				targets = category.contentTypes(),
+			).filterNot { it.contentId in existingContentIds },
+			parents = snapshot.parents,
+			requiredTotal = size,
+		).take(size).map { TripPlaceSummaryResponse.of(it.summary) }
+
+		return TripPlaceRecommendationsResponse(
+			tripId = tripId,
+			destination = TripDestinationResponse.from(trip.destinationCode),
+			category = category,
+			places = places,
+		)
+	}
+
 	@Transactional
 	fun recommendCourse(currentUser: AuthenticatedUser, tripId: Long): TripCourseResponse {
 		val child = getLoginUser(currentUser.id)
@@ -127,6 +173,7 @@ class TripCourseRecommendationService(
 		trip: Trip,
 		parents: List<TripParentProfileSnapshotResponse>,
 		requiredTotal: Int,
+		targets: List<TourApiContentType> = TourApiContentType.recommendationTargets,
 	): List<TourApiPlaceSummary> {
 		val destinationPolicy = DestinationTourApiPolicy.of(trip.destinationCode)
 		if (destinationPolicy.regions.isEmpty()) {
@@ -136,7 +183,7 @@ class TripCourseRecommendationService(
 		val rowsPerRequest = minOf(50, max(20, requiredTotal))
 		return destinationPolicy.regions
 			.flatMap { region ->
-				TourApiContentType.recommendationTargets.flatMap { contentType ->
+				targets.flatMap { contentType ->
 					tourApiClient.findPlaces(
 						TourApiPlaceSearch(
 							region = region,
@@ -378,6 +425,7 @@ class TripCourseRecommendationService(
 		private const val THEME_MATCH_SCORE = 15
 		private const val PERSONALITY_MATCH_SCORE = 8
 		private const val IMAGE_SCORE = 2
+		private const val MAX_RECOMMENDATION_SIZE = 50
 
 		private val walkingPaceOrder: Map<WalkingPace, Int> = mapOf(
 			WalkingPace.SLOW to 0,

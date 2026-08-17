@@ -26,6 +26,16 @@ enum class TripPledgeStatus(
 	}
 }
 
+enum class TripPledgeProgressStatus(
+	@get:JsonValue
+	val value: String,
+) {
+	NOT_CREATED("not_created"),
+	AWAITING_CHILD_SIGNATURE("awaiting_child_signature"),
+	AWAITING_PARENT_SIGNATURE("awaiting_parent_signature"),
+	COMPLETED("completed"),
+}
+
 @Converter(autoApply = true)
 class TripPledgeStatusConverter : AttributeConverter<TripPledgeStatus, String> {
 	override fun convertToDatabaseColumn(attribute: TripPledgeStatus?): String? = attribute?.value

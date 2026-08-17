@@ -42,6 +42,8 @@ import com.msdragon.backend.trip.tourapi.TourApiAccessibility
 import com.msdragon.backend.trip.tourapi.TourApiClient
 import com.msdragon.backend.trip.tourapi.TourApiKeywordSearch
 import com.msdragon.backend.trip.tourapi.TourApiPlaceDetail
+import com.msdragon.backend.trip.tourapi.TourApiPlaceImage
+import com.msdragon.backend.trip.tourapi.TourApiPlaceIntro
 import com.msdragon.backend.trip.tourapi.TourApiPlaceSearch
 import com.msdragon.backend.trip.tourapi.TourApiPlaceSummary
 import com.msdragon.backend.trip.tmap.TmapRouteClient
@@ -770,6 +772,10 @@ class TripControllerTest {
 		)
 			.andExpect(status().isOk)
 			.andExpect(jsonPath("$.data.tripId").value(tripId))
+			.andExpect(jsonPath("$.data.startDate").value(startDate.toString()))
+			.andExpect(jsonPath("$.data.endDate").value(startDate.plusDays(1).toString()))
+			.andExpect(jsonPath("$.data.participants.length()").value(2))
+			.andExpect(jsonPath("$.data.pledgeStatus").value("not_created"))
 			.andExpect(jsonPath("$.data.days.length()").value(2))
 			.andExpect(jsonPath("$.data.days[0].stops.length()").value(2))
 			.andExpect(jsonPath("$.data.days[0].stops[0].sortOrder").value(1))
@@ -793,7 +799,40 @@ class TripControllerTest {
 	}
 
 	@Test
-	fun `여행 제목만 수정하면 기존 코스를 유지한다`() {
+	fun `자녀가 방문지 메모를 단건 저장하고 삭제한다`() {
+		val child = saveUser(UserRole.CHILD, "child-1", "혜린")
+		val mother = saveUser(UserRole.PARENT, "parent-1", "엄마", GenderType.FEMALE)
+		connectFamily(child, mother)
+		saveCompletedParentProfile(mother)
+		val tripId = createTrip(child, mother, futureDate(10), futureDate(10))
+		saveSingleStopCourse(child, tripId)
+		val stopId = requireNotNull(
+			tripStopRepository.findAllByTripDayTripIdOrderByTripDayDayNumberAscSortOrderAsc(tripId.toLong()).single().id,
+		)
+		val authorization = "Bearer ${tokenService.createAccessToken(child)}"
+
+		mockMvc.perform(
+			put("/api/v1/trips/$tripId/stops/$stopId/note")
+				.header("Authorization", authorization)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"note\":\"부모님과 사진 찍기\"}"),
+		)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.data.id").value(stopId))
+			.andExpect(jsonPath("$.data.note").value("부모님과 사진 찍기"))
+
+		mockMvc.perform(
+			put("/api/v1/trips/$tripId/stops/$stopId/note")
+				.header("Authorization", authorization)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"note\":null}"),
+		)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.data.note").doesNotExist())
+	}
+
+	@Test
+	fun `기간과 참여 부모가 같으면 기존 코스와 제목 도시를 유지한다`() {
 		val child = saveUser(UserRole.CHILD, "child-1", "혜린")
 		val mother = saveUser(UserRole.PARENT, "parent-1", "엄마", GenderType.FEMALE)
 		connectFamily(child, mother)
@@ -810,8 +849,6 @@ class TripControllerTest {
 				.content(
 					"""
 					{
-					  "title": "엄마와 경주 여행",
-					  "destinationCode": "gyeongju",
 					  "startDate": "$startDate",
 					  "endDate": "$startDate",
 					  "parentUserIds": [${requireNotNull(mother.id)}]
@@ -820,13 +857,15 @@ class TripControllerTest {
 				),
 		)
 			.andExpect(status().isOk)
-			.andExpect(jsonPath("$.data.title").value("엄마와 경주 여행"))
+			.andExpect(jsonPath("$.data.title").value("경주 여행"))
+			.andExpect(jsonPath("$.data.destination.code").value("gyeongju"))
 
 		mockMvc.perform(
 			get("/api/v1/trips/$tripId/course")
 				.header("Authorization", "Bearer ${tokenService.createAccessToken(child)}"),
 		)
 			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.data.pledgeStatus").value("awaiting_child_signature"))
 			.andExpect(jsonPath("$.data.days[0].stops.length()").value(1))
 			.andExpect(jsonPath("$.data.days[0].stops[0].name").value("경주 산책 공원"))
 
@@ -850,10 +889,8 @@ class TripControllerTest {
 				.content(
 					"""
 					{
-					  "title": "부산 여행",
-					  "destinationCode": "busan",
-					  "startDate": "$startDate",
-					  "endDate": "$startDate",
+					  "startDate": "${startDate.plusDays(1)}",
+					  "endDate": "${startDate.plusDays(1)}",
 					  "parentUserIds": [${requireNotNull(mother.id)}]
 					}
 					""".trimIndent(),
@@ -863,7 +900,7 @@ class TripControllerTest {
 			.andExpect(jsonPath("$.status").value(400))
 			.andExpect(
 				jsonPath("$.message")
-					.value("도시, 날짜 또는 참여 부모를 변경하면 기존 코스가 삭제됩니다. 코스 초기화에 동의해주세요."),
+					.value("날짜 또는 참여 부모를 변경하면 기존 코스가 삭제됩니다. 코스 초기화에 동의해주세요."),
 			)
 	}
 
@@ -896,8 +933,6 @@ class TripControllerTest {
 				.content(
 					"""
 					{
-					  "title": "아빠와 부산 여행",
-					  "destinationCode": "busan",
 					  "startDate": "$changedStartDate",
 					  "endDate": "$changedEndDate",
 					  "parentUserIds": [${requireNotNull(father.id)}],
@@ -907,14 +942,14 @@ class TripControllerTest {
 				),
 		)
 			.andExpect(status().isOk)
-			.andExpect(jsonPath("$.data.title").value("아빠와 부산 여행"))
-			.andExpect(jsonPath("$.data.destination.code").value("busan"))
+			.andExpect(jsonPath("$.data.title").value("경주 여행"))
+			.andExpect(jsonPath("$.data.destination.code").value("gyeongju"))
 			.andExpect(jsonPath("$.data.startDate").value(changedStartDate.toString()))
 			.andExpect(jsonPath("$.data.endDate").value(changedEndDate.toString()))
 			.andExpect(jsonPath("$.data.status").value("planning"))
 			.andExpect(jsonPath("$.data.participants.length()").value(2))
 			.andExpect(jsonPath("$.data.participants[1].userId").value(requireNotNull(father.id)))
-			.andExpect(jsonPath("$.data.recommendationSnapshot.destinationCode").value("busan"))
+			.andExpect(jsonPath("$.data.recommendationSnapshot.destinationCode").value("gyeongju"))
 			.andExpect(jsonPath("$.data.recommendationSnapshot.parents[0].parentUserId").value(requireNotNull(father.id)))
 			.andExpect(jsonPath("$.data.days.length()").value(3))
 			.andExpect(jsonPath("$.data.days[0].travelDate").value(changedStartDate.toString()))
@@ -957,8 +992,6 @@ class TripControllerTest {
 				.content(
 					"""
 					{
-					  "title": "부모가 바꾼 여행",
-					  "destinationCode": "gyeongju",
 					  "startDate": "$startDate",
 					  "endDate": "$startDate",
 					  "parentUserIds": [${requireNotNull(mother.id)}]
@@ -991,8 +1024,6 @@ class TripControllerTest {
 				.content(
 					"""
 					{
-					  "title": "경주 여행",
-					  "destinationCode": "gyeongju",
 					  "startDate": "$today",
 					  "endDate": "$changedEndDate",
 					  "parentUserIds": [${requireNotNull(father.id)}],
@@ -1020,57 +1051,6 @@ class TripControllerTest {
 	}
 
 	@Test
-	fun `진행 중 여행은 제목과 도시를 수정할 수 없다`() {
-		val child = saveUser(UserRole.CHILD, "child-1", "혜린")
-		val mother = saveUser(UserRole.PARENT, "parent-1", "엄마", GenderType.FEMALE)
-		connectFamily(child, mother)
-		saveCompletedParentProfile(mother)
-		val today = futureDate(0)
-		val tripId = createTrip(child, mother, today, today.plusDays(1))
-		val authorization = "Bearer ${tokenService.createAccessToken(child)}"
-
-		mockMvc.perform(
-			put("/api/v1/trips/$tripId")
-				.header("Authorization", authorization)
-				.contentType(MediaType.APPLICATION_JSON)
-				.content(
-					"""
-					{
-					  "title": "수정한 경주 여행",
-					  "destinationCode": "gyeongju",
-					  "startDate": "$today",
-					  "endDate": "${today.plusDays(1)}",
-					  "parentUserIds": [${requireNotNull(mother.id)}]
-					}
-					""".trimIndent(),
-				),
-		)
-			.andExpect(status().isOk)
-			.andExpect(jsonPath("$.status").value(400))
-			.andExpect(jsonPath("$.message").value("여행 중에는 여행 제목을 수정할 수 없습니다."))
-
-		mockMvc.perform(
-			put("/api/v1/trips/$tripId")
-				.header("Authorization", authorization)
-				.contentType(MediaType.APPLICATION_JSON)
-				.content(
-					"""
-					{
-					  "title": "경주 여행",
-					  "destinationCode": "busan",
-					  "startDate": "$today",
-					  "endDate": "${today.plusDays(1)}",
-					  "parentUserIds": [${requireNotNull(mother.id)}]
-					}
-					""".trimIndent(),
-				),
-		)
-			.andExpect(status().isOk)
-			.andExpect(jsonPath("$.status").value(400))
-			.andExpect(jsonPath("$.message").value("여행 중에는 여행 도시를 수정할 수 없습니다."))
-	}
-
-	@Test
 	fun `진행 중 여행의 변경 기간에는 오늘이 포함되어야 한다`() {
 		val child = saveUser(UserRole.CHILD, "child-1", "혜린")
 		val mother = saveUser(UserRole.PARENT, "parent-1", "엄마", GenderType.FEMALE)
@@ -1086,8 +1066,6 @@ class TripControllerTest {
 				.content(
 					"""
 					{
-					  "title": "경주 여행",
-					  "destinationCode": "gyeongju",
 					  "startDate": "${today.plusDays(1)}",
 					  "endDate": "${today.plusDays(2)}",
 					  "parentUserIds": [${requireNotNull(mother.id)}]
@@ -1154,8 +1132,6 @@ class TripControllerTest {
 				.content(
 					"""
 					{
-					  "title": "경주 여행",
-					  "destinationCode": "gyeongju",
 					  "startDate": "$yesterday",
 					  "endDate": "$yesterday",
 					  "parentUserIds": [${requireNotNull(mother.id)}]
@@ -1196,8 +1172,6 @@ class TripControllerTest {
 				.content(
 					"""
 					{
-					  "title": "겹치는 여행",
-					  "destinationCode": "gyeongju",
 					  "startDate": "${firstStartDate.plusDays(1)}",
 					  "endDate": "${firstStartDate.plusDays(1)}",
 					  "parentUserIds": [${requireNotNull(mother.id)}]
@@ -1314,6 +1288,53 @@ class TripControllerTest {
 	}
 
 	@Test
+	fun `코스 전체 저장은 변경된 일자의 경로만 초기화한다`() {
+		val child = saveUser(UserRole.CHILD, "child-1", "혜린")
+		val mother = saveUser(UserRole.PARENT, "parent-1", "엄마", GenderType.FEMALE)
+		connectFamily(child, mother)
+		saveCompletedParentProfile(mother)
+		val startDate = futureDate(10)
+		val tripId = createTrip(child, mother, startDate, startDate.plusDays(1))
+		val authorization = "Bearer ${tokenService.createAccessToken(child)}"
+
+		fun saveCourse(secondDayName: String) = mockMvc.perform(
+			put("/api/v1/trips/$tripId/course")
+				.header("Authorization", authorization)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(
+					"""
+					{
+					  "days": [
+					    {"dayNumber": 1, "stops": [{"name": "첫날 공원", "latitude": 35.85, "longitude": 129.22}]},
+					    {"dayNumber": 2, "stops": [{"name": "$secondDayName", "latitude": 35.86, "longitude": 129.23}]}
+					  ]
+					}
+					""".trimIndent(),
+				),
+		)
+
+		saveCourse("둘째 날 식당").andExpect(status().isOk)
+		val tripDays = tripDayRepository.findAllByTripIdOrderByDayNumberAsc(tripId.toLong())
+		tripDays.forEach { day ->
+			day.applyRouteOptimization(
+				provider = ExternalApiProvider.TMAP,
+				totalDistanceMeters = 1200,
+				totalDurationSeconds = 600,
+				polyline = null,
+				sourcePayload = null,
+				optimizedAt = LocalDateTime.now(),
+			)
+		}
+		tripDayRepository.saveAllAndFlush(tripDays)
+
+		saveCourse("둘째 날 카페")
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.data.days[0].route.provider").value("tmap"))
+			.andExpect(jsonPath("$.data.days[1].route").doesNotExist())
+			.andExpect(jsonPath("$.data.days[1].stops[0].name").value("둘째 날 카페"))
+	}
+
+	@Test
 	fun `여행 추천 코스를 생성하면 부모 프로필 기준으로 일자별 방문지를 저장한다`() {
 		val child = saveUser(UserRole.CHILD, "child-1", "혜린")
 		val mother = saveUser(UserRole.PARENT, "parent-1", "엄마", GenderType.FEMALE)
@@ -1370,18 +1391,43 @@ class TripControllerTest {
 			get("/api/v1/trips/$tripId/places/search")
 				.header("Authorization", "Bearer ${tokenService.createAccessToken(child)}")
 				.param("keyword", "경주")
-				.param("contentTypeId", "39")
+				.param("category", "restaurant")
 				.param("page", "1")
 				.param("size", "10"),
 		)
 			.andExpect(status().isOk)
 			.andExpect(jsonPath("$.data.tripId").value(tripId))
 			.andExpect(jsonPath("$.data.keyword").value("경주"))
-			.andExpect(jsonPath("$.data.contentTypeId").value("39"))
+			.andExpect(jsonPath("$.data.category").value("restaurant"))
 			.andExpect(jsonPath("$.data.places.length()").value(1))
 			.andExpect(jsonPath("$.data.places[0].externalPlaceId").value("food-1"))
 			.andExpect(jsonPath("$.data.places[0].contentTypeName").value("음식점"))
 			.andExpect(jsonPath("$.data.places[0].stopType").value("meal"))
+	}
+
+	@Test
+	fun `부모 프로필 기준 추천 장소에서 현재 코스 장소를 제외한다`() {
+		val child = saveUser(UserRole.CHILD, "child-1", "혜린")
+		val mother = saveUser(UserRole.PARENT, "parent-1", "엄마", GenderType.FEMALE)
+		connectFamily(child, mother)
+		saveCompletedParentProfile(mother)
+		val tripId = createTrip(child, mother, futureDate(10), futureDate(10))
+		saveSingleStopCourse(child, tripId)
+		fakeTourApiClient.placesByContentType["12"] = listOf(
+			tourPlace("nature-1", "12", "경주 산책 공원", "NA"),
+			tourPlace("nature-2", "12", "보문 호수길", "NA"),
+		)
+
+		mockMvc.perform(
+			get("/api/v1/trips/$tripId/places/recommendations")
+				.header("Authorization", "Bearer ${tokenService.createAccessToken(child)}")
+				.param("category", "attraction")
+				.param("size", "10"),
+		)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.data.category").value("attraction"))
+			.andExpect(jsonPath("$.data.places.length()").value(1))
+			.andExpect(jsonPath("$.data.places[0].externalPlaceId").value("nature-2"))
 	}
 
 	@Test
@@ -1415,6 +1461,19 @@ class TripControllerTest {
 			restroom = "장애인 화장실 있음",
 			raw = mapOf("contentid" to "nature-1", "route" to "출입구까지 경사로 있음"),
 		)
+		fakeTourApiClient.introsByContentId["nature-1"] = TourApiPlaceIntro(
+			operatingHours = "09:00~18:00",
+			closedDays = "매주 월요일",
+			admissionFee = "무료",
+			raw = mapOf("usetime" to "09:00~18:00"),
+		)
+		fakeTourApiClient.imagesByContentId["nature-1"] = listOf(
+			TourApiPlaceImage(
+				imageUrl = "https://example.com/nature-1-sub.jpg",
+				thumbnailUrl = null,
+				raw = mapOf("originimgurl" to "https://example.com/nature-1-sub.jpg"),
+			),
+		)
 
 		mockMvc.perform(
 			get("/api/v1/trips/$tripId/places/nature-1")
@@ -1426,6 +1485,10 @@ class TripControllerTest {
 			.andExpect(jsonPath("$.data.contentTypeName").value("관광지"))
 			.andExpect(jsonPath("$.data.stopType").value("sightseeing"))
 			.andExpect(jsonPath("$.data.homepageUrl").value("https://example.com/nature-1"))
+			.andExpect(jsonPath("$.data.imageUrls.length()").value(2))
+			.andExpect(jsonPath("$.data.operatingHours").value("09:00~18:00"))
+			.andExpect(jsonPath("$.data.closedDays").value("매주 월요일"))
+			.andExpect(jsonPath("$.data.admissionFee").value("무료"))
 			.andExpect(jsonPath("$.data.accessibility.route").value("출입구까지 경사로 있음"))
 			.andExpect(jsonPath("$.data.accessibility.restroom").value("장애인 화장실 있음"))
 			.andExpect(jsonPath("$.data.recommendationTags[0]").value("tour_api"))
@@ -1667,6 +1730,8 @@ class TripControllerTest {
 	class FakeTourApiClient : TourApiClient {
 		val placesByContentType: MutableMap<String, List<TourApiPlaceSummary>> = mutableMapOf()
 		val detailsByContentId: MutableMap<String, TourApiPlaceDetail> = mutableMapOf()
+		val introsByContentId: MutableMap<String, TourApiPlaceIntro> = mutableMapOf()
+		val imagesByContentId: MutableMap<String, List<TourApiPlaceImage>> = mutableMapOf()
 		val accessibilityByContentId: MutableMap<String, TourApiAccessibility> = mutableMapOf()
 		var keywordPlaces: List<TourApiPlaceSummary> = emptyList()
 
@@ -1683,12 +1748,20 @@ class TripControllerTest {
 				raw = mapOf("contentid" to contentId),
 			)
 
+		override fun getPlaceIntro(contentId: String, contentTypeId: String): TourApiPlaceIntro? =
+			introsByContentId[contentId]
+
+		override fun getPlaceImages(contentId: String): List<TourApiPlaceImage> =
+			imagesByContentId[contentId].orEmpty()
+
 		override fun getAccessibility(contentId: String): TourApiAccessibility? =
 			accessibilityByContentId[contentId]
 
 		fun reset() {
 			placesByContentType.clear()
 			detailsByContentId.clear()
+			introsByContentId.clear()
+			imagesByContentId.clear()
 			accessibilityByContentId.clear()
 			keywordPlaces = emptyList()
 		}

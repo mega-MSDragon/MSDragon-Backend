@@ -61,6 +61,19 @@ data class TourApiPlaceDetail(
 	val lclsSystm3: String? = null,
 )
 
+data class TourApiPlaceIntro(
+	val operatingHours: String?,
+	val closedDays: String?,
+	val admissionFee: String?,
+	val raw: Map<String, Any?>,
+)
+
+data class TourApiPlaceImage(
+	val imageUrl: String?,
+	val thumbnailUrl: String?,
+	val raw: Map<String, Any?>,
+)
+
 data class TourApiAccessibility(
 	val parking: String?,
 	val publicTransport: String?,

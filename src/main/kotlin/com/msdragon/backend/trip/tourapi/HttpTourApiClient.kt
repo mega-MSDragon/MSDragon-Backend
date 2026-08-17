@@ -81,6 +81,43 @@ class HttpTourApiClient(
 		)
 	}
 
+	override fun getPlaceIntro(contentId: String, contentTypeId: String): TourApiPlaceIntro? {
+		val item = requestItems(
+			operation = "detailIntro2",
+			params = mapOf(
+				"numOfRows" to "10",
+				"pageNo" to "1",
+				"contentId" to contentId,
+				"contentTypeId" to contentTypeId,
+			),
+		).firstOrNull() ?: return null
+
+		return TourApiPlaceIntro(
+			operatingHours = item.firstString("usetime", "usetimeculture", "usetimeleports", "opentime", "opentimefood"),
+			closedDays = item.firstString("restdate", "restdateculture", "restdateleports", "restdateshopping", "restdatefood"),
+			admissionFee = item.firstString("usefee", "usefeeleports", "saleitemcost"),
+			raw = item,
+		)
+	}
+
+	override fun getPlaceImages(contentId: String): List<TourApiPlaceImage> =
+		requestItems(
+			operation = "detailImage2",
+			params = mapOf(
+				"numOfRows" to "50",
+				"pageNo" to "1",
+				"contentId" to contentId,
+				"imageYN" to "Y",
+				"subImageYN" to "Y",
+			),
+		).map { item ->
+			TourApiPlaceImage(
+				imageUrl = item.string("originimgurl"),
+				thumbnailUrl = item.string("smallimageurl"),
+				raw = item,
+			)
+		}
+
 	override fun getAccessibility(contentId: String): TourApiAccessibility? {
 		val item = requestItems(
 			operation = "detailWithTour2",
@@ -176,6 +213,9 @@ private fun Map<String, Any?>.decimal(key: String): BigDecimal? =
 	string(key)?.let { value ->
 		runCatching { value.toBigDecimal() }.getOrNull()
 	}
+
+private fun Map<String, Any?>.firstString(vararg keys: String): String? =
+	keys.firstNotNullOfOrNull(::string)
 
 private fun Map<String, Any?>.toPlaceSummary(defaultContentTypeId: String? = null): TourApiPlaceSummary? {
 	val contentId = string("contentid") ?: return null

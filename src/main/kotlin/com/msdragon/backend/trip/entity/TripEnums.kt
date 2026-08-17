@@ -70,6 +70,21 @@ enum class StopType(
 	}
 }
 
+enum class TripPlaceCategory(
+	@get:JsonValue
+	override val value: String,
+) : DbEnum {
+	RESTAURANT("restaurant"),
+	ATTRACTION("attraction"),
+	;
+
+	companion object {
+		@JvmStatic
+		@JsonCreator(mode = JsonCreator.Mode.DELEGATING)
+		fun from(value: String): TripPlaceCategory = enumValueOf(value, entries)
+	}
+}
+
 enum class ExternalApiProvider(
 	@get:JsonValue
 	override val value: String,

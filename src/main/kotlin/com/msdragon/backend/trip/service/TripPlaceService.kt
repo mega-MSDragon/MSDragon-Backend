@@ -12,6 +12,7 @@ import com.msdragon.backend.trip.dto.TripDestinationResponse
 import com.msdragon.backend.trip.dto.TripPlaceDetailResponse
 import com.msdragon.backend.trip.dto.TripPlaceSearchResponse
 import com.msdragon.backend.trip.dto.TripPlaceSummaryResponse
+import com.msdragon.backend.trip.entity.TripPlaceCategory
 import com.msdragon.backend.trip.entity.Trip
 import com.msdragon.backend.trip.repository.TripRepository
 import com.msdragon.backend.trip.tourapi.DestinationTourApiPolicy
@@ -33,7 +34,7 @@ class TripPlaceService(
 		currentUser: AuthenticatedUser,
 		tripId: Long,
 		keyword: String,
-		contentTypeId: String?,
+		category: TripPlaceCategory,
 		page: Int,
 		size: Int,
 	): TripPlaceSearchResponse {
@@ -48,9 +49,7 @@ class TripPlaceService(
 		}
 		val normalizedPage = validatePage(page)
 		val normalizedSize = validateSize(size)
-		val requestedContentTypeId = normalizeContentTypeId(contentTypeId)
-		val allowedContentTypeIds = requestedContentTypeId?.let { setOf(it) }
-			?: TourApiContentType.recommendationTargets.map { it.id }.toSet()
+		val allowedContentTypeIds = category.contentTypes().map(TourApiContentType::id).toSet()
 
 		val destinationPolicy = DestinationTourApiPolicy.of(trip.destinationCode)
 		if (destinationPolicy.regions.isEmpty()) {
@@ -77,7 +76,7 @@ class TripPlaceService(
 			tripId = tripId,
 			destination = TripDestinationResponse.from(trip.destinationCode),
 			keyword = normalizedKeyword,
-			contentTypeId = requestedContentTypeId,
+			category = category,
 			page = normalizedPage,
 			size = normalizedSize,
 			places = places,
@@ -109,6 +108,8 @@ class TripPlaceService(
 		return TripPlaceDetailResponse.of(
 			contentId = normalizedContentId,
 			detail = detail,
+			intro = resolvedContentTypeId?.let { tourApiClient.getPlaceIntro(normalizedContentId, it) },
+			images = tourApiClient.getPlaceImages(normalizedContentId),
 			accessibility = tourApiClient.getAccessibility(normalizedContentId),
 			requestedContentTypeId = requestedContentTypeId,
 		)
@@ -161,3 +162,9 @@ class TripPlaceService(
 		private const val MAX_PAGE_SIZE = 50
 	}
 }
+
+internal fun TripPlaceCategory.contentTypes(): List<TourApiContentType> =
+	when (this) {
+		TripPlaceCategory.RESTAURANT -> listOf(TourApiContentType.FOOD)
+		TripPlaceCategory.ATTRACTION -> TourApiContentType.recommendationTargets.filter { it != TourApiContentType.FOOD }
+	}

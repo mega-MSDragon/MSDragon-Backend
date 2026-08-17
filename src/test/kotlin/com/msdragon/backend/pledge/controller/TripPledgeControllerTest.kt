@@ -353,6 +353,9 @@ class TripPledgeControllerTest {
 		Loader.loadPDF(pdfBytes).use { document ->
 			check(document.numberOfPages == 1)
 			val text = PDFTextStripper().getText(document)
+			check(text.contains("계약 제"))
+			check(text.contains("서약서"))
+			check(text.contains("우리 가족은"))
 			check(text.contains("가족 여행 10계명"))
 			check(text.contains("경주 여행"))
 			check(text.contains("가족 약속 1"))

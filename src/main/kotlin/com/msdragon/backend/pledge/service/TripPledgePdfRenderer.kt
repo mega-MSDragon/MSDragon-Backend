@@ -30,6 +30,9 @@ class TripPledgePdfRenderer {
 	fun render(data: TripPledgePdfData): ByteArray =
 		try {
 			val document = loadTemplate()
+			document.slot("document-number").text(data.documentNumber)
+			document.slot("written-date").text(data.documentDate.format(DATE_FORMAT))
+			document.slot("written-date-copy").text(data.documentDate.format(DATE_FORMAT))
 			document.slot("document-title").text(data.documentTitle)
 			document.slot("trip-title").text(data.tripTitle)
 			document.slot("trip-period").text(formatPeriod(data.startDate, data.endDate))
@@ -60,8 +63,9 @@ class TripPledgePdfRenderer {
 
 	private fun appendSignatures(container: Element, signatures: List<TripPledgePdfSignature>) {
 		container.empty()
-		signatures.forEach { signature ->
+			signatures.forEach { signature ->
 			val card = container.appendElement("div").addClass("signature-card")
+			card.appendElement("div").addClass("signature-role").text(signature.role.displayName())
 			card.appendElement("div")
 				.addClass("signature-image-frame")
 				.appendElement("img")
@@ -69,8 +73,7 @@ class TripPledgePdfRenderer {
 				.attr("src", "data:${signature.mimeType};base64,${Base64.getEncoder().encodeToString(signature.imageData)}")
 				.attr("alt", "${signature.displayName} 서명")
 			card.appendElement("div").addClass("signature-name").text(signature.displayName)
-			card.appendElement("div").addClass("signature-role").text(signature.role.displayName())
-			card.appendElement("div").addClass("signature-date").text(signature.signedAt.format(SIGNATURE_DATE_FORMAT))
+			card.appendElement("div").addClass("signature-stamp").text("서약 완료")
 		}
 	}
 
@@ -107,7 +110,6 @@ class TripPledgePdfRenderer {
 	companion object {
 		private val logger = LoggerFactory.getLogger(TripPledgePdfRenderer::class.java)
 		private val DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy.MM.dd")
-		private val SIGNATURE_DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy.MM.dd HH:mm")
 		private const val TEMPLATE_PATH = "templates/pledge/trip-pledge.html"
 		private const val REGULAR_FONT_PATH = "fonts/NanumGothic-Regular.ttf"
 		private const val BOLD_FONT_PATH = "fonts/NanumGothic-Bold.ttf"
@@ -117,6 +119,8 @@ class TripPledgePdfRenderer {
 
 data class TripPledgePdfData(
 	val tripId: Long,
+	val documentNumber: String,
+	val documentDate: LocalDate,
 	val documentTitle: String,
 	val tripTitle: String,
 	val startDate: LocalDate,
