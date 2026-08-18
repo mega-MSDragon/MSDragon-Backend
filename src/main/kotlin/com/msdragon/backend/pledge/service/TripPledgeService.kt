@@ -1,5 +1,6 @@
 package com.msdragon.backend.pledge.service
 
+import com.msdragon.backend.auth.entity.GenderType
 import com.msdragon.backend.auth.entity.User
 import com.msdragon.backend.auth.entity.UserRole
 import com.msdragon.backend.auth.repository.UserRepository
@@ -95,14 +96,12 @@ class TripPledgeService(
 				documentNumber = "${documentDate.year}-${pledgeId.toString().padStart(2, '0')}",
 				documentDate = documentDate,
 				documentTitle = pledge.title ?: DEFAULT_TITLE,
-				tripTitle = trip.title,
-				startDate = trip.startDate,
-				endDate = trip.endDate,
 				items = pledgeItemRepository.findAllByTripPledgeIdOrderBySortOrderAsc(pledgeId)
 					.map(PledgeItem::content),
 				signatures = findOrderedSignatures(pledgeId).map { signature ->
 					TripPledgePdfSignature(
 						role = signature.user.role,
+						relationLabel = signature.user.pledgeRelationLabel(),
 						displayName = signature.user.displayName,
 						mimeType = signature.signatureMimeType,
 						imageData = signature.signatureImageData,
@@ -253,6 +252,16 @@ class TripPledgeService(
 	}
 
 	private fun currentTimestamp(): LocalDateTime = LocalDateTime.now().truncatedTo(ChronoUnit.MICROS)
+
+	private fun User.pledgeRelationLabel(): String =
+		when (role) {
+			UserRole.CHILD -> "자녀"
+			UserRole.PARENT -> when (gender) {
+				GenderType.FEMALE -> "엄마"
+				GenderType.MALE -> "아빠"
+				GenderType.UNDISCLOSED -> "부모"
+			}
+		}
 
 	private fun pledgeResponse(pledge: TripPledge, currentUser: User): TripPledgeResponse {
 		val pledgeId = requireNotNull(pledge.id)

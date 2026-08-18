@@ -3,111 +3,261 @@
 <head>
   <meta charset="UTF-8" />
   <style>
-    @page { size: A4; margin: 13mm 15mm; }
-    * { box-sizing: border-box; }
-    body {
+    @page {
+      size: 374px 886px;
       margin: 0;
-      color: #171717;
-      font-family: "NanumGothic", sans-serif;
-      font-size: 10pt;
-      line-height: 1.5;
     }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      height: 886px;
+      margin: 0;
+      width: 374px;
+    }
+
+    body {
+      background: #ffffff;
+      color: #151717;
+      font-family: "Pretendard", sans-serif;
+      font-size: 13px;
+      line-height: 1.65;
+    }
+
+    .document {
+      height: 886px;
+      padding: 36px 33px 35px;
+      position: relative;
+      width: 374px;
+    }
+
     .document-meta {
-      border-bottom: 1px solid #cfcfcf;
-      color: #555555;
-      font-size: 8.5pt;
-      padding-bottom: 2.5mm;
+      color: #969b9b;
+      font-size: 10px;
+      line-height: 14px;
       width: 100%;
     }
-    .document-meta td:last-child { text-align: right; }
-    .title-block { padding: 10mm 0 7mm; text-align: center; }
-    .title-block h1 { font-size: 25pt; margin: 0; }
-    .title-block p { font-size: 11pt; font-weight: 700; margin: 2mm 0 0; }
-    .trip-meta {
-      background: #f5f3ef;
-      border: 1px solid #ded8cf;
-      margin-bottom: 5mm;
-      padding: 3mm 5mm;
+
+    .document-meta td {
+      padding: 0;
+    }
+
+    .document-meta td:last-child {
+      text-align: right;
+    }
+
+    .title-block {
+      padding-top: 25px;
       text-align: center;
     }
-    .trip-title { font-weight: 700; }
-    .trip-period { color: #666666; font-size: 8.5pt; margin-top: 1mm; }
-    .intro { margin: 0 0 4mm; text-align: center; }
-    #pledge-items { counter-reset: pledge-item; list-style: none; margin: 0; padding: 0 5mm; }
+
+    .title-block h1 {
+      font-size: 18px;
+      font-weight: 600;
+      line-height: 25px;
+      margin: 0;
+    }
+
+    .title-block p {
+      color: #9a9f9f;
+      font-size: 12px;
+      font-weight: 400;
+      line-height: 18px;
+      margin: 5px 0 0;
+    }
+
+    .title-rule {
+      border-top: 2px solid #8e9998;
+      height: 2px;
+      margin: 20px auto 0;
+      width: 40px;
+    }
+
+    .intro {
+      font-size: 13px;
+      font-weight: 400;
+      line-height: 23px;
+      margin: 22px 0 14px;
+      text-align: center;
+    }
+
+    #pledge-items {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
     #pledge-items li {
-      border-bottom: 1px solid #e1e1e1;
-      counter-increment: pledge-item;
-      min-height: 7mm;
-      padding: 1.4mm 2mm 1.4mm 12mm;
-      position: relative;
+      border-bottom: 1px solid #eceeee;
+      height: 47px;
+      line-height: 46px;
+      overflow: hidden;
+      white-space: nowrap;
     }
-    #pledge-items li::before {
-      content: counter(pledge-item, decimal-leading-zero);
-      font-size: 8pt;
-      font-weight: 700;
-      left: 2mm;
-      position: absolute;
-      top: 1.8mm;
-    }
-    .promise { font-weight: 700; margin: 6mm 0 3mm; text-align: center; }
-    .written-date { color: #555555; font-size: 9pt; margin-bottom: 4mm; text-align: center; }
-    .signature-section { page-break-inside: avoid; text-align: center; }
-    .signature-list { text-align: center; width: 100%; }
-    .signature-card {
-      border: 1px solid #d8d8d8;
+
+    .item-order {
+      color: #6f7777;
       display: inline-block;
-      margin: 0 1%;
-      min-height: 28mm;
-      padding: 2mm;
-      text-align: center;
+      font-size: 12px;
+      font-weight: 400;
+      width: 40px;
+    }
+
+    .item-content {
+      display: inline-block;
+      font-size: 13px;
+      font-weight: 600;
+      max-width: 264px;
       vertical-align: top;
-      width: 30%;
     }
-    .signature-role { color: #666666; font-size: 7.5pt; }
-    .signature-image-frame { height: 12mm; margin-top: 1mm; text-align: center; }
-    .signature-image { height: 11mm; max-width: 100%; }
-    .signature-name { font-size: 8.5pt; font-weight: 700; }
-    .signature-stamp {
-      border: 1.5px solid #b22a2a;
-      color: #b22a2a;
-      font-size: 6.5pt;
-      font-weight: 700;
-      margin: 1mm auto 0;
-      padding: 0.5mm 1mm;
-      width: 17mm;
+
+    .completion-stamp {
+      border: 2px solid #ef654f;
+      border-radius: 50%;
+      bottom: 147px;
+      color: #ef654f;
+      font-size: 17px;
+      font-weight: 600;
+      height: 69px;
+      line-height: 22px;
+      padding-top: 10px;
+      position: absolute;
+      right: 39px;
+      text-align: center;
+      width: 69px;
     }
-    .footer { color: #999999; font-size: 7pt; margin-top: 5mm; text-align: center; }
+
+    .completion-stamp-inner {
+      border: 1px solid #ef654f;
+      border-radius: 50%;
+      height: 59px;
+      margin: -7px auto 0;
+      padding-top: 7px;
+      width: 59px;
+    }
+
+    .written-date {
+      bottom: 126px;
+      font-size: 13px;
+      left: 0;
+      line-height: 20px;
+      position: absolute;
+      text-align: center;
+      width: 100%;
+    }
+
+    .signature-section {
+      bottom: 36px;
+      left: 33px;
+      position: absolute;
+      width: 308px;
+    }
+
+    .signature-list {
+      text-align: center;
+      width: 100%;
+    }
+
+    .signature-card {
+      display: inline-block;
+      margin: 0;
+      text-align: left;
+      vertical-align: top;
+      width: 46.4%;
+    }
+
+    .signature-card + .signature-card {
+      margin-left: 7.1%;
+    }
+
+    .signature-count-3 .signature-card {
+      margin: 0 1%;
+      width: 30.5%;
+    }
+
+    .signature-count-3 .signature-card + .signature-card {
+      margin-left: 1%;
+    }
+
+    .signature-owner {
+      height: 18px;
+      line-height: 18px;
+      overflow: hidden;
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    .signature-role {
+      color: #a5aaaa;
+      font-size: 10px;
+      font-weight: 400;
+      margin-right: 10px;
+    }
+
+    .signature-name {
+      color: #151717;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .signature-count-3 .signature-role {
+      display: block;
+      font-size: 8px;
+      line-height: 9px;
+      margin: 0;
+    }
+
+    .signature-count-3 .signature-name {
+      display: block;
+      font-size: 10px;
+      line-height: 11px;
+    }
+
+    .signature-image-frame {
+      border: 1px dashed #dfe3e3;
+      border-radius: 8px;
+      height: 56px;
+      margin-top: 8px;
+      text-align: center;
+      width: 100%;
+    }
+
+    .signature-image {
+      height: 50px;
+      max-width: 96%;
+    }
   </style>
 </head>
 <body>
-  <main>
+  <main class="document">
     <table class="document-meta">
       <tr>
         <td>계약 제<span id="document-number">2026-01</span>호</td>
-        <td>작성일 <span id="written-date">2026.08.11</span></td>
+        <td>작성일 <span id="written-date">2026. 08. 11</span></td>
       </tr>
     </table>
 
     <header class="title-block">
-      <h1>서약서</h1>
-      <p>- <span id="document-title">우리 가족 여행 10계명</span> -</p>
+      <h1>서 약 서</h1>
+      <p>- 우리 <span id="document-title">가족 여행 10계명</span> -</p>
+      <div class="title-rule"></div>
     </header>
 
-    <section class="trip-meta">
-      <div id="trip-title" class="trip-title">여행 제목</div>
-      <div id="trip-period" class="trip-period">여행 기간</div>
-    </section>
-
-    <p class="intro">우리 가족은 즐거운 가족 여행을 위하여 아래 금지어 사용을 최대한 자제할 것을 약속합니다.</p>
+    <p class="intro">우리 가족은 즐거운 가족 여행을 위하여<br />아래 금지어 사용을 최대한 자제할 것을 약속합니다.</p>
     <ol id="pledge-items"></ol>
-    <p class="promise">위 내용을 모두 확인했으며 여행 중 서로를 배려할 것을 약속합니다.</p>
-    <div class="written-date">작성일 <span id="written-date-copy">2026.08.11</span></div>
+
+    <div class="completion-stamp">
+      <div class="completion-stamp-inner">서 약<br />완 료</div>
+    </div>
+
+    <div id="written-date-copy" class="written-date">2026년 8월 11일</div>
 
     <section class="signature-section">
       <div id="signature-list" class="signature-list"></div>
     </section>
-
-    <footer class="footer">모셔용 · 우리 가족 여행 10계명</footer>
   </main>
 </body>
 </html>

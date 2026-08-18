@@ -352,13 +352,17 @@ class TripPledgeControllerTest {
 
 		Loader.loadPDF(pdfBytes).use { document ->
 			check(document.numberOfPages == 1)
+			val pageSize = document.getPage(0).mediaBox
+			check(kotlin.math.abs(pageSize.width - 280.5f) < 1f)
+			check(kotlin.math.abs(pageSize.height - 664.5f) < 1f)
 			val text = PDFTextStripper().getText(document)
 			check(text.contains("계약 제"))
-			check(text.contains("서약서"))
+			check(text.contains("서 약 서"))
 			check(text.contains("우리 가족은"))
 			check(text.contains("가족 여행 10계명"))
-			check(text.contains("경주 여행"))
-			check(text.contains("가족 약속 1"))
+			check(text.contains("하나,"))
+			check(text.contains("열,"))
+			check(text.contains("아직 멀었어?"))
 			check(text.contains("혜린"))
 			check(text.contains("엄마"))
 			check(text.contains("아빠"))
@@ -440,7 +444,19 @@ class TripPledgeControllerTest {
 	}
 
 	private fun saveReviewedPledge(child: User, trip: Trip) {
-		val items = (1..10).map { index -> mapOf("content" to "가족 약속 $index") }
+		val contents = listOf(
+			"“아직 멀었어?”",
+			"“겨우 이거 보러 온거야?”",
+			"“이건 무슨 맛으로 먹냐”",
+			"“음식이 너무 짜다. 내가 만드는게 낫겠다”",
+			"“돈 아깝다”",
+			"“그냥 집에 일찍 가자”",
+			"“여기는 젊은애들이나 오는 곳이지”",
+			"“물이 제일 맛있네”",
+			"“이게 다야?”",
+			"“누가 여기 오자고 했어?”",
+		)
+		val items = contents.map { content -> mapOf("content" to content) }
 		mockMvc.perform(
 			put("/api/v1/trips/${requireNotNull(trip.id)}/pledge")
 				.header("Authorization", "Bearer ${tokenService.createAccessToken(child)}")

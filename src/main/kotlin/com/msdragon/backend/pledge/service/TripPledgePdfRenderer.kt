@@ -31,11 +31,9 @@ class TripPledgePdfRenderer {
 		try {
 			val document = loadTemplate()
 			document.slot("document-number").text(data.documentNumber)
-			document.slot("written-date").text(data.documentDate.format(DATE_FORMAT))
-			document.slot("written-date-copy").text(data.documentDate.format(DATE_FORMAT))
+			document.slot("written-date").text(data.documentDate.format(HEADER_DATE_FORMAT))
+			document.slot("written-date-copy").text(data.documentDate.format(KOREAN_DATE_FORMAT))
 			document.slot("document-title").text(data.documentTitle)
-			document.slot("trip-title").text(data.tripTitle)
-			document.slot("trip-period").text(formatPeriod(data.startDate, data.endDate))
 			appendItems(document.slot("pledge-items"), data.items)
 			appendSignatures(document.slot("signature-list"), data.signatures)
 			renderPdf(document)
@@ -56,24 +54,26 @@ class TripPledgePdfRenderer {
 
 	private fun appendItems(container: Element, items: List<String>) {
 		container.empty()
-		items.forEach { content ->
-			container.appendElement("li").text(content)
+		items.forEachIndexed { index, content ->
+			val item = container.appendElement("li")
+			item.appendElement("span").addClass("item-order").text(ITEM_ORDINALS[index])
+			item.appendElement("span").addClass("item-content").text(content)
 		}
 	}
 
 	private fun appendSignatures(container: Element, signatures: List<TripPledgePdfSignature>) {
-		container.empty()
-			signatures.forEach { signature ->
+		container.empty().attr("class", "signature-list signature-count-${signatures.size.coerceAtMost(3)}")
+		signatures.forEach { signature ->
 			val card = container.appendElement("div").addClass("signature-card")
-			card.appendElement("div").addClass("signature-role").text(signature.role.displayName())
+			val owner = card.appendElement("div").addClass("signature-owner")
+			owner.appendElement("span").addClass("signature-role").text("서약인 · ${signature.relationLabel}")
+			owner.appendElement("span").addClass("signature-name").text(signature.displayName)
 			card.appendElement("div")
 				.addClass("signature-image-frame")
 				.appendElement("img")
 				.addClass("signature-image")
 				.attr("src", "data:${signature.mimeType};base64,${Base64.getEncoder().encodeToString(signature.imageData)}")
 				.attr("alt", "${signature.displayName} 서명")
-			card.appendElement("div").addClass("signature-name").text(signature.displayName)
-			card.appendElement("div").addClass("signature-stamp").text("서약 완료")
 		}
 	}
 
@@ -82,7 +82,7 @@ class TripPledgePdfRenderer {
 			PdfRendererBuilder()
 				.withW3cDocument(W3CDom().fromJsoup(document), null)
 				.useFont(fontSupplier(regularFontResource), FONT_FAMILY, 400, FontStyle.NORMAL, true)
-				.useFont(fontSupplier(boldFontResource), FONT_FAMILY, 700, FontStyle.NORMAL, true)
+				.useFont(fontSupplier(boldFontResource), FONT_FAMILY, 600, FontStyle.NORMAL, true)
 				.toStream(outputStream)
 				.run()
 			outputStream.toByteArray()
@@ -91,29 +91,18 @@ class TripPledgePdfRenderer {
 	private fun fontSupplier(resource: ClassPathResource): FSSupplier<InputStream> =
 		FSSupplier { resource.inputStream }
 
-	private fun formatPeriod(startDate: LocalDate, endDate: LocalDate): String =
-		if (startDate == endDate) {
-			startDate.format(DATE_FORMAT)
-		} else {
-			"${startDate.format(DATE_FORMAT)} - ${endDate.format(DATE_FORMAT)}"
-		}
-
 	private fun Document.slot(id: String): Element =
 		getElementById(id) ?: throw IllegalStateException("PDF 템플릿 슬롯을 찾을 수 없습니다: $id")
 
-	private fun UserRole.displayName(): String =
-		when (this) {
-			UserRole.CHILD -> "자녀"
-			UserRole.PARENT -> "부모"
-		}
-
 	companion object {
 		private val logger = LoggerFactory.getLogger(TripPledgePdfRenderer::class.java)
-		private val DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy.MM.dd")
+		private val HEADER_DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy. MM. dd")
+		private val KOREAN_DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy년 M월 d일")
+		private val ITEM_ORDINALS = listOf("하나,", "둘,", "셋,", "넷,", "다섯,", "여섯,", "일곱,", "여덟,", "아홉,", "열,")
 		private const val TEMPLATE_PATH = "templates/pledge/trip-pledge.html"
-		private const val REGULAR_FONT_PATH = "fonts/NanumGothic-Regular.ttf"
-		private const val BOLD_FONT_PATH = "fonts/NanumGothic-Bold.ttf"
-		private const val FONT_FAMILY = "NanumGothic"
+		private const val REGULAR_FONT_PATH = "fonts/Pretendard-Regular.ttf"
+		private const val BOLD_FONT_PATH = "fonts/Pretendard-SemiBold.ttf"
+		private const val FONT_FAMILY = "Pretendard"
 	}
 }
 
@@ -122,15 +111,13 @@ data class TripPledgePdfData(
 	val documentNumber: String,
 	val documentDate: LocalDate,
 	val documentTitle: String,
-	val tripTitle: String,
-	val startDate: LocalDate,
-	val endDate: LocalDate,
 	val items: List<String>,
 	val signatures: List<TripPledgePdfSignature>,
 )
 
 data class TripPledgePdfSignature(
 	val role: UserRole,
+	val relationLabel: String,
 	val displayName: String,
 	val mimeType: String,
 	val imageData: ByteArray,
