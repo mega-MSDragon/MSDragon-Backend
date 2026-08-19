@@ -28,6 +28,7 @@ BaseException
 - 요청 파라미터 누락·형식 오류, Bean Validation 실패, JSON 본문 파싱 실패, 지원하지 않는 enum은 HTTP `200`, 본문 `status=400`으로 반환합니다.
 - 현재 `status`는 정수형이며 별도 에러 코드 enum은 사용하지 않습니다.
 - 성공 응답이 PDF 같은 바이너리인 API도 처리 가능한 실패 응답은 HTTP `200`, `Content-Type: application/json`인 공통 실패 응답을 반환합니다.
+- `ControllerExceptionAdvice`는 처리 가능한 API 오류를 warn 로그로 남깁니다. 로그에는 method, URI, 앱 상태 코드, 메시지, client IP, user-agent, 예외 타입만 포함하고 Authorization 토큰과 요청 본문은 남기지 않습니다.
 
 ---
 
