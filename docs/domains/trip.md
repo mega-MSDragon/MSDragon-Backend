@@ -95,8 +95,8 @@ trip
 - 기간 또는 참여 부모를 여행 중 변경하면 저장 후 상태는 `in_progress`를 유지합니다.
 - 기간 또는 참여 부모가 바뀌면 기존 부모 평가 요청, 피드백, 효도 리포트를 삭제합니다.
 - 코스 저장, 추천 재생성, 경로 최적화는 여행을 만든 자녀만 `planning`, `ready`, `in_progress` 상태에서 할 수 있습니다.
-- `planning`, `ready` 여행은 생성 자녀가 soft delete할 수 있고 삭제 시 `deleted_at`을 기록합니다.
-- `in_progress` 여행은 생성 자녀가 중단할 수 있으며 상태를 `stopped`로 바꾸고 기록 데이터를 유지합니다.
+- `planning`, `ready`, `in_progress` 여행은 생성 자녀가 soft delete할 수 있고 삭제 시 `deleted_at`을 기록합니다.
+- `in_progress` 여행은 생성 자녀가 수동 종료할 수 있으며 정상 종료와 동일하게 상태를 `completed`로 바꾸고 기록·평가 데이터를 유지합니다.
 - `completed`, `stopped`, `archived` 여행의 기본정보와 코스는 변경할 수 없습니다.
 - 방문지 추가·삭제·순서 변경은 단건 API 없이 클라이언트에서 임시 편집한 최종 코스를 `PUT /api/v1/trips/{tripId}/course`로 전체 저장합니다. 요청에서 빠진 일자는 빈 코스가 됩니다.
 - 방문지 메모는 `PUT /api/v1/trips/{tripId}/stops/{stopId}/note`로 즉시 저장하거나 삭제합니다.

@@ -67,7 +67,7 @@ class Trip(
 	}
 
 	fun synchronizeStatus(today: LocalDate) {
-		if (status == TripStatus.STOPPED || status == TripStatus.ARCHIVED) {
+		if (status == TripStatus.COMPLETED || status == TripStatus.STOPPED || status == TripStatus.ARCHIVED) {
 			return
 		}
 		status = when {
@@ -81,8 +81,8 @@ class Trip(
 		status = TripStatus.ARCHIVED
 	}
 
-	fun stop() {
-		status = TripStatus.STOPPED
+	fun complete() {
+		status = TripStatus.COMPLETED
 	}
 
 	fun softDelete(deletedAt: LocalDateTime) {

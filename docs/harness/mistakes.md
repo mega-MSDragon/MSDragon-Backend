@@ -221,6 +221,23 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse as SwaggerApiResponse
 - 존재하지 않는 URL, 지원하지 않는 method·media type 등 라우팅/프로토콜 오류와 예상하지 못한 서버·외부 연동 실패만 실제 HTTP 오류를 사용합니다.
 - 새 API의 Swagger와 테스트에는 실제 HTTP `200`과 본문 `status`를 따로 검증합니다.
 
+### 2026-08-19: enum 상태 추가 시 운영 DB check constraint 갱신 누락
+
+**상황**
+
+- 여행 중단 기능에서 `TripStatus.STOPPED`와 API를 추가했지만 기존 운영 PostgreSQL의 `trips.status` check constraint를 배포 과정에서 자동 갱신하지 않았습니다.
+- 운영 서버에서 `status=stopped` 저장이 DB 제약에 막혀 여행 중단 API가 `500`으로 실패했습니다.
+
+**원인**
+
+- 코드와 DB 설계 문서는 갱신했지만 `ddl-auto=update`가 기존 enum check constraint 값 목록까지 바꾸지 않는 점을 수동 운영 절차로만 남겼습니다.
+
+**재발 방지 규칙**
+
+- 문자열 enum 값을 추가하거나 제거할 때는 Entity, DBML, SQL 설계 문서뿐 아니라 운영 DB의 기존 constraint 변경 방법까지 확인합니다.
+- 운영 DB 변경이 필수인 기능은 재실행 가능한 SQL과 실행 시점을 배포 체크리스트에 포함합니다.
+- 새 상태를 저장하는 통합 테스트와 실제 PostgreSQL constraint 목록을 함께 점검합니다.
+
 ### 2026-08-06: Swagger 예시와 기본 미디어 타입 분리
 
 **상황**

@@ -24,14 +24,14 @@ import org.springframework.web.bind.annotation.RestController
 
 @RestController
 @RequestMapping("/api/v1/trips/{tripId}/feedback")
-@Tag(name = "Trip Feedback", description = "여행 마지막 날 이후 부모 피드백 API입니다.")
+@Tag(name = "Trip Feedback", description = "여행 마지막 날 또는 수동 종료 이후 부모 피드백 API입니다.")
 @SecurityRequirement(name = BEARER_AUTH_SCHEME)
 class TripFeedbackController(
 	private val tripFeedbackService: TripFeedbackService,
 ) {
 	@Operation(
 		summary = "부모 평가 요청",
-		description = "여행을 만든 자녀가 마지막 날부터 아직 피드백을 제출하지 않은 참여 부모 모두에게 평가를 요청합니다. 중복 호출해도 요청 이력은 부모별 한 건만 유지합니다.",
+		description = "여행을 만든 자녀가 마지막 날 또는 수동 종료 후 아직 피드백을 제출하지 않은 참여 부모 모두에게 평가를 요청합니다. 중복 호출해도 요청 이력은 부모별 한 건만 유지합니다.",
 	)
 	@ApiResponses(
 		value = [
@@ -69,7 +69,7 @@ class TripFeedbackController(
 
 	@Operation(
 		summary = "내 여행 피드백 제출",
-		description = "여행에 참여한 부모가 마지막 날부터 본인 피드백을 한 번 제출합니다. 자녀의 평가 요청을 받지 않았어도 제출할 수 있으며 제출 후에는 수정할 수 없습니다.",
+		description = "여행에 참여한 부모가 마지막 날 또는 수동 종료 후 본인 피드백을 한 번 제출합니다. 자녀의 평가 요청을 받지 않았어도 제출할 수 있으며 제출 후에는 수정할 수 없습니다.",
 	)
 	@ApiResponses(
 		value = [

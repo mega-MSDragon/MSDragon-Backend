@@ -159,7 +159,7 @@ class TripRecordControllerTest {
 			stopNames = listOf("한옥마을"),
 			routeDistanceMeters = 1_000,
 		)
-		stoppedTrip.trip.stop()
+		stoppedTrip.trip.status = TripStatus.STOPPED
 		tripRepository.saveAndFlush(stoppedTrip.trip)
 
 		mockMvc.perform(

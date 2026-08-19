@@ -478,7 +478,7 @@ Table trips {
   updated_at datetime [not null, default: `now()`]
   deleted_at datetime
 
-  Note: '여행 제목과 도시는 생성 후 변경할 수 없다. 생성 자녀는 planning/ready에서 기간, 참여 부모, 코스를 수정하거나 soft delete할 수 있고 in_progress에서는 오늘을 포함하는 기간, 참여 부모, 코스를 수정하거나 여행을 stopped로 중단할 수 있다. completed/stopped/archived 상태에서는 기본정보와 코스를 수정할 수 없다. 날짜나 함께 가는 가족을 바꾸면 코스 재추천/덮어쓰기 확인 플로우를 거친다. 여행 기간 상한은 두지 않는다. 코스 생성은 TourAPI 추천과 일자별 Tmap 최적화를 동기 호출하고 별도 job은 저장하지 않는다. 서울 날짜 기준 start_date부터 in_progress, end_date 다음 날부터 completed로 동기화하며 여행모드는 start_date 00:00부터 end_date 23:59까지 같은 가족 구성원에게 노출한다.'
+  Note: '여행 제목과 도시는 생성 후 변경할 수 없다. 생성 자녀는 planning/ready/in_progress 여행을 soft delete할 수 있다. planning/ready에서는 기간, 참여 부모, 코스를 수정할 수 있고 in_progress에서는 오늘을 포함하는 기간, 참여 부모, 코스를 수정하거나 여행을 completed로 수동 종료할 수 있다. completed/stopped/archived 상태에서는 기본정보와 코스를 수정하거나 삭제할 수 없다. 수동 종료는 정상 종료와 동일하게 기록, 평가, 효도 리포트 대상에 포함한다. 날짜나 함께 가는 가족을 바꾸면 코스 재추천/덮어쓰기 확인 플로우를 거친다. 여행 기간 상한은 두지 않는다. 코스 생성은 TourAPI 추천과 일자별 Tmap 최적화를 동기 호출하고 별도 job은 저장하지 않는다. 서울 날짜 기준 start_date부터 in_progress, end_date 다음 날부터 completed로 동기화하며 여행모드는 start_date 00:00부터 end_date 23:59까지 같은 가족 구성원에게 노출한다.'
 }
 
 Table trip_participants {

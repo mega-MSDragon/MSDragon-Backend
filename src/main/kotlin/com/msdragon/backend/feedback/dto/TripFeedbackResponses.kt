@@ -11,7 +11,7 @@ data class TripFeedbackStatusResponse(
 	@field:Schema(description = "여행 ID", example = "1")
 	val tripId: Long,
 
-	@field:Schema(description = "마지막 날이 시작되어 피드백을 작성할 수 있는지 여부", example = "true")
+	@field:Schema(description = "마지막 날이 시작되었거나 여행이 수동 종료되어 피드백을 작성할 수 있는지 여부", example = "true")
 	val feedbackAvailable: Boolean,
 
 	@field:Schema(description = "참여 부모 수", example = "2")

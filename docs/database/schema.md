@@ -147,8 +147,8 @@ DB 스키마와 공통 엔티티 규칙을 기록합니다.
 - 같은 가족에서 날짜가 겹치는 여행은 서비스에서 생성 거부합니다. soft delete, `stopped`, `archived` 여행은 충돌 검사에서 제외합니다.
 - 여행 기간 상한은 두지 않습니다. 시작일은 오늘 또는 이후여야 하고, 종료일은 시작일과 같거나 이후여야 합니다.
 - 여행을 만든 자녀는 `planning`, `ready` 상태에서 날짜와 참여 부모를 수정할 수 있습니다.
-- `planning`, `ready` 여행 삭제는 row를 지우지 않고 `deleted_at`을 기록하는 soft delete로 처리합니다.
-- `in_progress` 여행 중단은 기존 코스와 참여자를 유지한 채 `status=stopped`로 기록합니다.
+- `planning`, `ready`, `in_progress` 여행 삭제는 row를 지우지 않고 `deleted_at`을 기록하는 soft delete로 처리합니다.
+- `in_progress` 여행 수동 종료는 기존 코스, 참여자, 평가 데이터를 유지한 채 정상 종료와 동일하게 `status=completed`로 기록합니다.
 - `in_progress`에서는 서울 기준 오늘을 포함하는 기간과 참여 부모만 수정할 수 있습니다. `completed`, `stopped`, `archived`에서는 수정할 수 없습니다.
 - 날짜 또는 참여 부모가 바뀌면 생성 당시 도시와 현재 부모 프로필 기준으로 `recommendation_snapshot`을 다시 저장합니다. 준비 중에는 `planning`, 여행 중에는 날짜 동기화 후 `in_progress` 상태가 됩니다.
 - 코스 생성은 여행 저장, TourAPI 추천, 일자별 Tmap 최적화를 동기식으로 호출합니다. 별도 생성 job이나 진행률 테이블은 두지 않습니다.

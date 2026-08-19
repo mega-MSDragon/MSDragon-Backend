@@ -336,7 +336,7 @@ class TripController(
 
 	@Operation(
 		summary = "여행 삭제",
-		description = "여행을 만든 자녀가 시작 전 planning 또는 ready 여행을 soft delete합니다. 삭제된 여행은 목록과 상세 조회에서 제외되며 같은 날짜로 새 여행을 만들 수 있습니다.",
+		description = "여행을 만든 자녀가 planning, ready 또는 in_progress 여행을 soft delete합니다. 삭제된 여행은 목록과 상세 조회에서 제외되며 같은 날짜로 새 여행을 만들 수 있습니다.",
 	)
 	@ApiResponses(
 		value = [
@@ -354,8 +354,8 @@ class TripController(
 	}
 
 	@Operation(
-		summary = "여행 중단",
-		description = "여행을 만든 자녀가 in_progress 여행을 중단합니다. 중단된 여행은 stopped 상태로 기록 탭에 남고 여행 모드와 편집 기능은 더 이상 사용할 수 없습니다.",
+		summary = "여행 수동 종료",
+		description = "여행을 만든 자녀가 in_progress 여행을 수동 종료합니다. 정상 종료와 동일하게 completed 상태로 기록 탭에 남고, 바로 부모 평가를 진행할 수 있습니다.",
 	)
 	@ApiResponses(
 		value = [
@@ -369,7 +369,7 @@ class TripController(
 		@PathVariable tripId: Long,
 	): ApiResponse<TripDetailResponse> =
 		ApiResponse.success(
-			message = "여행 중단 성공",
+			message = "여행 종료 성공",
 			data = tripService.stopTrip(currentUser, tripId),
 		)
 

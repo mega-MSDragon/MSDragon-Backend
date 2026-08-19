@@ -167,6 +167,7 @@ class TripService(
 		val today = currentDate()
 		trip.synchronizeStatus(today)
 		when {
+			trip.status == TripStatus.COMPLETED -> throw BadRequestException("종료된 여행은 여행 모드를 이용할 수 없습니다.")
 			trip.status == TripStatus.STOPPED -> throw BadRequestException("중단된 여행은 여행 모드를 이용할 수 없습니다.")
 			trip.status == TripStatus.ARCHIVED -> throw BadRequestException("보관된 여행은 여행 모드를 이용할 수 없습니다.")
 			today.isBefore(trip.startDate) -> throw BadRequestException("여행 시작일부터 여행 모드를 이용할 수 있습니다.")
@@ -328,7 +329,7 @@ class TripService(
 		trip.synchronizeStatus(currentDate())
 		validateTripOwner(child, trip)
 		if (trip.status !in DELETABLE_TRIP_STATUSES) {
-			throw BadRequestException("여행 시작 전 준비 중인 여행만 삭제할 수 있습니다.")
+			throw BadRequestException("준비 중이거나 진행 중인 여행만 삭제할 수 있습니다.")
 		}
 		trip.softDelete(currentDateTime())
 	}
@@ -341,10 +342,9 @@ class TripService(
 		trip.synchronizeStatus(currentDate())
 		validateTripOwner(child, trip)
 		if (trip.status != TripStatus.IN_PROGRESS) {
-			throw BadRequestException("진행 중인 여행만 중단할 수 있습니다.")
+			throw BadRequestException("진행 중인 여행만 종료할 수 있습니다.")
 		}
-		tripFeedbackService.resetForTripChange(tripId)
-		trip.stop()
+		trip.complete()
 		return tripDetail(trip)
 	}
 
@@ -725,8 +725,10 @@ class TripService(
 	companion object {
 		private val SERVICE_ZONE_ID: ZoneId = ZoneId.of("Asia/Seoul")
 		private val EDITABLE_TRIP_STATUSES = setOf(TripStatus.PLANNING, TripStatus.READY, TripStatus.IN_PROGRESS)
-		private val DELETABLE_TRIP_STATUSES = setOf(TripStatus.PLANNING, TripStatus.READY)
-		private val NON_BLOCKING_TRIP_STATUSES = setOf(TripStatus.STOPPED, TripStatus.ARCHIVED)
+		private val DELETABLE_TRIP_STATUSES =
+			setOf(TripStatus.PLANNING, TripStatus.READY, TripStatus.IN_PROGRESS)
+		private val NON_BLOCKING_TRIP_STATUSES =
+			setOf(TripStatus.COMPLETED, TripStatus.STOPPED, TripStatus.ARCHIVED)
 		private const val MAX_PARENT_COUNT = 2
 		private const val PARENT_TRAVEL_MBTI_POLICY_VERSION = "parent-travel-mbti-v1"
 	}
