@@ -372,7 +372,7 @@ CREATE TABLE trips (
 -- 도시/날짜/함께 가는 가족/추천 기준 변경은 저장 후 코스 재추천과 기존 일정 덮어쓰기 확인 플로우를 거친다.
 -- 여행 중에는 오늘을 포함하는 날짜, 함께 가는 부모, 코스만 생성 자녀가 수정할 수 있다.
 -- completed/stopped/archived 상태에서는 기본정보와 코스를 수정할 수 없다.
--- planning/ready/in_progress 삭제는 deleted_at을 기록하고, in_progress 수동 종료는 completed로 기록한다.
+-- 여행 삭제는 상태와 관계없이 deleted_at을 기록하고, in_progress 수동 종료는 completed로 기록한다.
 -- 여행모드는 start_date 00:00부터 end_date 23:59까지 노출하며 생성 자녀는 진행 중 여행을 수동 종료할 수 있다.
 -- 서울 날짜 기준 start_date부터 status=in_progress, end_date 다음 날부터 status=completed로 동기화한다.
 -- 여행 참여자 선택 여부와 관계없이 같은 family_id의 구성원은 여행모드에 접근할 수 있다.

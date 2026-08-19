@@ -1111,7 +1111,7 @@ class TripControllerTest {
 	}
 
 	@Test
-	fun `진행 중 여행을 수동 종료하면 정상 완료와 같이 평가할 수 있다`() {
+	fun `진행 중 여행을 수동 종료하면 정상 완료와 같이 평가하고 삭제할 수 있다`() {
 		val child = saveUser(UserRole.CHILD, "stop-child", "혜린")
 		val mother = saveUser(UserRole.PARENT, "stop-parent", "엄마", GenderType.FEMALE)
 		connectFamily(child, mother)
@@ -1152,8 +1152,10 @@ class TripControllerTest {
 				.header("Authorization", authorization),
 		)
 			.andExpect(status().isOk)
-			.andExpect(jsonPath("$.status").value(400))
-			.andExpect(jsonPath("$.message").value("준비 중이거나 진행 중인 여행만 삭제할 수 있습니다."))
+			.andExpect(jsonPath("$.status").value(200))
+			.andExpect(jsonPath("$.message").value("여행 삭제 성공"))
+
+		check(tripRepository.findById(tripId.toLong()).orElseThrow().deletedAt != null)
 	}
 
 	@Test

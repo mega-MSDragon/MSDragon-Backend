@@ -326,11 +326,7 @@ class TripService(
 		val child = getLoginUser(currentUser.id)
 		val trip = tripRepository.findByIdAndDeletedAtIsNull(tripId)
 			?: throw NotFoundException("여행을 찾을 수 없습니다.")
-		trip.synchronizeStatus(currentDate())
 		validateTripOwner(child, trip)
-		if (trip.status !in DELETABLE_TRIP_STATUSES) {
-			throw BadRequestException("준비 중이거나 진행 중인 여행만 삭제할 수 있습니다.")
-		}
 		trip.softDelete(currentDateTime())
 	}
 
@@ -725,8 +721,6 @@ class TripService(
 	companion object {
 		private val SERVICE_ZONE_ID: ZoneId = ZoneId.of("Asia/Seoul")
 		private val EDITABLE_TRIP_STATUSES = setOf(TripStatus.PLANNING, TripStatus.READY, TripStatus.IN_PROGRESS)
-		private val DELETABLE_TRIP_STATUSES =
-			setOf(TripStatus.PLANNING, TripStatus.READY, TripStatus.IN_PROGRESS)
 		private val NON_BLOCKING_TRIP_STATUSES =
 			setOf(TripStatus.COMPLETED, TripStatus.STOPPED, TripStatus.ARCHIVED)
 		private const val MAX_PARENT_COUNT = 2

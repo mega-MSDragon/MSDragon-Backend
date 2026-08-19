@@ -21,7 +21,7 @@
 
 ## 삭제와 중단
 
-- `DELETE /api/v1/trips/{tripId}`는 생성 자녀만 `planning`, `ready`, `in_progress` 상태에서 호출할 수 있습니다.
+- `DELETE /api/v1/trips/{tripId}`는 생성 자녀가 여행 상태와 관계없이 호출할 수 있습니다.
 - 삭제는 `deleted_at`을 기록하는 soft delete이며 일반 조회와 날짜 중복 검사에서 제외합니다.
 - `POST /api/v1/trips/{tripId}/stop`은 생성 자녀만 `in_progress` 상태에서 호출할 수 있습니다.
 - 수동 종료는 정상 종료와 동일하게 `status=completed`로 기록하고 참여자, 일자, 코스, 평가 요청, 피드백, 효도 리포트를 유지합니다.

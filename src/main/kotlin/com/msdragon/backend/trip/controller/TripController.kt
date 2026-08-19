@@ -336,7 +336,7 @@ class TripController(
 
 	@Operation(
 		summary = "여행 삭제",
-		description = "여행을 만든 자녀가 planning, ready 또는 in_progress 여행을 soft delete합니다. 삭제된 여행은 목록과 상세 조회에서 제외되며 같은 날짜로 새 여행을 만들 수 있습니다.",
+		description = "여행을 만든 자녀가 상태와 관계없이 여행을 soft delete합니다. 삭제된 여행은 목록과 상세·기록 조회에서 제외되며 같은 날짜로 새 여행을 만들 수 있습니다.",
 	)
 	@ApiResponses(
 		value = [
