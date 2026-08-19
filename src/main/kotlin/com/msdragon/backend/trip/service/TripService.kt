@@ -275,20 +275,10 @@ class TripService(
 			0
 		}
 
-		val tripDays = tripDayRepository.findAllByTripIdOrderByDayNumberAsc(tripId)
-		val existingStops = tripStopRepository.findAllByTripDayTripIdOrderByTripDayDayNumberAscSortOrderAsc(tripId)
-		val hasSavedCourse = existingStops.isNotEmpty() || tripDays.any { it.routeOptimizedAt != null }
-		if (recommendationInputsChanged && hasSavedCourse && !request.courseResetConfirmed) {
-			throw BadRequestException("날짜 또는 참여 부모를 변경하면 기존 코스가 삭제됩니다. 코스 초기화에 동의해주세요.")
-		}
-
 		if (recommendationInputsChanged) {
-			if (datesChanged || participantsChanged) {
-				tripFeedbackService.resetForTripChange(tripId)
-			}
-			resetCourse(existingStops, tripDays)
+			tripFeedbackService.resetForTripChange(tripId)
 			if (datesChanged) {
-				replaceTripDays(trip, tripDays, request.startDate, dayCount)
+				resizeTripDays(trip, request.startDate, dayCount)
 			}
 			if (participantsChanged) {
 				tripPledgeService.resetForParticipantChange(tripId)
@@ -489,28 +479,37 @@ class TripService(
 		}
 	}
 
-	private fun resetCourse(existingStops: List<TripStop>, tripDays: List<TripDay>) {
-		if (existingStops.isNotEmpty()) {
-			tripStopRepository.deleteAllInBatch(existingStops)
-			tripStopRepository.flush()
+	private fun resizeTripDays(trip: Trip, startDate: LocalDate, dayCount: Int) {
+		val existingDays = tripDayRepository.findAllByTripIdOrderByDayNumberAsc(requireNotNull(trip.id))
+		existingDays.take(dayCount).forEachIndexed { index, day ->
+			day.updateTravelDate(startDate.plusDays(index.toLong()))
 		}
-		tripDays.forEach { it.clearRouteOptimization() }
-	}
 
-	private fun replaceTripDays(trip: Trip, existingDays: List<TripDay>, startDate: LocalDate, dayCount: Int) {
-		if (existingDays.isNotEmpty()) {
-			tripDayRepository.deleteAllInBatch(existingDays)
+		val removedDays = existingDays.drop(dayCount)
+		if (removedDays.isNotEmpty()) {
+			val removedDayIds = removedDays.mapTo(mutableSetOf()) { requireNotNull(it.id) }
+			val removedStops = tripStopRepository
+				.findAllByTripDayTripIdOrderByTripDayDayNumberAscSortOrderAsc(requireNotNull(trip.id))
+				.filter { it.tripDay.id in removedDayIds }
+			if (removedStops.isNotEmpty()) {
+				tripStopRepository.deleteAllInBatch(removedStops)
+				tripStopRepository.flush()
+			}
+			tripDayRepository.deleteAllInBatch(removedDays)
 			tripDayRepository.flush()
 		}
-		tripDayRepository.saveAll(
-			(0 until dayCount).map { index ->
-				TripDay(
-					trip = trip,
-					dayNumber = index + 1,
-					travelDate = startDate.plusDays(index.toLong()),
-				)
-			},
-		)
+
+		if (dayCount > existingDays.size) {
+			tripDayRepository.saveAll(
+				(existingDays.size until dayCount).map { index ->
+					TripDay(
+						trip = trip,
+						dayNumber = index + 1,
+						travelDate = startDate.plusDays(index.toLong()),
+					)
+				},
+			)
+		}
 	}
 
 	private fun replaceTripParticipants(

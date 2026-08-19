@@ -173,7 +173,8 @@ DB 스키마와 공통 엔티티 규칙을 기록합니다.
 - `route_source_payload`는 선택된 시작/도착/방문 순서와 Tmap 응답 properties 일부를 저장합니다.
 - `route_optimized_at`은 경로 계산 시간입니다.
 - 코스 저장이나 추천 코스 재생성으로 방문지 구성이 바뀌면 경로 캐시를 비웁니다.
-- 여행 날짜 변경 시 기존 `trip_stops`를 먼저 삭제한 뒤 `trip_days`를 새 기간에 맞춰 재생성합니다.
+- 여행 날짜 변경 시 같은 `day_number`의 일자, 방문지, Tmap 경로는 유지하고 `travel_date`만 갱신합니다.
+- 기간이 줄면 뒤쪽 `trip_days`와 해당 `trip_stops`를 삭제하고, 늘면 방문지와 경로가 없는 빈 일자를 추가합니다.
 
 ### trip_stops
 

@@ -874,7 +874,7 @@ class TripControllerTest {
 	}
 
 	@Test
-	fun `코스가 있는 여행의 추천 입력 변경은 초기화 동의가 필요하다`() {
+	fun `여행 날짜를 옮겨도 같은 일차의 코스와 경로를 유지한다`() {
 		val child = saveUser(UserRole.CHILD, "child-1", "혜린")
 		val mother = saveUser(UserRole.PARENT, "parent-1", "엄마", GenderType.FEMALE)
 		connectFamily(child, mother)
@@ -882,6 +882,12 @@ class TripControllerTest {
 		val startDate = futureDate(10)
 		val tripId = createTrip(child, mother, startDate, startDate)
 		saveSingleStopCourse(child, tripId)
+		val originalDay = tripDayRepository.findByTripIdAndDayNumber(tripId.toLong(), 1)!!
+		applyTestRoute(originalDay)
+		val originalDayId = requireNotNull(originalDay.id)
+		val originalStopId = requireNotNull(
+			tripStopRepository.findAllByTripDayIdOrderBySortOrderAsc(originalDayId).single().id,
+		)
 
 		mockMvc.perform(
 			put("/api/v1/trips/$tripId")
@@ -896,17 +902,25 @@ class TripControllerTest {
 					}
 					""".trimIndent(),
 				),
+			)
+				.andExpect(status().isOk)
+				.andExpect(jsonPath("$.status").value(200))
+				.andExpect(jsonPath("$.data.days[0].id").value(originalDayId))
+
+		mockMvc.perform(
+			get("/api/v1/trips/$tripId/course")
+				.header("Authorization", "Bearer ${tokenService.createAccessToken(child)}"),
 		)
 			.andExpect(status().isOk)
-			.andExpect(jsonPath("$.status").value(400))
-			.andExpect(
-				jsonPath("$.message")
-					.value("날짜 또는 참여 부모를 변경하면 기존 코스가 삭제됩니다. 코스 초기화에 동의해주세요."),
-			)
+			.andExpect(jsonPath("$.data.days[0].tripDayId").value(originalDayId))
+			.andExpect(jsonPath("$.data.days[0].route.provider").value("tmap"))
+			.andExpect(jsonPath("$.data.days[0].stops[0].id").value(originalStopId))
+
+		check(tripDayRepository.findById(originalDayId).orElseThrow().travelDate == startDate.plusDays(1))
 	}
 
 	@Test
-	fun `여행 추천 입력 변경에 동의하면 코스와 경로를 초기화하고 일자와 부모를 갱신한다`() {
+	fun `기간을 늘리고 참여 부모를 바꾸면 기존 코스와 경로를 유지하고 빈 일차를 추가한다`() {
 		val child = saveUser(UserRole.CHILD, "child-1", "혜린")
 		val mother = saveUser(UserRole.PARENT, "parent-1", "엄마", GenderType.FEMALE)
 		val father = saveUser(UserRole.PARENT, "parent-2", "아빠", GenderType.MALE)
@@ -916,6 +930,9 @@ class TripControllerTest {
 		val startDate = futureDate(10)
 		val tripId = createTrip(child, mother, startDate, startDate)
 		saveSingleStopCourse(child, tripId)
+		val originalDay = tripDayRepository.findByTripIdAndDayNumber(tripId.toLong(), 1)!!
+		applyTestRoute(originalDay)
+		val originalDayId = requireNotNull(originalDay.id)
 		saveReviewedPledge(child, tripId)
 		savePledgeSignature(child, tripId)
 		savePledgeSignature(mother, tripId)
@@ -936,8 +953,7 @@ class TripControllerTest {
 					{
 					  "startDate": "$changedStartDate",
 					  "endDate": "$changedEndDate",
-					  "parentUserIds": [${requireNotNull(father.id)}],
-					  "courseResetConfirmed": true
+					  "parentUserIds": [${requireNotNull(father.id)}]
 					}
 					""".trimIndent(),
 				),
@@ -953,6 +969,7 @@ class TripControllerTest {
 			.andExpect(jsonPath("$.data.recommendationSnapshot.destinationCode").value("gyeongju"))
 			.andExpect(jsonPath("$.data.recommendationSnapshot.parents[0].parentUserId").value(requireNotNull(father.id)))
 			.andExpect(jsonPath("$.data.days.length()").value(3))
+			.andExpect(jsonPath("$.data.days[0].id").value(originalDayId))
 			.andExpect(jsonPath("$.data.days[0].travelDate").value(changedStartDate.toString()))
 			.andExpect(jsonPath("$.data.days[2].travelDate").value(changedEndDate.toString()))
 
@@ -962,8 +979,12 @@ class TripControllerTest {
 		)
 			.andExpect(status().isOk)
 			.andExpect(jsonPath("$.data.days.length()").value(3))
-			.andExpect(jsonPath("$.data.days[0].route").doesNotExist())
-			.andExpect(jsonPath("$.data.days[0].stops.length()").value(0))
+			.andExpect(jsonPath("$.data.days[0].route.provider").value("tmap"))
+			.andExpect(jsonPath("$.data.days[0].stops.length()").value(1))
+			.andExpect(jsonPath("$.data.days[1].route").doesNotExist())
+			.andExpect(jsonPath("$.data.days[1].stops.length()").value(0))
+			.andExpect(jsonPath("$.data.days[2].route").doesNotExist())
+			.andExpect(jsonPath("$.data.days[2].stops.length()").value(0))
 
 		check(tripPledgeRepository.findByTripId(tripId.toLong()) == null)
 		check(pledgeItemRepository.count() == 0L)
@@ -975,6 +996,50 @@ class TripControllerTest {
 			.andExpect(status().isOk)
 			.andExpect(jsonPath("$.status").value(404))
 			.andExpect(jsonPath("$.message").value("저장된 여행 10계명이 없습니다."))
+	}
+
+	@Test
+	fun `기간을 줄이면 유지되는 일차의 경로만 남기고 뒤쪽 일차를 삭제한다`() {
+		val child = saveUser(UserRole.CHILD, "shrink-child", "혜린")
+		val mother = saveUser(UserRole.PARENT, "shrink-parent", "엄마", GenderType.FEMALE)
+		connectFamily(child, mother)
+		saveCompletedParentProfile(mother)
+		val startDate = futureDate(10)
+		val tripId = createTrip(child, mother, startDate, startDate.plusDays(2))
+		val originalDays = tripDayRepository.findAllByTripIdOrderByDayNumberAsc(tripId.toLong())
+		originalDays.forEach(::applyTestRoute)
+		val originalDayIds = originalDays.map { requireNotNull(it.id) }
+
+		mockMvc.perform(
+			put("/api/v1/trips/$tripId")
+				.header("Authorization", "Bearer ${tokenService.createAccessToken(child)}")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(
+					"""
+					{
+					  "startDate": "$startDate",
+					  "endDate": "$startDate",
+					  "parentUserIds": [${requireNotNull(mother.id)}]
+					}
+					""".trimIndent(),
+				),
+		)
+				.andExpect(status().isOk)
+				.andExpect(jsonPath("$.status").value(200))
+				.andExpect(jsonPath("$.data.days.length()").value(1))
+				.andExpect(jsonPath("$.data.days[0].id").value(originalDayIds[0]))
+
+		mockMvc.perform(
+			get("/api/v1/trips/$tripId/course")
+				.header("Authorization", "Bearer ${tokenService.createAccessToken(child)}"),
+		)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.data.days.length()").value(1))
+			.andExpect(jsonPath("$.data.days[0].tripDayId").value(originalDayIds[0]))
+			.andExpect(jsonPath("$.data.days[0].route.provider").value("tmap"))
+
+		check(tripDayRepository.findById(originalDayIds[1]).isEmpty)
+		check(tripDayRepository.findById(originalDayIds[2]).isEmpty)
 	}
 
 	@Test
@@ -1027,8 +1092,7 @@ class TripControllerTest {
 					{
 					  "startDate": "$today",
 					  "endDate": "$changedEndDate",
-					  "parentUserIds": [${requireNotNull(father.id)}],
-					  "courseResetConfirmed": true
+					  "parentUserIds": [${requireNotNull(father.id)}]
 					}
 					""".trimIndent(),
 				),
@@ -1048,7 +1112,7 @@ class TripControllerTest {
 		)
 			.andExpect(status().isOk)
 			.andExpect(jsonPath("$.data.days.length()").value(3))
-			.andExpect(jsonPath("$.data.days[0].stops.length()").value(0))
+			.andExpect(jsonPath("$.data.days[0].stops.length()").value(1))
 	}
 
 	@Test
@@ -1674,6 +1738,18 @@ class TripControllerTest {
 				),
 		)
 			.andExpect(status().isOk)
+	}
+
+	private fun applyTestRoute(day: TripDay) {
+		day.applyRouteOptimization(
+			provider = ExternalApiProvider.TMAP,
+			totalDistanceMeters = 1200,
+			totalDurationSeconds = 600,
+			polyline = null,
+			sourcePayload = null,
+			optimizedAt = LocalDateTime.now(),
+		)
+		tripDayRepository.saveAndFlush(day)
 	}
 
 	private fun saveReviewedPledge(child: User, tripId: Int) {

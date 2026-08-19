@@ -74,12 +74,6 @@ data class UpdateTripRequest(
 	@field:NotEmpty(message = "여행 대상 부모를 선택해주세요.")
 	@field:Size(max = 2, message = "부모는 최대 2명까지 선택할 수 있습니다.")
 	val parentUserIds: List<Long>,
-
-	@field:Schema(
-		description = "날짜 또는 참여 부모 변경으로 기존 코스가 삭제되는 것에 동의했는지 여부. 기존 코스가 있을 때만 true가 필요합니다.",
-		example = "false",
-	)
-	val courseResetConfirmed: Boolean = false,
 )
 
 @Schema(description = "여행 방문지 메모 수정 요청")

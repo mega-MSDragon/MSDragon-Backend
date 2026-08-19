@@ -30,7 +30,7 @@ class TripDay(
 	val dayNumber: Int,
 
 	@Column(name = "travel_date", nullable = false)
-	val travelDate: LocalDate,
+	var travelDate: LocalDate,
 ) : BaseTimeEntity() {
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -60,6 +60,10 @@ class TripDay(
 	@Column(name = "route_optimized_at")
 	var routeOptimizedAt: LocalDateTime? = null
 		protected set
+
+	fun updateTravelDate(travelDate: LocalDate) {
+		this.travelDate = travelDate
+	}
 
 	fun applyRouteOptimization(
 		provider: ExternalApiProvider,
