@@ -22,6 +22,7 @@ import com.msdragon.backend.feedback.repository.TripFeedbackRequestRepository
 import com.msdragon.backend.report.service.FilialReportService
 import com.msdragon.backend.trip.dto.relationLabelOf
 import com.msdragon.backend.trip.entity.Trip
+import com.msdragon.backend.trip.entity.TripStatus
 import com.msdragon.backend.trip.repository.TripParticipantRepository
 import com.msdragon.backend.trip.repository.TripRepository
 import com.msdragon.backend.trip.repository.TripStopRepository
@@ -168,7 +169,7 @@ class TripFeedbackService(
 			.associateBy { requireNotNull(it.parentUser.id) }
 		val feedbacksByParentId = tripFeedbackRepository.findAllByTripIdOrderByParentUserIdAsc(tripId)
 			.associateBy { requireNotNull(it.parentUser.id) }
-		val feedbackAvailable = !today.isBefore(trip.endDate)
+		val feedbackAvailable = trip.status != TripStatus.STOPPED && !today.isBefore(trip.endDate)
 		val currentUserId = requireNotNull(user.id)
 		val isCreator = user.role == UserRole.CHILD && trip.createdByUser.id == currentUserId
 		val isParticipatingParent = user.role == UserRole.PARENT && parents.any { it.id == currentUserId }
@@ -269,6 +270,9 @@ class TripFeedbackService(
 	}
 
 	private fun validateFeedbackAvailable(trip: Trip, today: LocalDate) {
+		if (trip.status == TripStatus.STOPPED) {
+			throw BadRequestException("중단된 여행은 피드백을 작성할 수 없습니다.")
+		}
 		if (today.isBefore(trip.endDate)) {
 			throw BadRequestException("여행 마지막 날부터 피드백을 작성할 수 있습니다.")
 		}

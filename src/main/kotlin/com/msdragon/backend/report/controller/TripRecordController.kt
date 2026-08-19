@@ -18,14 +18,14 @@ import org.springframework.web.bind.annotation.RestController
 
 @RestController
 @RequestMapping("/api/v1/records")
-@Tag(name = "Record", description = "완료 여행 기록 목록과 통계 API입니다.")
+@Tag(name = "Record", description = "완료·중단 여행 기록 목록과 완료 여행 통계 API입니다.")
 @SecurityRequirement(name = BEARER_AUTH_SCHEME)
 class TripRecordController(
 	private val filialReportService: FilialReportService,
 ) {
 	@Operation(
 		summary = "기록 탭 조회",
-		description = "같은 가족의 completed 여행을 종료일 최신순으로 조회하고 상단 통계를 함께 반환합니다.",
+		description = "같은 가족의 completed·stopped 여행을 종료일 최신순으로 조회합니다. 상단 통계는 completed 여행만 계산합니다.",
 	)
 	@ApiResponses(
 		value = [

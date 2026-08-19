@@ -15,6 +15,7 @@ enum class TripStatus(
 	READY("ready"),
 	IN_PROGRESS("in_progress"),
 	COMPLETED("completed"),
+	STOPPED("stopped"),
 	ARCHIVED("archived"),
 	;
 

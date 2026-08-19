@@ -167,6 +167,7 @@ class TripService(
 		val today = currentDate()
 		trip.synchronizeStatus(today)
 		when {
+			trip.status == TripStatus.STOPPED -> throw BadRequestException("중단된 여행은 여행 모드를 이용할 수 없습니다.")
 			trip.status == TripStatus.ARCHIVED -> throw BadRequestException("보관된 여행은 여행 모드를 이용할 수 없습니다.")
 			today.isBefore(trip.startDate) -> throw BadRequestException("여행 시작일부터 여행 모드를 이용할 수 있습니다.")
 			today.isAfter(trip.endDate) -> throw BadRequestException("종료된 여행은 여행 모드를 이용할 수 없습니다.")
@@ -185,7 +186,7 @@ class TripService(
 		val familyId = requireNotNull(family.id)
 
 		val dayCount = validateDateRange(request.startDate, request.endDate)
-		if (tripRepository.existsOverlappingTrip(familyId, request.startDate, request.endDate, TripStatus.ARCHIVED)) {
+		if (tripRepository.existsOverlappingTrip(familyId, request.startDate, request.endDate, NON_BLOCKING_TRIP_STATUSES)) {
 			throw BadRequestException("선택한 날짜에 이미 등록된 여행이 있습니다.")
 		}
 
@@ -263,7 +264,7 @@ class TripService(
 						tripId = tripId,
 						startDate = request.startDate,
 						endDate = request.endDate,
-						excludedStatus = TripStatus.ARCHIVED,
+						excludedStatuses = NON_BLOCKING_TRIP_STATUSES,
 					)
 				) {
 					throw BadRequestException("선택한 날짜에 이미 등록된 여행이 있습니다.")
@@ -316,6 +317,34 @@ class TripService(
 		)
 		trip.synchronizeStatus(today)
 
+		return tripDetail(trip)
+	}
+
+	@Transactional
+	fun deleteTrip(currentUser: AuthenticatedUser, tripId: Long) {
+		val child = getLoginUser(currentUser.id)
+		val trip = tripRepository.findByIdAndDeletedAtIsNull(tripId)
+			?: throw NotFoundException("여행을 찾을 수 없습니다.")
+		trip.synchronizeStatus(currentDate())
+		validateTripOwner(child, trip)
+		if (trip.status !in DELETABLE_TRIP_STATUSES) {
+			throw BadRequestException("여행 시작 전 준비 중인 여행만 삭제할 수 있습니다.")
+		}
+		trip.softDelete(currentDateTime())
+	}
+
+	@Transactional
+	fun stopTrip(currentUser: AuthenticatedUser, tripId: Long): TripDetailResponse {
+		val child = getLoginUser(currentUser.id)
+		val trip = tripRepository.findByIdAndDeletedAtIsNull(tripId)
+			?: throw NotFoundException("여행을 찾을 수 없습니다.")
+		trip.synchronizeStatus(currentDate())
+		validateTripOwner(child, trip)
+		if (trip.status != TripStatus.IN_PROGRESS) {
+			throw BadRequestException("진행 중인 여행만 중단할 수 있습니다.")
+		}
+		tripFeedbackService.resetForTripChange(tripId)
+		trip.stop()
 		return tripDetail(trip)
 	}
 
@@ -581,19 +610,17 @@ class TripService(
 		val isCurrentFamilyMember = familyMemberRepository.findByUserId(userId)
 			?.let { it.family.isActive && it.family.id == trip.family.id }
 			?: false
-		val isCompletedTripParticipant = trip.status == TripStatus.COMPLETED &&
+		val isPastTripParticipant = trip.status in setOf(TripStatus.COMPLETED, TripStatus.STOPPED) &&
 			tripParticipantRepository.existsByTripIdAndUserId(requireNotNull(trip.id), userId)
-		if (!isCurrentFamilyMember && !isCompletedTripParticipant) {
+		if (!isCurrentFamilyMember && !isPastTripParticipant) {
 			throw ForbiddenException("여행 조회 권한이 없습니다.")
 		}
 	}
 
 	private fun validateTripEditable(user: User, trip: Trip) {
-		if (user.role != UserRole.CHILD || trip.createdByUser.id != user.id) {
-			throw ForbiddenException("여행을 만든 자녀만 여행 정보를 수정할 수 있습니다.")
-		}
+		validateTripOwner(user, trip, "여행 정보를 수정할 수 있습니다.")
 		if (trip.status !in EDITABLE_TRIP_STATUSES) {
-			throw BadRequestException("완료되거나 보관된 여행은 여행 정보를 수정할 수 없습니다.")
+			throw BadRequestException("완료·중단·보관된 여행은 여행 정보를 수정할 수 없습니다.")
 		}
 	}
 
@@ -603,7 +630,13 @@ class TripService(
 			throw ForbiddenException("여행을 만든 자녀만 여행 코스를 수정할 수 있습니다.")
 		}
 		if (trip.status !in EDITABLE_TRIP_STATUSES) {
-			throw BadRequestException("완료되거나 보관된 여행은 여행 코스를 수정할 수 없습니다.")
+			throw BadRequestException("완료·중단·보관된 여행은 여행 코스를 수정할 수 없습니다.")
+		}
+	}
+
+	private fun validateTripOwner(user: User, trip: Trip, action: String = "여행을 삭제하거나 중단할 수 있습니다.") {
+		if (user.role != UserRole.CHILD || trip.createdByUser.id != user.id) {
+			throw ForbiddenException("여행을 만든 자녀만 $action")
 		}
 	}
 
@@ -686,9 +719,14 @@ class TripService(
 
 	private fun currentDate(): LocalDate = LocalDate.now(SERVICE_ZONE_ID)
 
+	private fun currentDateTime(): LocalDateTime =
+		LocalDateTime.now(SERVICE_ZONE_ID).truncatedTo(ChronoUnit.MICROS)
+
 	companion object {
 		private val SERVICE_ZONE_ID: ZoneId = ZoneId.of("Asia/Seoul")
 		private val EDITABLE_TRIP_STATUSES = setOf(TripStatus.PLANNING, TripStatus.READY, TripStatus.IN_PROGRESS)
+		private val DELETABLE_TRIP_STATUSES = setOf(TripStatus.PLANNING, TripStatus.READY)
+		private val NON_BLOCKING_TRIP_STATUSES = setOf(TripStatus.STOPPED, TripStatus.ARCHIVED)
 		private const val MAX_PARENT_COUNT = 2
 		private const val PARENT_TRAVEL_MBTI_POLICY_VERSION = "parent-travel-mbti-v1"
 	}

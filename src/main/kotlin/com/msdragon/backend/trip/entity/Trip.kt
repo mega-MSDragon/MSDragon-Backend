@@ -67,7 +67,7 @@ class Trip(
 	}
 
 	fun synchronizeStatus(today: LocalDate) {
-		if (status == TripStatus.ARCHIVED) {
+		if (status == TripStatus.STOPPED || status == TripStatus.ARCHIVED) {
 			return
 		}
 		status = when {
@@ -79,5 +79,13 @@ class Trip(
 
 	fun archive() {
 		status = TripStatus.ARCHIVED
+	}
+
+	fun stop() {
+		status = TripStatus.STOPPED
+	}
+
+	fun softDelete(deletedAt: LocalDateTime) {
+		this.deletedAt = deletedAt
 	}
 }

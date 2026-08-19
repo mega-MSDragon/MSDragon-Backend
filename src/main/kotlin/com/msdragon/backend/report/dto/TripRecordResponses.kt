@@ -2,6 +2,7 @@ package com.msdragon.backend.report.dto
 
 import com.msdragon.backend.trip.dto.TripDestinationResponse
 import com.msdragon.backend.trip.dto.TripParticipantResponse
+import com.msdragon.backend.trip.entity.TripStatus
 import io.swagger.v3.oas.annotations.media.Schema
 import java.math.BigDecimal
 import java.time.LocalDate
@@ -14,7 +15,7 @@ data class TripRecordsResponse(
 	@field:Schema(description = "완료 여행 통계")
 	val statistics: TripRecordStatisticsResponse,
 
-	@field:Schema(description = "종료일 최신순 완료 여행 목록")
+	@field:Schema(description = "종료일 최신순 완료·중단 여행 목록")
 	val records: List<TripRecordSummaryResponse>,
 ) {
 	companion object {
@@ -63,6 +64,9 @@ data class TripRecordSummaryResponse(
 
 	@field:Schema(description = "여행 종료일", example = "2026-07-11")
 	val endDate: LocalDate,
+
+	@field:Schema(description = "기록 상태", example = "completed", allowableValues = ["completed", "stopped"])
+	val status: TripStatus,
 
 	@field:Schema(description = "여행 참여자")
 	val participants: List<TripParticipantResponse>,

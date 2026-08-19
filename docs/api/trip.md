@@ -25,7 +25,9 @@
 - 참여 부모 구성이 바뀌면 저장된 여행 10계명, 문구 10개, 모든 참여자 서명을 함께 삭제하고 처음부터 다시 작성하도록 합니다.
 - 여행 기간 또는 참여 부모 구성이 바뀌면 기존 부모 평가 요청, 제출된 피드백, 효도 리포트도 함께 삭제합니다.
 - 기존 코스나 경로가 있는 상태에서 추천 입력을 바꾸려면 `courseResetConfirmed=true`를 전달해야 합니다.
-- 코스 전체 저장, 추천 재생성, 경로 최적화는 여행을 만든 자녀만 `planning`, `ready`, `in_progress` 상태에서 할 수 있습니다. `completed`, `archived` 여행은 변경할 수 없습니다.
+- 여행을 만든 자녀는 시작 전 `planning`, `ready` 여행을 soft delete할 수 있습니다.
+- 여행을 만든 자녀는 `in_progress` 여행만 중단할 수 있습니다. 중단된 여행은 `stopped` 상태로 기록에 남습니다.
+- 코스 전체 저장, 추천 재생성, 경로 최적화는 여행을 만든 자녀만 `planning`, `ready`, `in_progress` 상태에서 할 수 있습니다. `completed`, `stopped`, `archived` 여행은 변경할 수 없습니다.
 - 여행 코스는 일자별 방문지 목록을 전체 저장합니다. 요청 배열 순서가 방문 순서가 되며, 포함하지 않은 일자는 빈 코스로 저장됩니다.
 - 저장된 방문지는 외부 API 원본이 바뀌어도 기존 코스를 유지할 수 있도록 `trip_stops`에 장소 스냅샷을 저장합니다.
 - 추천 코스 생성은 한국관광공사 TourAPI 무장애여행 서비스로 장소 후보를 조회하고, 부모 프로필 스냅샷으로 점수를 계산해 `trip_stops`에 저장합니다.
@@ -59,11 +61,13 @@
 | `GET` | `/api/v1/trips/{tripId}/places/search` | 코스 편집용 방문지 검색 |
 | `GET` | `/api/v1/trips/{tripId}/places/{contentId}` | 코스 편집용 방문지 상세 조회 |
 | `POST` | `/api/v1/trips` | 여행 생성 |
+| `POST` | `/api/v1/trips/{tripId}/stop` | 진행 중 여행 중단 |
 | `POST` | `/api/v1/trips/{tripId}/course/recommendation` | 여행 추천 코스 생성 |
 | `POST` | `/api/v1/trips/{tripId}/days/{dayNumber}/route-optimization` | 여행 일자 경로 최적화 |
 | `PUT` | `/api/v1/trips/{tripId}` | 여행 기본정보 수정 |
 | `PUT` | `/api/v1/trips/{tripId}/course` | 여행 코스 전체 저장 |
 | `PUT` | `/api/v1/trips/{tripId}/stops/{stopId}/note` | 방문지 메모 저장·삭제 |
+| `DELETE` | `/api/v1/trips/{tripId}` | 시작 전 여행 soft delete |
 
 ---
 
@@ -253,7 +257,7 @@
 
 1. `GET /api/v1/trips/parent-candidates`로 선택 가능한 부모와 프로필 상태를 조회합니다.
 2. `GET /api/v1/trips/destinations`로 서버가 정한 도시 순서와 배지를 표시합니다.
-3. `GET /api/v1/trips`에서 `status != archived`인 여행 기간을 캘린더의 `다른 여행` 범위로 표시합니다.
+3. `GET /api/v1/trips`에서 `status`가 `stopped`, `archived`가 아닌 여행 기간을 캘린더의 `다른 여행` 범위로 표시합니다.
 4. 제목과 날짜를 확정하면 `POST /api/v1/trips`로 여행과 일자를 생성합니다.
 5. 반환된 `tripId`로 `POST /api/v1/trips/{tripId}/course/recommendation`을 호출해 모든 일자의 장소를 생성합니다.
 6. 추천 응답의 각 `dayNumber`에 대해 `POST /api/v1/trips/{tripId}/days/{dayNumber}/route-optimization`을 호출합니다.
@@ -267,7 +271,7 @@
 
 여행을 만든 자녀가 여행 정보 편집 화면의 날짜와 참여 부모를 한 번에 저장합니다.
 제목과 도시는 생성 후 변경할 수 없으므로 요청에 포함하지 않습니다. `in_progress`에서는 서울 기준 오늘을 포함하는 기간만 선택할 수 있습니다.
-`completed`, `archived` 상태에서는 수정할 수 없습니다.
+`completed`, `stopped`, `archived` 상태에서는 수정할 수 없습니다.
 
 ### Request
 
@@ -304,6 +308,29 @@
 `GET /api/v1/trips/{tripId}`와 같은 `TripDetailResponse` 형태입니다.
 
 상세 정책은 `docs/policy/trip-edit.md`를 따릅니다.
+
+---
+
+## DELETE /api/v1/trips/{tripId}
+
+여행을 만든 자녀가 시작 전 `planning`, `ready` 여행을 삭제합니다.
+
+- 실제 row는 지우지 않고 `trips.deleted_at`을 기록합니다.
+- 삭제된 여행은 목록·상세·코스·기록 조회에서 제외됩니다.
+- 삭제된 여행 기간은 날짜 중복 검사에서 제외되므로 같은 날짜로 새 여행을 만들 수 있습니다.
+- `in_progress`, `completed`, `stopped`, `archived` 여행은 삭제할 수 없습니다.
+- 성공 응답은 `data` 없이 `status=200`, `message=여행 삭제 성공`입니다.
+
+---
+
+## POST /api/v1/trips/{tripId}/stop
+
+여행을 만든 자녀가 현재 `in_progress`인 여행을 중단합니다. Request Body는 없습니다.
+
+- 상태를 `stopped`로 변경하고 기존 참여자·일자·코스 데이터는 유지합니다.
+- 중단 후 여행 모드와 기본정보·코스 편집은 사용할 수 없습니다.
+- 중단 여행은 `GET /api/v1/records`에 남지만 완료 여행 통계, 평가, 효도 리포트 대상에는 포함하지 않습니다. 중단 시 기존 평가 요청·피드백·리포트가 있으면 삭제합니다.
+- 성공 응답은 상태가 `stopped`인 `TripDetailResponse`입니다.
 
 ---
 
@@ -346,7 +373,7 @@
 
 ## GET /api/v1/trips/{tripId}
 
-현재 같은 가족 구성원이 여행 상세를 조회합니다. 가족 연결이 해제된 뒤에는 해당 여행의 기존 참여자만 `completed` 여행 상세를 계속 조회할 수 있습니다.
+현재 같은 가족 구성원이 여행 상세를 조회합니다. 가족 연결이 해제된 뒤에는 해당 여행의 기존 참여자만 `completed`, `stopped` 여행 상세를 계속 조회할 수 있습니다.
 다른 가족 여행이면 HTTP `200`, 본문 `status=403`을 반환합니다.
 응답 전 여행 상태를 현재 서울 날짜에 맞춰 동기화합니다.
 
@@ -521,7 +548,7 @@
 
 여행을 만든 자녀가 여행 추천 코스를 생성합니다.
 요청 본문은 받지 않습니다. 서버는 여행 생성 시 저장한 `recommendationSnapshot`, 여행 도시, 여행 일자를 기준으로 TourAPI 장소 후보를 조회합니다.
-`planning`, `ready`, `in_progress` 상태에서 호출할 수 있고 `completed`, `archived` 상태에서는 호출할 수 없습니다.
+`planning`, `ready`, `in_progress` 상태에서 호출할 수 있고 `completed`, `stopped`, `archived` 상태에서는 호출할 수 없습니다.
 
 생성 규칙:
 
@@ -599,7 +626,7 @@ TourAPI 서비스키가 서버에 설정되어 있지 않거나 TourAPI 호출�
 
 여행을 만든 자녀가 특정 일자의 방문지 순서를 Tmap 기준으로 최적화합니다.
 사용자가 시작점/도착점을 입력하지 않으므로 서버가 모든 시작/도착 조합을 탐색한 뒤 가장 짧은 결과를 선택합니다.
-`planning`, `ready`, `in_progress` 상태에서 호출할 수 있고 `completed`, `archived` 상태에서는 호출할 수 없습니다.
+`planning`, `ready`, `in_progress` 상태에서 호출할 수 있고 `completed`, `stopped`, `archived` 상태에서는 호출할 수 없습니다.
 
 최적화 결과는 아래에 반영됩니다.
 
@@ -876,7 +903,7 @@ TourAPI 서비스키가 서버에 설정되어 있지 않거나 TourAPI 호출�
 요청 배열 순서가 해당 일자의 방문 순서가 됩니다.
 기존 코스는 저장 요청 기준으로 덮어쓰며, 요청에 포함하지 않은 일자는 빈 코스로 저장됩니다.
 코스를 저장하면 방문지 구성이 달라진 일자의 Tmap 경로 최적화 캐시만 무효화됩니다.
-`planning`, `ready`, `in_progress` 상태에서 저장할 수 있고 `completed`, `archived` 상태에서는 저장할 수 없습니다.
+`planning`, `ready`, `in_progress` 상태에서 저장할 수 있고 `completed`, `stopped`, `archived` 상태에서는 저장할 수 없습니다.
 
 > 이 엔드포인트가 방문지 추가·수정·삭제·순서 변경을 모두 처리합니다. 단건 편집 API가 아닌 전체 덮어쓰기이므로 클라이언트는 화면에서 임시 편집한 뒤, 변경하지 않은 일자를 포함한 최종 코스 전체를 `저장하기` 시점에 전송해야 합니다.
 > 저장 성공 후 응답에서 `route`가 `null`인 변경 일자마다 `POST /api/v1/trips/{tripId}/days/{dayNumber}/route-optimization`을 호출한 뒤 코스 화면으로 돌아갑니다. 방문지 구성이 같은 일자의 방문지 ID와 기존 경로는 유지됩니다.

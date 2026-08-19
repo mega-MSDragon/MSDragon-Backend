@@ -10,7 +10,7 @@
 - API: `POST /api/v1/trips/{tripId}/days/{dayNumber}/route-optimization`
 - 여행을 생성한 자녀만 방문 순서와 경로 캐시를 갱신할 수 있습니다.
 - `planning`, `ready`, `in_progress` 상태에서 호출할 수 있습니다.
-- `completed`, `archived` 상태에서는 호출할 수 없습니다.
+- `completed`, `stopped`, `archived` 상태에서는 호출할 수 없습니다.
 
 ---
 

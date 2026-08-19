@@ -94,7 +94,7 @@ class FilialReportService(
 		val records = (familyTrips + participatedTrips)
 			.distinctBy { requireNotNull(it.id) }
 			.onEach { it.synchronizeStatus(today) }
-			.filter { it.status == TripStatus.COMPLETED }
+			.filter { it.status in RECORD_TRIP_STATUSES }
 			.sortedWith(compareByDescending<Trip> { it.endDate }.thenByDescending { requireNotNull(it.id) })
 			.map(::recordAggregate)
 
@@ -102,12 +102,13 @@ class FilialReportService(
 			return TripRecordsResponse.empty(familyId)
 		}
 
-		val tripAverages = records.mapNotNull(RecordAggregate::averageRating)
+		val completedRecords = records.filter { it.response.status == TripStatus.COMPLETED }
+		val tripAverages = completedRecords.mapNotNull(RecordAggregate::averageRating)
 		val averageRating = tripAverages
 			.takeIf(List<BigDecimal>::isNotEmpty)
 			?.fold(BigDecimal.ZERO, BigDecimal::add)
 			?.divide(BigDecimal(tripAverages.size), 1, RoundingMode.HALF_UP)
-		val routeDistances = records.mapNotNull(RecordAggregate::totalDistanceMeters)
+		val routeDistances = completedRecords.mapNotNull(RecordAggregate::totalDistanceMeters)
 		val totalDistanceKm = routeDistances
 			.takeIf(List<Long>::isNotEmpty)
 			?.sum()
@@ -116,9 +117,9 @@ class FilialReportService(
 		return TripRecordsResponse(
 			familyId = familyId,
 			statistics = TripRecordStatisticsResponse(
-				completedTripCount = records.size,
+				completedTripCount = completedRecords.size,
 				averageRating = averageRating,
-				totalPlaceCount = records.sumOf { it.response.totalPlaceCount },
+				totalPlaceCount = completedRecords.sumOf { it.response.totalPlaceCount },
 				totalDistanceKm = totalDistanceKm,
 			),
 			records = records.map(RecordAggregate::response),
@@ -279,6 +280,7 @@ class FilialReportService(
 				destination = TripDestinationResponse.from(trip.destinationCode),
 				startDate = trip.startDate,
 				endDate = trip.endDate,
+				status = trip.status,
 				participants = source.participants.map(TripParticipantResponse::from),
 				coverImageUrl = coverImageUrl,
 				totalPlaceCount = source.stops.size,
@@ -362,5 +364,6 @@ class FilialReportService(
 	companion object {
 		private val SERVICE_ZONE_ID: ZoneId = ZoneId.of("Asia/Seoul")
 		private val METERS_PER_KILOMETER = BigDecimal("1000")
+		private val RECORD_TRIP_STATUSES = setOf(TripStatus.COMPLETED, TripStatus.STOPPED)
 	}
 }

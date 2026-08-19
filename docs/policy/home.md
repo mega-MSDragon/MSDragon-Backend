@@ -15,7 +15,7 @@
 ## 홈 여행 목록
 
 - 홈에는 `in_progress`, `planning`, `ready` 여행만 노출합니다.
-- `completed`, `archived` 여행은 기록 탭에서 조회하므로 홈에서 제외합니다.
+- `completed`, `stopped`, `archived` 여행은 홈에서 제외합니다. `completed`, `stopped`는 기록 탭에서 조회합니다.
 - `in_progress` 여행을 먼저 표시하고, 이후 예정 여행을 시작일과 ID 오름차순으로 표시합니다.
 - 서울 날짜 기준으로 조회 시점에 여행 상태를 동기화합니다.
 - 미래 여행의 `dDay`는 `시작일 - 오늘`의 날짜 차이입니다. 진행 중인 여행은 `null`입니다.

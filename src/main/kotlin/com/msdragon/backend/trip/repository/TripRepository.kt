@@ -18,7 +18,7 @@ interface TripRepository : JpaRepository<Trip, Long> {
 		from Trip t
 		where t.family.id = :familyId
 		  and t.deletedAt is null
-		  and t.status <> :excludedStatus
+		  and t.status not in :excludedStatuses
 		  and t.startDate <= :endDate
 		  and t.endDate >= :startDate
 		""",
@@ -27,7 +27,7 @@ interface TripRepository : JpaRepository<Trip, Long> {
 		@Param("familyId") familyId: Long,
 		@Param("startDate") startDate: LocalDate,
 		@Param("endDate") endDate: LocalDate,
-		@Param("excludedStatus") excludedStatus: TripStatus,
+		@Param("excludedStatuses") excludedStatuses: Collection<TripStatus>,
 	): Boolean
 
 	@Query(
@@ -37,7 +37,7 @@ interface TripRepository : JpaRepository<Trip, Long> {
 		where t.family.id = :familyId
 		  and t.id <> :tripId
 		  and t.deletedAt is null
-		  and t.status <> :excludedStatus
+		  and t.status not in :excludedStatuses
 		  and t.startDate <= :endDate
 		  and t.endDate >= :startDate
 		""",
@@ -47,6 +47,6 @@ interface TripRepository : JpaRepository<Trip, Long> {
 		@Param("tripId") tripId: Long,
 		@Param("startDate") startDate: LocalDate,
 		@Param("endDate") endDate: LocalDate,
-		@Param("excludedStatus") excludedStatus: TripStatus,
+		@Param("excludedStatuses") excludedStatuses: Collection<TripStatus>,
 	): Boolean
 }

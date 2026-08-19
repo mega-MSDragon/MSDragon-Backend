@@ -47,7 +47,7 @@ CREATE TYPE walking_pace       AS ENUM ('slow', 'normal', 'fast');          -- �
 CREATE TYPE travel_theme_code  AS ENUM ('nature_scenery', 'history_culture', 'shopping', 'activity', 'culture_life', 'landmark', 'experience');
 CREATE TYPE food_preference_code AS ENUM ('korean', 'familiar', 'adventurous');
 CREATE TYPE travel_personality_type_code AS ENUM ('urban_explorer', 'culture_stroller', 'healing_traveler', 'heritage_walker', 'active_adventurer', 'local_challenger');
-CREATE TYPE trip_status        AS ENUM ('planning', 'ready', 'in_progress', 'completed', 'archived');
+CREATE TYPE trip_status        AS ENUM ('planning', 'ready', 'in_progress', 'completed', 'stopped', 'archived');
 CREATE TYPE trip_pledge_status AS ENUM ('draft', 'reviewed', 'signature_requested', 'completed');
 CREATE TYPE trip_companion_scope AS ENUM ('with_parents', 'whole_family', 'parents_only');
 CREATE TYPE stop_type          AS ENUM ('sightseeing', 'meal', 'rest', 'cafe');
@@ -371,7 +371,8 @@ CREATE TABLE trips (
 -- 여행 도시는 준비 중 정보 편집에서 변경 가능하고 여행 중에는 고정한다.
 -- 도시/날짜/함께 가는 가족/추천 기준 변경은 저장 후 코스 재추천과 기존 일정 덮어쓰기 확인 플로우를 거친다.
 -- 여행 중에는 오늘을 포함하는 날짜, 함께 가는 부모, 코스만 생성 자녀가 수정할 수 있다.
--- completed/archived 상태에서는 기본정보와 코스를 수정할 수 없다.
+-- completed/stopped/archived 상태에서는 기본정보와 코스를 수정할 수 없다.
+-- planning/ready 삭제는 deleted_at을 기록하고, in_progress 중단은 stopped로 보존한다.
 -- 여행모드는 start_date 00:00부터 end_date 23:59까지 노출하고 별도 여행 종료 버튼은 두지 않는다.
 -- 서울 날짜 기준 start_date부터 status=in_progress, end_date 다음 날부터 status=completed로 동기화한다.
 -- 여행 참여자 선택 여부와 관계없이 같은 family_id의 구성원은 여행모드에 접근할 수 있다.

@@ -172,7 +172,7 @@ data class TripSummaryResponse(
 	@field:Schema(description = "여행 종료일", example = "2026-07-11")
 	val endDate: LocalDate,
 
-	@field:Schema(description = "여행 상태", example = "planning", allowableValues = ["planning", "ready", "in_progress", "completed", "archived"])
+	@field:Schema(description = "여행 상태", example = "planning", allowableValues = ["planning", "ready", "in_progress", "completed", "stopped", "archived"])
 	val status: TripStatus,
 
 	@field:Schema(description = "참여자 수", example = "2")
@@ -212,7 +212,7 @@ data class TripDetailResponse(
 	@field:Schema(description = "여행 종료일", example = "2026-07-11")
 	val endDate: LocalDate,
 
-	@field:Schema(description = "여행 상태", example = "planning", allowableValues = ["planning", "ready", "in_progress", "completed", "archived"])
+	@field:Schema(description = "여행 상태", example = "planning", allowableValues = ["planning", "ready", "in_progress", "completed", "stopped", "archived"])
 	val status: TripStatus,
 
 	@field:Schema(description = "여행 참여자")
@@ -367,7 +367,7 @@ data class TripCourseResponse(
 	@field:Schema(description = "여행 종료일", example = "2026-07-11")
 	val endDate: LocalDate,
 
-	@field:Schema(description = "여행 상태", example = "planning", allowableValues = ["planning", "ready", "in_progress", "completed", "archived"])
+	@field:Schema(description = "여행 상태", example = "planning", allowableValues = ["planning", "ready", "in_progress", "completed", "stopped", "archived"])
 	val status: TripStatus,
 
 	@field:Schema(description = "여행 참여자")

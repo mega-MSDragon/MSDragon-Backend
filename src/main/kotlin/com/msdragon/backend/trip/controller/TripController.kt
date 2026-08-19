@@ -32,6 +32,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
+import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
@@ -167,7 +168,7 @@ class TripController(
 
 	@Operation(
 		summary = "여행 추천 코스 생성",
-		description = "여행을 만든 자녀가 부모님 프로필 스냅샷과 TourAPI 장소/무장애 정보를 기반으로 일자별 추천 코스를 생성해 저장합니다. 기존 코스가 있으면 추천 결과로 덮어쓰며 완료·보관 여행은 수정할 수 없습니다.",
+		description = "여행을 만든 자녀가 부모님 프로필 스냅샷과 TourAPI 장소/무장애 정보를 기반으로 일자별 추천 코스를 생성해 저장합니다. 기존 코스가 있으면 추천 결과로 덮어쓰며 완료·중단·보관 여행은 수정할 수 없습니다.",
 	)
 	@ApiResponses(
 		value = [
@@ -188,7 +189,7 @@ class TripController(
 
 	@Operation(
 		summary = "여행 일자 경로 최적화",
-		description = "여행을 만든 자녀가 저장된 일자별 방문지 좌표를 기준으로 모든 시작/도착 조합을 Tmap API에 조회하고, 가장 짧은 경로로 방문 순서와 경로 캐시를 갱신합니다. 완료·보관 여행은 수정할 수 없습니다.",
+		description = "여행을 만든 자녀가 저장된 일자별 방문지 좌표를 기준으로 모든 시작/도착 조합을 Tmap API에 조회하고, 가장 짧은 경로로 방문 순서와 경로 캐시를 갱신합니다. 완료·중단·보관 여행은 수정할 수 없습니다.",
 	)
 	@ApiResponses(
 		value = [
@@ -334,8 +335,47 @@ class TripController(
 		)
 
 	@Operation(
+		summary = "여행 삭제",
+		description = "여행을 만든 자녀가 시작 전 planning 또는 ready 여행을 soft delete합니다. 삭제된 여행은 목록과 상세 조회에서 제외되며 같은 날짜로 새 여행을 만들 수 있습니다.",
+	)
+	@ApiResponses(
+		value = [
+			SwaggerApiResponse(responseCode = "200", description = "처리 완료: 삭제 성공(status=200) 또는 인증·정책 오류(status=400/401/403/404)"),
+		],
+	)
+	@DeleteMapping("/{tripId}")
+	fun deleteTrip(
+		@CurrentUser currentUser: AuthenticatedUser,
+		@Parameter(description = "여행 ID", example = "1")
+		@PathVariable tripId: Long,
+	): ApiResponse<Unit> {
+		tripService.deleteTrip(currentUser, tripId)
+		return ApiResponse.success(message = "여행 삭제 성공")
+	}
+
+	@Operation(
+		summary = "여행 중단",
+		description = "여행을 만든 자녀가 in_progress 여행을 중단합니다. 중단된 여행은 stopped 상태로 기록 탭에 남고 여행 모드와 편집 기능은 더 이상 사용할 수 없습니다.",
+	)
+	@ApiResponses(
+		value = [
+			SwaggerApiResponse(responseCode = "200", description = "처리 완료: 중단 성공(status=200) 또는 인증·정책 오류(status=400/401/403/404)"),
+		],
+	)
+	@PostMapping("/{tripId}/stop")
+	fun stopTrip(
+		@CurrentUser currentUser: AuthenticatedUser,
+		@Parameter(description = "여행 ID", example = "1")
+		@PathVariable tripId: Long,
+	): ApiResponse<TripDetailResponse> =
+		ApiResponse.success(
+			message = "여행 중단 성공",
+			data = tripService.stopTrip(currentUser, tripId),
+		)
+
+	@Operation(
 		summary = "여행 코스 저장",
-		description = "여행을 만든 자녀가 준비 중 또는 여행 중인 방문지를 편집한 뒤 최종 일자별 코스를 전체 저장합니다. 방문지 단건 추가·수정·삭제 API가 아니므로 변경하지 않은 일자도 함께 보내야 하며, 포함하지 않은 일자는 빈 코스로 저장됩니다. 요청 배열 순서가 방문 순서가 됩니다. 방문지 구성이 바뀐 일자의 기존 경로만 초기화되므로 응답에서 route가 null인 변경 일자를 다시 최적화해야 합니다. 완료·보관 여행은 수정할 수 없습니다.",
+		description = "여행을 만든 자녀가 준비 중 또는 여행 중인 방문지를 편집한 뒤 최종 일자별 코스를 전체 저장합니다. 방문지 단건 추가·수정·삭제 API가 아니므로 변경하지 않은 일자도 함께 보내야 하며, 포함하지 않은 일자는 빈 코스로 저장됩니다. 요청 배열 순서가 방문 순서가 됩니다. 방문지 구성이 바뀐 일자의 기존 경로만 초기화되므로 응답에서 route가 null인 변경 일자를 다시 최적화해야 합니다. 완료·중단·보관 여행은 수정할 수 없습니다.",
 	)
 	@ApiResponses(
 		value = [

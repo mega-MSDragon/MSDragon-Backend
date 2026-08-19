@@ -93,7 +93,7 @@ class TripRecordControllerTest {
 	}
 
 	@Test
-	fun `완료 여행만 최신순으로 조회하고 부분 피드백을 포함해 기록 통계를 계산한다`() {
+	fun `완료와 중단 여행을 최신순으로 조회하고 완료 여행만 기록 통계에 반영한다`() {
 		val child = saveUser(UserRole.CHILD, "record-child", "혜린", GenderType.FEMALE)
 		val mother = saveUser(UserRole.PARENT, "record-mother", "길순", GenderType.FEMALE)
 		val father = saveUser(UserRole.PARENT, "record-father", "철수", GenderType.MALE)
@@ -148,6 +148,19 @@ class TripRecordControllerTest {
 			stopNames = listOf("서울 공원"),
 			routeDistanceMeters = 1_000,
 		)
+		val stoppedTrip = saveTrip(
+			family = family,
+			child = child,
+			participants = participants,
+			title = "중단한 여행",
+			destinationCode = TripDestinationCode.JEONJU,
+			startDate = today(),
+			endDate = today().plusDays(1),
+			stopNames = listOf("한옥마을"),
+			routeDistanceMeters = 1_000,
+		)
+		stoppedTrip.trip.stop()
+		tripRepository.saveAndFlush(stoppedTrip.trip)
 
 		mockMvc.perform(
 			get("/api/v1/records")
@@ -159,28 +172,33 @@ class TripRecordControllerTest {
 			.andExpect(jsonPath("$.data.statistics.averageRating").value(4.0))
 			.andExpect(jsonPath("$.data.statistics.totalPlaceCount").value(3))
 			.andExpect(jsonPath("$.data.statistics.totalDistanceKm").value(10.0))
-			.andExpect(jsonPath("$.data.records.length()").value(2))
-			.andExpect(jsonPath("$.data.records[0].tripId").value(requireNotNull(pendingTrip.trip.id)))
-			.andExpect(jsonPath("$.data.records[0].title").value("부산 온천 여행"))
-			.andExpect(jsonPath("$.data.records[0].coverImageUrl").value("https://example.com/해운대 산책로.jpg"))
-			.andExpect(jsonPath("$.data.records[0].averageRating").value(3.5))
+			.andExpect(jsonPath("$.data.records.length()").value(3))
+			.andExpect(jsonPath("$.data.records[0].tripId").value(requireNotNull(stoppedTrip.trip.id)))
+			.andExpect(jsonPath("$.data.records[0].status").value("stopped"))
 			.andExpect(jsonPath("$.data.records[0].reportReady").value(false))
-			.andExpect(jsonPath("$.data.records[0].participants.length()").value(3))
-			.andExpect(jsonPath("$.data.records[1].tripId").value(requireNotNull(readyTrip.trip.id)))
-			.andExpect(jsonPath("$.data.records[1].coverImageUrl").value("https://example.com/report-cover.jpg"))
-			.andExpect(jsonPath("$.data.records[1].averageRating").value(4.5))
-			.andExpect(jsonPath("$.data.records[1].reportReady").value(true))
+			.andExpect(jsonPath("$.data.records[1].tripId").value(requireNotNull(pendingTrip.trip.id)))
+			.andExpect(jsonPath("$.data.records[1].title").value("부산 온천 여행"))
+			.andExpect(jsonPath("$.data.records[1].status").value("completed"))
+			.andExpect(jsonPath("$.data.records[1].coverImageUrl").value("https://example.com/해운대 산책로.jpg"))
+			.andExpect(jsonPath("$.data.records[1].averageRating").value(3.5))
+			.andExpect(jsonPath("$.data.records[1].reportReady").value(false))
+			.andExpect(jsonPath("$.data.records[1].participants.length()").value(3))
+			.andExpect(jsonPath("$.data.records[2].tripId").value(requireNotNull(readyTrip.trip.id)))
+			.andExpect(jsonPath("$.data.records[2].coverImageUrl").value("https://example.com/report-cover.jpg"))
+			.andExpect(jsonPath("$.data.records[2].averageRating").value(4.5))
+			.andExpect(jsonPath("$.data.records[2].reportReady").value(true))
 
 		check(tripRepository.findById(requireNotNull(readyTrip.trip.id)).orElseThrow().status == TripStatus.COMPLETED)
 		check(tripRepository.findById(requireNotNull(pendingTrip.trip.id)).orElseThrow().status == TripStatus.COMPLETED)
 		check(tripRepository.findById(requireNotNull(lastDayTrip.trip.id)).orElseThrow().status == TripStatus.IN_PROGRESS)
+		check(tripRepository.findById(requireNotNull(stoppedTrip.trip.id)).orElseThrow().status == TripStatus.STOPPED)
 
 		mockMvc.perform(
 			get("/api/v1/records")
 				.header("Authorization", authorization(mother)),
 		)
 			.andExpect(status().isOk)
-			.andExpect(jsonPath("$.data.records.length()").value(2))
+			.andExpect(jsonPath("$.data.records.length()").value(3))
 	}
 
 	@Test

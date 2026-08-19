@@ -177,6 +177,26 @@ docker compose up -d --build
 - `deploy/nginx/certs/origin.pem` 존재
 - `deploy/nginx/certs/origin.key` 존재
 
+### 여행 중단 상태 DB 반영
+
+기존 PostgreSQL의 `trips.status` check constraint는 Hibernate `ddl-auto=update`가 enum 값 추가를 반영하지 못할 수 있습니다. `stopped` 상태를 처음 배포할 때 DBeaver 또는 `psql`에서 한 번 실행합니다.
+
+```sql
+ALTER TABLE trips DROP CONSTRAINT IF EXISTS trips_status_check;
+ALTER TABLE trips
+    ADD CONSTRAINT trips_status_check
+    CHECK (status IN ('planning', 'ready', 'in_progress', 'completed', 'stopped', 'archived'));
+```
+
+기존 constraint 이름이 다르면 아래 쿼리로 이름을 확인한 뒤 해당 constraint를 삭제합니다.
+
+```sql
+SELECT conname, pg_get_constraintdef(oid)
+FROM pg_constraint
+WHERE conrelid = 'trips'::regclass
+  AND contype = 'c';
+```
+
 ---
 
 ## Cloudflare

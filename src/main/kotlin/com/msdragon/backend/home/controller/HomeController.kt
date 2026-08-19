@@ -24,7 +24,7 @@ class HomeController(
 ) {
 	@Operation(
 		summary = "홈 조회",
-		description = "로그인 사용자의 역할, 부모님 프로필 안내, 진행·예정 여행, 월별 추천 도시와 축제를 한 번에 조회합니다. 완료·보관 여행은 제외하며 TourAPI 장애 시 추천 이미지는 null, 축제는 빈 목록 또는 직전 캐시로 반환합니다.",
+		description = "로그인 사용자의 역할, 부모님 프로필 안내, 진행·예정 여행, 월별 추천 도시와 축제를 한 번에 조회합니다. 완료·중단·보관 여행은 제외하며 TourAPI 장애 시 추천 이미지는 null, 축제는 빈 목록 또는 직전 캐시로 반환합니다.",
 	)
 	@ApiResponses(
 		value = [

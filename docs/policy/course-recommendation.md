@@ -19,7 +19,7 @@
 - API: `POST /api/v1/trips/{tripId}/course/recommendation`
 - 여행을 생성한 자녀만 추천 코스를 생성하거나 기존 코스를 추천 결과로 덮어쓸 수 있습니다.
 - `planning`, `ready`, `in_progress` 상태에서 호출할 수 있습니다.
-- `completed`, `archived` 상태에서는 호출할 수 없습니다.
+- `completed`, `stopped`, `archived` 상태에서는 호출할 수 없습니다.
 - 방문지 검색과 상세 조회는 코스를 변경하지 않으므로 기존처럼 같은 가족 구성원이 이용할 수 있습니다.
 
 ## API 사용

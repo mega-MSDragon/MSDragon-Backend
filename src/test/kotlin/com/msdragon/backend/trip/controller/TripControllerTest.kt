@@ -62,6 +62,7 @@ import org.springframework.context.annotation.Import
 import org.springframework.context.annotation.Primary
 import org.springframework.http.MediaType
 import org.springframework.test.web.servlet.MockMvc
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
@@ -1079,6 +1080,116 @@ class TripControllerTest {
 	}
 
 	@Test
+	fun `준비 중 여행을 soft delete하면 조회에서 제외되고 같은 날짜로 다시 생성할 수 있다`() {
+		val child = saveUser(UserRole.CHILD, "delete-child", "혜린")
+		val mother = saveUser(UserRole.PARENT, "delete-parent", "엄마", GenderType.FEMALE)
+		connectFamily(child, mother)
+		saveCompletedParentProfile(mother)
+		val startDate = futureDate(10)
+		val endDate = startDate.plusDays(1)
+		val tripId = createTrip(child, mother, startDate, endDate)
+		val authorization = "Bearer ${tokenService.createAccessToken(child)}"
+
+		mockMvc.perform(
+			delete("/api/v1/trips/$tripId")
+				.header("Authorization", authorization),
+		)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(200))
+			.andExpect(jsonPath("$.message").value("여행 삭제 성공"))
+
+		check(tripRepository.findById(tripId.toLong()).orElseThrow().deletedAt != null)
+
+		mockMvc.perform(
+			get("/api/v1/trips/$tripId")
+				.header("Authorization", authorization),
+		)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(404))
+
+		createTrip(child, mother, startDate, endDate)
+	}
+
+	@Test
+	fun `진행 중 여행만 중단하고 중단 후에는 여행 모드를 이용할 수 없다`() {
+		val child = saveUser(UserRole.CHILD, "stop-child", "혜린")
+		val mother = saveUser(UserRole.PARENT, "stop-parent", "엄마", GenderType.FEMALE)
+		connectFamily(child, mother)
+		saveCompletedParentProfile(mother)
+		val today = futureDate(0)
+		val tripId = createTrip(child, mother, today, today.plusDays(1))
+		val authorization = "Bearer ${tokenService.createAccessToken(child)}"
+
+		mockMvc.perform(
+			post("/api/v1/trips/$tripId/stop")
+				.header("Authorization", authorization),
+		)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(200))
+			.andExpect(jsonPath("$.data.status").value("stopped"))
+
+		check(tripRepository.findById(tripId.toLong()).orElseThrow().status == TripStatus.STOPPED)
+
+		mockMvc.perform(
+			get("/api/v1/trips/$tripId/travel-mode")
+				.header("Authorization", authorization),
+		)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(400))
+			.andExpect(jsonPath("$.message").value("중단된 여행은 여행 모드를 이용할 수 없습니다."))
+
+		mockMvc.perform(
+			get("/api/v1/trips/$tripId/feedback/status")
+				.header("Authorization", authorization),
+		)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.data.feedbackAvailable").value(false))
+			.andExpect(jsonPath("$.data.canRequest").value(false))
+	}
+
+	@Test
+	fun `진행 전 여행은 중단할 수 없고 진행 중 여행은 삭제할 수 없다`() {
+		val child = saveUser(UserRole.CHILD, "transition-child", "혜린")
+		val mother = saveUser(UserRole.PARENT, "transition-parent", "엄마", GenderType.FEMALE)
+		connectFamily(child, mother)
+		saveCompletedParentProfile(mother)
+		val authorization = "Bearer ${tokenService.createAccessToken(child)}"
+		val futureTripId = createTrip(child, mother, futureDate(10), futureDate(10))
+		val progressTripId = createTrip(child, mother, futureDate(0), futureDate(0))
+
+		mockMvc.perform(
+			post("/api/v1/trips/$futureTripId/stop")
+				.header("Authorization", authorization),
+		)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(400))
+			.andExpect(jsonPath("$.message").value("진행 중인 여행만 중단할 수 있습니다."))
+
+		mockMvc.perform(
+			delete("/api/v1/trips/$progressTripId")
+				.header("Authorization", authorization),
+		)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(400))
+			.andExpect(jsonPath("$.message").value("여행 시작 전 준비 중인 여행만 삭제할 수 있습니다."))
+
+		val parentAuthorization = "Bearer ${tokenService.createAccessToken(mother)}"
+		mockMvc.perform(
+			delete("/api/v1/trips/$futureTripId")
+				.header("Authorization", parentAuthorization),
+		)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(403))
+
+		mockMvc.perform(
+			post("/api/v1/trips/$progressTripId/stop")
+				.header("Authorization", parentAuthorization),
+		)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(403))
+	}
+
+	@Test
 	fun `부모는 여행 코스를 변경할 수 없다`() {
 		val child = saveUser(UserRole.CHILD, "child-1", "혜린")
 		val mother = saveUser(UserRole.PARENT, "parent-1", "엄마", GenderType.FEMALE)
@@ -1141,7 +1252,7 @@ class TripControllerTest {
 		)
 			.andExpect(status().isOk)
 			.andExpect(jsonPath("$.status").value(400))
-			.andExpect(jsonPath("$.message").value("완료되거나 보관된 여행은 여행 정보를 수정할 수 없습니다."))
+			.andExpect(jsonPath("$.message").value("완료·중단·보관된 여행은 여행 정보를 수정할 수 없습니다."))
 
 		mockMvc.perform(
 			put("/api/v1/trips/$tripId/course")
@@ -1151,7 +1262,7 @@ class TripControllerTest {
 		)
 			.andExpect(status().isOk)
 			.andExpect(jsonPath("$.status").value(400))
-			.andExpect(jsonPath("$.message").value("완료되거나 보관된 여행은 여행 코스를 수정할 수 없습니다."))
+			.andExpect(jsonPath("$.message").value("완료·중단·보관된 여행은 여행 코스를 수정할 수 없습니다."))
 	}
 
 	@Test

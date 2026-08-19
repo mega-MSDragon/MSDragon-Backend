@@ -141,13 +141,15 @@ DB 스키마와 공통 엔티티 규칙을 기록합니다.
 - `title`은 필수이며 최대 15자입니다.
 - `title`, `destination_code`는 여행 생성 후 변경하지 않습니다. 정보 수정 API는 기간과 참여 부모만 받습니다.
 - 미래 여행의 생성 직후 `status`는 `planning`이며, 시작일이 오늘이면 생성 응답부터 `in_progress`입니다.
-- 서울 날짜 기준 시작일부터 준비 여부와 관계없이 `in_progress`, 종료일 다음 날부터 `completed`로 동기화합니다. `archived`는 날짜로 변경하지 않습니다.
+- 서울 날짜 기준 시작일부터 준비 여부와 관계없이 `in_progress`, 종료일 다음 날부터 `completed`로 동기화합니다. `stopped`, `archived`는 날짜로 변경하지 않습니다.
 - 여행 생성 시 `recommendation_snapshot`에 부모 프로필 추천 입력값을 JSON 문자열로 저장합니다.
   현재 스냅샷에는 정책 버전, 도시/날짜, 부모별 `walkingPace`, `needsMobilityAssistance`, `travelThemes`, `foodPreference`, `personalityType`을 포함합니다.
-- 같은 가족에서 날짜가 겹치는 여행은 서비스에서 생성 거부합니다.
+- 같은 가족에서 날짜가 겹치는 여행은 서비스에서 생성 거부합니다. soft delete, `stopped`, `archived` 여행은 충돌 검사에서 제외합니다.
 - 여행 기간 상한은 두지 않습니다. 시작일은 오늘 또는 이후여야 하고, 종료일은 시작일과 같거나 이후여야 합니다.
 - 여행을 만든 자녀는 `planning`, `ready` 상태에서 날짜와 참여 부모를 수정할 수 있습니다.
-- `in_progress`에서는 서울 기준 오늘을 포함하는 기간과 참여 부모만 수정할 수 있습니다. `completed`, `archived`에서는 수정할 수 없습니다.
+- `planning`, `ready` 여행 삭제는 row를 지우지 않고 `deleted_at`을 기록하는 soft delete로 처리합니다.
+- `in_progress` 여행 중단은 기존 코스와 참여자를 유지한 채 `status=stopped`로 기록합니다.
+- `in_progress`에서는 서울 기준 오늘을 포함하는 기간과 참여 부모만 수정할 수 있습니다. `completed`, `stopped`, `archived`에서는 수정할 수 없습니다.
 - 날짜 또는 참여 부모가 바뀌면 생성 당시 도시와 현재 부모 프로필 기준으로 `recommendation_snapshot`을 다시 저장합니다. 준비 중에는 `planning`, 여행 중에는 날짜 동기화 후 `in_progress` 상태가 됩니다.
 - 코스 생성은 여행 저장, TourAPI 추천, 일자별 Tmap 최적화를 동기식으로 호출합니다. 별도 생성 job이나 진행률 테이블은 두지 않습니다.
 
@@ -158,7 +160,7 @@ DB 스키마와 공통 엔티티 규칙을 기록합니다.
 - 부모는 최대 2명까지 선택할 수 있습니다.
 - 참여 부모 변경 시 생성 자녀는 유지하고 선택한 부모 목록으로 기존 참여자를 교체하며, 기존 여행 10계명과 모든 서명을 함께 삭제합니다.
 - 대표 자녀 탈퇴로 가족 연결이 끊겨도 완료 여행 참여 여부를 확인할 수 있도록 과거 참여자 row는 유지합니다.
-- 활성 사용자는 현재 가족의 완료 여행과 자신이 참여했던 완료 여행을 기록 탭에서 조회할 수 있습니다.
+- 활성 사용자는 현재 가족의 완료·중단 여행과 자신이 참여했던 완료·중단 여행을 기록 탭에서 조회할 수 있습니다.
 
 ### trip_days
 
@@ -176,7 +178,7 @@ DB 스키마와 공통 엔티티 규칙을 기록합니다.
 ### trip_stops
 
 - `trip_day_id`, `sort_order` 조합은 unique입니다.
-- 코스 저장, 추천 재생성, 경로 최적화는 여행을 만든 자녀만 `planning`, `ready`, `in_progress` 상태에서 할 수 있습니다.
+- 코스 저장, 추천 재생성, 경로 최적화는 여행을 만든 자녀만 `planning`, `ready`, `in_progress` 상태에서 할 수 있습니다. `stopped` 상태에서는 호출할 수 없습니다.
 - 코스 저장 API는 요청 배열 순서대로 `sort_order`를 1부터 다시 부여하고 기존 방문지를 전체 덮어씁니다.
 - Tmap 경로 최적화 API는 최적화 결과 기준으로 `sort_order`를 다시 부여하고, `arrival_time`과 비어 있던 `dwell_minutes` 기본값을 갱신합니다.
 - 현재 구현은 `places` 마스터 FK 없이 장소명, 카테고리, 주소, 좌표, 대표 이미지, 소개, 외부 장소 ID 등을 스냅샷으로 저장합니다.
