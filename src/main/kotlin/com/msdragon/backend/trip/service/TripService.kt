@@ -301,6 +301,7 @@ class TripService(
 			trip.recommendationSnapshot
 		}
 		trip.updateInfo(
+			title = request.title.trim(),
 			startDate = request.startDate,
 			endDate = request.endDate,
 			recommendationSnapshot = recommendationSnapshot,

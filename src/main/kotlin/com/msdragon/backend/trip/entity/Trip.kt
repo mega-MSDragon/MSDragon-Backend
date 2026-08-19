@@ -53,11 +53,13 @@ class Trip(
 		protected set
 
 	fun updateInfo(
+		title: String,
 		startDate: LocalDate,
 		endDate: LocalDate,
 		recommendationSnapshot: String?,
 		resetToPlanning: Boolean,
 	) {
+		this.title = title
 		this.startDate = startDate
 		this.endDate = endDate
 		this.recommendationSnapshot = recommendationSnapshot

@@ -833,7 +833,7 @@ class TripControllerTest {
 	}
 
 	@Test
-	fun `기간과 참여 부모가 같으면 기존 코스와 제목 도시를 유지한다`() {
+	fun `제목만 변경하면 기존 코스와 10계명을 유지한다`() {
 		val child = saveUser(UserRole.CHILD, "child-1", "혜린")
 		val mother = saveUser(UserRole.PARENT, "parent-1", "엄마", GenderType.FEMALE)
 		connectFamily(child, mother)
@@ -850,6 +850,7 @@ class TripControllerTest {
 				.content(
 					"""
 					{
+					  "title": "엄마와 경주 여행",
 					  "startDate": "$startDate",
 					  "endDate": "$startDate",
 					  "parentUserIds": [${requireNotNull(mother.id)}]
@@ -858,7 +859,7 @@ class TripControllerTest {
 				),
 		)
 			.andExpect(status().isOk)
-			.andExpect(jsonPath("$.data.title").value("경주 여행"))
+			.andExpect(jsonPath("$.data.title").value("엄마와 경주 여행"))
 			.andExpect(jsonPath("$.data.destination.code").value("gyeongju"))
 
 		mockMvc.perform(
@@ -896,6 +897,7 @@ class TripControllerTest {
 				.content(
 					"""
 					{
+					  "title": "경주 여행",
 					  "startDate": "${startDate.plusDays(1)}",
 					  "endDate": "${startDate.plusDays(1)}",
 					  "parentUserIds": [${requireNotNull(mother.id)}]
@@ -951,6 +953,7 @@ class TripControllerTest {
 				.content(
 					"""
 					{
+					  "title": "경주 여행",
 					  "startDate": "$changedStartDate",
 					  "endDate": "$changedEndDate",
 					  "parentUserIds": [${requireNotNull(father.id)}]
@@ -1017,6 +1020,7 @@ class TripControllerTest {
 				.content(
 					"""
 					{
+					  "title": "경주 여행",
 					  "startDate": "$startDate",
 					  "endDate": "$startDate",
 					  "parentUserIds": [${requireNotNull(mother.id)}]
@@ -1058,6 +1062,7 @@ class TripControllerTest {
 				.content(
 					"""
 					{
+					  "title": "경주 여행",
 					  "startDate": "$startDate",
 					  "endDate": "$startDate",
 					  "parentUserIds": [${requireNotNull(mother.id)}]
@@ -1090,6 +1095,7 @@ class TripControllerTest {
 				.content(
 					"""
 					{
+					  "title": "경주 여행",
 					  "startDate": "$today",
 					  "endDate": "$changedEndDate",
 					  "parentUserIds": [${requireNotNull(father.id)}]
@@ -1131,6 +1137,7 @@ class TripControllerTest {
 				.content(
 					"""
 					{
+					  "title": "경주 여행",
 					  "startDate": "${today.plusDays(1)}",
 					  "endDate": "${today.plusDays(2)}",
 					  "parentUserIds": [${requireNotNull(mother.id)}]
@@ -1320,6 +1327,7 @@ class TripControllerTest {
 				.content(
 					"""
 					{
+					  "title": "경주 여행",
 					  "startDate": "$yesterday",
 					  "endDate": "$yesterday",
 					  "parentUserIds": [${requireNotNull(mother.id)}]
@@ -1360,6 +1368,7 @@ class TripControllerTest {
 				.content(
 					"""
 					{
+					  "title": "경주 여행",
 					  "startDate": "${firstStartDate.plusDays(1)}",
 					  "endDate": "${firstStartDate.plusDays(1)}",
 					  "parentUserIds": [${requireNotNull(mother.id)}]

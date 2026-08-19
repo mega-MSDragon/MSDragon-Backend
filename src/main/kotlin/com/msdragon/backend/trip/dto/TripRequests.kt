@@ -62,6 +62,11 @@ data class CreateTripRequest(
 
 @Schema(description = "여행 기본정보 수정 요청")
 data class UpdateTripRequest(
+	@field:Schema(description = "여행 제목. 공백을 제외하고 필수이며 최대 15자입니다.", example = "부모님과 경주 여행")
+	@field:NotBlank(message = "여행 제목을 입력해주세요.")
+	@field:Size(max = 15, message = "여행 제목은 15자 이하로 입력해주세요.")
+	val title: String,
+
 	@field:Schema(description = "여행 시작일. 여행 중 변경하는 경우 시작일과 종료일 사이에 오늘이 포함되어야 합니다.", example = "2026-07-10")
 	@field:NotNull(message = "여행 시작일을 선택해주세요.")
 	val startDate: LocalDate,

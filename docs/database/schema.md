@@ -139,7 +139,7 @@ DB 스키마와 공통 엔티티 규칙을 기록합니다.
 - MVP 구현은 `travel_destinations` 마스터 테이블 FK 대신 `destination_code` enum 문자열을 저장합니다.
 - `destination_code`는 화면 노출 순서대로 `gangneung_sokcho`, `gyeongju`, `daegu`, `busan`, `seoul`, `suwon_yongin`, `yeosu`, `incheon`, `jeonju`, `jeju`, `tongyeong_geoje_namhae`, `pohang_andong` 중 하나입니다.
 - `title`은 필수이며 최대 15자입니다.
-- `title`, `destination_code`는 여행 생성 후 변경하지 않습니다. 정보 수정 API는 기간과 참여 부모만 받습니다.
+- `title`은 정보 수정 API에서 변경할 수 있고, `destination_code`는 여행 생성 후 변경하지 않습니다. 정보 수정 API는 제목, 기간, 참여 부모를 받습니다.
 - 미래 여행의 생성 직후 `status`는 `planning`이며, 시작일이 오늘이면 생성 응답부터 `in_progress`입니다.
 - 서울 날짜 기준 시작일부터 준비 여부와 관계없이 `in_progress`, 종료일 다음 날부터 `completed`로 동기화합니다. `stopped`, `archived`는 날짜로 변경하지 않습니다.
 - 여행 생성 시 `recommendation_snapshot`에 부모 프로필 추천 입력값을 JSON 문자열로 저장합니다.
@@ -149,7 +149,7 @@ DB 스키마와 공통 엔티티 규칙을 기록합니다.
 - 여행을 만든 자녀는 `planning`, `ready` 상태에서 날짜와 참여 부모를 수정할 수 있습니다.
 - 여행 삭제는 상태와 관계없이 row를 지우지 않고 `deleted_at`을 기록하는 soft delete로 처리합니다.
 - `in_progress` 여행 수동 종료는 기존 코스, 참여자, 평가 데이터를 유지한 채 정상 종료와 동일하게 `status=completed`로 기록합니다.
-- `in_progress`에서는 서울 기준 오늘을 포함하는 기간과 참여 부모만 수정할 수 있습니다. `completed`, `stopped`, `archived`에서는 수정할 수 없습니다.
+- `in_progress`에서는 제목, 서울 기준 오늘을 포함하는 기간, 참여 부모를 수정할 수 있습니다. `completed`, `stopped`, `archived`에서는 수정할 수 없습니다.
 - 날짜 또는 참여 부모가 바뀌면 생성 당시 도시와 현재 부모 프로필 기준으로 `recommendation_snapshot`을 다시 저장합니다. 준비 중에는 `planning`, 여행 중에는 날짜 동기화 후 `in_progress` 상태가 됩니다.
 - 코스 생성은 여행 저장, TourAPI 추천, 일자별 Tmap 최적화를 동기식으로 호출합니다. 별도 생성 job이나 진행률 테이블은 두지 않습니다.
 
