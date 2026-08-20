@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import tools.jackson.databind.ObjectMapper
 import java.net.InetSocketAddress
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -69,6 +70,83 @@ class OpenAiResponsesClientTest {
 			assertTrue(requestBody.contains("\"effort\":\"none\""))
 			assertTrue(requestBody.contains("\"safety_identifier\":\"anonymous-user-hash\""))
 			assertFalse(requestBody.contains("test-openai-key"))
+		} finally {
+			server.stop(0)
+		}
+	}
+
+	@Test
+	fun `function call을 실행하고 결과를 이어 보내 최종 답변을 추출한다`() {
+		val requestCount = AtomicInteger()
+		val requestBodies = mutableListOf<String>()
+		val server = HttpServer.create(InetSocketAddress(0), 0)
+		server.createContext("/v1/responses") { exchange ->
+			requestBodies += exchange.requestBody.bufferedReader().use { it.readText() }
+			val body = if (requestCount.getAndIncrement() == 0) {
+				"""
+				{
+				  "id": "resp_tool",
+				  "output": [{
+				    "type": "function_call",
+				    "call_id": "call_123",
+				    "name": "get_trip_schedule",
+				    "arguments": "{\"day_number\":1}"
+				  }]
+				}
+				""".trimIndent()
+			} else {
+				"""
+				{
+				  "id": "resp_final",
+				  "output": [{
+				    "type": "message",
+				    "role": "assistant",
+				    "content": [{"type": "output_text", "text": "첫 장소는 첨성대예용."}]
+				  }]
+				}
+				""".trimIndent()
+			}.toByteArray()
+			exchange.responseHeaders.add("Content-Type", "application/json")
+			exchange.sendResponseHeaders(200, body.size.toLong())
+			exchange.responseBody.use { it.write(body) }
+		}
+		server.start()
+
+		try {
+			val client = HttpOpenAiResponsesClient(
+				properties = OpenAiProperties(
+					baseUri = "http://localhost:${server.address.port}/v1",
+					apiKey = "test-openai-key",
+					model = "gpt-5.6-luna",
+				),
+				objectMapper = objectMapper,
+			)
+			val result = client.generate(
+				OpenAiChatRequest(
+					context = "{\"title\":\"경주 여행\"}",
+					messages = listOf(OpenAiChatMessage(ChatSender.USER, "오늘 일정 알려줘")),
+					safetyIdentifier = "anonymous-user-hash",
+					tools = listOf(
+						OpenAiFunctionTool(
+							name = "get_trip_schedule",
+							description = "일정 조회",
+							parameters = mapOf("type" to "object", "properties" to emptyMap<String, Any>()),
+						),
+					),
+				),
+			) { call ->
+				assertEquals("get_trip_schedule", call.name)
+				assertEquals(1, (call.arguments["day_number"] as Number).toInt())
+				"{\"dayNumber\":1,\"stops\":[{\"name\":\"첨성대\"}]}"
+			}
+
+			assertEquals("resp_final", result.responseId)
+			assertEquals("첫 장소는 첨성대예용.", result.content)
+			assertEquals(2, requestBodies.size)
+			assertTrue(requestBodies.first().contains("\"name\":\"get_trip_schedule\""))
+			assertTrue(requestBodies.last().contains("\"type\":\"function_call_output\""))
+			assertTrue(requestBodies.last().contains("call_123"))
+			assertTrue(requestBodies.last().contains("첨성대"))
 		} finally {
 			server.stop(0)
 		}

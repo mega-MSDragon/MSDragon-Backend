@@ -10,6 +10,7 @@ import com.msdragon.backend.chat.entity.ChatSender
 import com.msdragon.backend.chat.openai.OpenAiChatRequest
 import com.msdragon.backend.chat.openai.OpenAiChatResult
 import com.msdragon.backend.chat.openai.OpenAiResponsesClient
+import com.msdragon.backend.chat.openai.OpenAiToolCall
 import com.msdragon.backend.chat.repository.ChatMessageRepository
 import com.msdragon.backend.chat.repository.ChatSessionRepository
 import com.msdragon.backend.common.exception.InternalServerException
@@ -133,6 +134,10 @@ class TravelChatControllerTest {
 		assertTrue(aiRequest.context.contains("첨성대"))
 		assertEquals(ChatSender.USER, aiRequest.messages.single().role)
 		assertEquals(64, aiRequest.safetyIdentifier.length)
+		assertEquals(
+			listOf("get_trip_schedule", "get_place_detail", "find_nearby_facilities"),
+			aiRequest.tools.map { it.name },
+		)
 	}
 
 	@Test
@@ -201,6 +206,24 @@ class TravelChatControllerTest {
 			.andExpect(status().isOk)
 			.andExpect(jsonPath("$.status").value(400))
 			.andExpect(jsonPath("$.message").value("질문을 입력해 주세요."))
+	}
+
+	@Test
+	fun `현재 위치는 위도와 경도를 함께 입력해야 한다`() {
+		val child = saveUser("child-1")
+		val tripId = createTravelModeTrip(child)
+
+		mockMvc.perform(
+			post("/api/v1/trips/$tripId/chat/messages")
+				.header("Authorization", "Bearer ${tokenService.createAccessToken(child)}")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""{"message":"가까운 화장실 알려줘","latitude":35.1587}"""),
+		)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(400))
+			.andExpect(jsonPath("$.message").value("현재 위치는 latitude와 longitude를 함께 입력해 주세요."))
+
+		assertTrue(fakeOpenAiResponsesClient.requests.isEmpty())
 	}
 
 	private fun sendMessage(tripId: Long, token: String, message: String) {
@@ -277,7 +300,10 @@ class TravelChatControllerTest {
 		val requests = mutableListOf<OpenAiChatRequest>()
 		var failure: RuntimeException? = null
 
-		override fun generate(request: OpenAiChatRequest): OpenAiChatResult {
+		override fun generate(
+			request: OpenAiChatRequest,
+			toolExecutor: (OpenAiToolCall) -> String,
+		): OpenAiChatResult {
 			requests += request
 			failure?.let { throw it }
 			return OpenAiChatResult(

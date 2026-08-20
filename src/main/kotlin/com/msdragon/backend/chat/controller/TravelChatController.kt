@@ -51,7 +51,7 @@ class TravelChatController(
 
 	@Operation(
 		summary = "여행 AI 질문 전송",
-		description = "여행 기간 중 같은 가족 구성원이 여행 일정이나 여행지에 관해 질문합니다. 첫 질문이면 사용자별 여행 채팅 세션을 자동으로 생성합니다.",
+		description = "여행 기간 중 같은 가족 구성원이 여행 일정이나 여행지에 관해 질문합니다. 주변 카페·화장실·의료시설 질문에는 latitude와 longitude를 함께 전달합니다. 첫 질문이면 사용자별 여행 채팅 세션을 자동으로 생성합니다.",
 	)
 	@ApiResponses(
 		value = [
