@@ -9,6 +9,7 @@
 - 질문과 AI 답변을 시간순으로 저장합니다.
 - 현재 여행 일정과 방문지를 AI 문맥으로 구성합니다.
 - Responses API function calling으로 일정·방문지·주변 시설을 서버에서 조회합니다.
+- 여행 관련 정보가 서버 데이터만으로 부족하면 Responses API web search로 보강합니다.
 - 최근 20개 메시지를 OpenAI에 전달합니다.
 - OpenAI 호출 실패를 시스템 오류로 변환합니다.
 

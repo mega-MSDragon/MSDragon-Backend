@@ -146,6 +146,7 @@ class TravelChatControllerTest {
 			listOf("get_trip_schedule", "get_place_detail", "find_nearby_facilities"),
 			aiRequest.tools.map { it.name },
 		)
+		assertTrue(aiRequest.webSearchEnabled)
 	}
 
 	@Test

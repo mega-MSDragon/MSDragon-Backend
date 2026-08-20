@@ -133,6 +133,7 @@ class OpenAiResponsesClientTest {
 							parameters = mapOf("type" to "object", "properties" to emptyMap<String, Any>()),
 						),
 					),
+					webSearchEnabled = true,
 				),
 			) { call ->
 				assertEquals("get_trip_schedule", call.name)
@@ -144,7 +145,9 @@ class OpenAiResponsesClientTest {
 			assertEquals("첫 장소는 첨성대예용.", result.content)
 			assertEquals(2, requestBodies.size)
 			assertTrue(requestBodies.first().contains("\"name\":\"get_trip_schedule\""))
+			assertTrue(requestBodies.first().contains("\"type\":\"web_search\""))
 			assertTrue(requestBodies.last().contains("\"type\":\"function_call_output\""))
+			assertTrue(requestBodies.last().contains("\"type\":\"web_search\""))
 			assertTrue(requestBodies.last().contains("call_123"))
 			assertTrue(requestBodies.last().contains("첨성대"))
 		} finally {

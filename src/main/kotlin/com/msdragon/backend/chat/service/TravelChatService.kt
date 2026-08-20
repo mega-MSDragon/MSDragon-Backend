@@ -102,6 +102,7 @@ class TravelChatService(
 				messages = recentMessages,
 				safetyIdentifier = safetyIdentifier(currentUser.id),
 				tools = CHAT_TOOLS,
+				webSearchEnabled = true,
 			),
 		) { call -> executeTool(call, currentUser, tripId, request, travelContext) }
 		val assistantMessage = chatMessageRepository.save(
@@ -229,7 +230,7 @@ class TravelChatService(
 
 	companion object {
 		private val logger = LoggerFactory.getLogger(TravelChatService::class.java)
-		private const val SYSTEM_PROMPT_VERSION = "travel-chat-v2"
+		private const val SYSTEM_PROMPT_VERSION = "travel-chat-v3"
 		private val CHAT_TOOLS = listOf(
 			OpenAiFunctionTool(
 				name = "get_trip_schedule",
