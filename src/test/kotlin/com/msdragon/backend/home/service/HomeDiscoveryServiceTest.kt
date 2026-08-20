@@ -25,26 +25,40 @@ class HomeDiscoveryServiceTest {
 	}
 
 	@Test
-	fun `TourAPI 호출에 실패해도 도시와 빈 축제 목록을 반환한다`() {
+	fun `추천 여행과 축제는 서로의 TourAPI를 호출하지 않고 장애 시 축소 응답한다`() {
+		var imageCalls = 0
+		var festivalCalls = 0
 		val service = HomeDiscoveryService(
 			homeTourApiClient = object : HomeTourApiClient {
-				override fun findDestinationImage(destination: TripDestinationCode): String? =
+				override fun findDestinationImage(destination: TripDestinationCode): String? {
+					imageCalls++
 					throw InternalServerException("호출 실패")
+				}
 
 				override fun findFestivals(
 					startDate: LocalDate,
 					endDate: LocalDate,
 					limit: Int,
-				): List<HomeTourApiFestival> = throw InternalServerException("호출 실패")
+				): List<HomeTourApiFestival> {
+					festivalCalls++
+					throw InternalServerException("호출 실패")
+				}
 			},
 		)
 
-		val discovery = service.getDiscovery(LocalDate.of(2026, 5, 1))
+		val recommendations = service.getMonthlyRecommendations(LocalDate.of(2026, 5, 1))
 
-		assertEquals(5, discovery.recommendationMonth)
-		assertEquals(3, discovery.recommendedCities.size)
-		assertTrue(discovery.recommendedCities.all { it.imageUrl == null })
-		assertTrue(discovery.festivals.isEmpty())
-		assertNull(discovery.recommendedCities.first().imageUrl)
+		assertEquals(5, recommendations.recommendationMonth)
+		assertEquals(3, recommendations.recommendedCities.size)
+		assertTrue(recommendations.recommendedCities.all { it.imageUrl == null })
+		assertNull(recommendations.recommendedCities.first().imageUrl)
+		assertEquals(3, imageCalls)
+		assertEquals(0, festivalCalls)
+
+		val festivals = service.getFestivals(LocalDate.of(2026, 5, 1))
+
+		assertTrue(festivals.festivals.isEmpty())
+		assertEquals(3, imageCalls)
+		assertEquals(1, festivalCalls)
 	}
 }

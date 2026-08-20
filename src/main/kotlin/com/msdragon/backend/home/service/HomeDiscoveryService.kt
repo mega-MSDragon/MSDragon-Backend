@@ -2,6 +2,8 @@ package com.msdragon.backend.home.service
 
 import com.msdragon.backend.common.exception.InternalServerException
 import com.msdragon.backend.home.dto.HomeFestivalResponse
+import com.msdragon.backend.home.dto.HomeFestivalsResponse
+import com.msdragon.backend.home.dto.HomeMonthlyRecommendationsResponse
 import com.msdragon.backend.home.dto.HomeRecommendedCityResponse
 import com.msdragon.backend.home.tourapi.HomeTourApiClient
 import com.msdragon.backend.trip.entity.TripDestinationCode
@@ -15,36 +17,54 @@ class HomeDiscoveryService(
 	private val homeTourApiClient: HomeTourApiClient,
 ) {
 	private val logger = LoggerFactory.getLogger(javaClass)
-	private val cacheLock = Any()
+	private val monthlyRecommendationsCacheLock = Any()
+	private val festivalsCacheLock = Any()
 
 	@Volatile
-	private var cache: HomeDiscovery? = null
+	private var monthlyRecommendationsCache: HomeMonthlyRecommendationsCache? = null
 
-	fun getDiscovery(today: LocalDate): HomeDiscovery {
-		cache?.takeIf { it.cachedDate == today }?.let { return it }
-		return synchronized(cacheLock) {
-			cache?.takeIf { it.cachedDate == today } ?: refresh(today).also { cache = it }
+	@Volatile
+	private var festivalsCache: HomeFestivalsCache? = null
+
+	fun getMonthlyRecommendations(today: LocalDate): HomeMonthlyRecommendationsResponse {
+		monthlyRecommendationsCache?.takeIf { it.cachedDate == today }?.let { return it.response }
+		return synchronized(monthlyRecommendationsCacheLock) {
+			monthlyRecommendationsCache?.takeIf { it.cachedDate == today }?.response
+				?: refreshMonthlyRecommendations(today).also {
+					monthlyRecommendationsCache = HomeMonthlyRecommendationsCache(today, it)
+				}
 		}
 	}
 
-	private fun refresh(today: LocalDate): HomeDiscovery {
-		val previous = cache
-		val previousImages = previous?.recommendedCities.orEmpty().associate { it.code to it.imageUrl }
+	fun getFestivals(today: LocalDate): HomeFestivalsResponse {
+		festivalsCache?.takeIf { it.cachedDate == today }?.let { return it.response }
+		return synchronized(festivalsCacheLock) {
+			festivalsCache?.takeIf { it.cachedDate == today }?.response
+				?: refreshFestivals(today).also {
+					festivalsCache = HomeFestivalsCache(today, it)
+				}
+		}
+	}
+
+	private fun refreshMonthlyRecommendations(today: LocalDate): HomeMonthlyRecommendationsResponse {
+		val previousImages = monthlyRecommendationsCache?.response?.recommendedCities.orEmpty()
+			.associate { it.code to it.imageUrl }
 		val destinations = HomeRecommendationPolicy.destinationsFor(today.month)
 		val cityFutures = destinations.associateWith { destination ->
 			CompletableFuture.supplyAsync { loadCity(destination, previousImages[destination]) }
 		}
-		val festivalFuture = CompletableFuture.supplyAsync { loadFestivals(today, previous?.festivals.orEmpty()) }
 		val recommendedCities = destinations.map { cityFutures.getValue(it).join() }
-		val festivals = festivalFuture.join()
 
-		return HomeDiscovery(
-			cachedDate = today,
+		return HomeMonthlyRecommendationsResponse(
 			recommendationMonth = today.monthValue,
 			recommendedCities = recommendedCities,
-			festivals = festivals,
 		)
 	}
+
+	private fun refreshFestivals(today: LocalDate): HomeFestivalsResponse =
+		HomeFestivalsResponse(
+			festivals = loadFestivals(today, festivalsCache?.response?.festivals.orEmpty()),
+		)
 
 	private fun loadCity(
 		destination: TripDestinationCode,
@@ -97,9 +117,12 @@ class HomeDiscoveryService(
 	}
 }
 
-data class HomeDiscovery(
+private data class HomeMonthlyRecommendationsCache(
 	val cachedDate: LocalDate,
-	val recommendationMonth: Int,
-	val recommendedCities: List<HomeRecommendedCityResponse>,
-	val festivals: List<HomeFestivalResponse>,
+	val response: HomeMonthlyRecommendationsResponse,
+)
+
+private data class HomeFestivalsCache(
+	val cachedDate: LocalDate,
+	val response: HomeFestivalsResponse,
 )

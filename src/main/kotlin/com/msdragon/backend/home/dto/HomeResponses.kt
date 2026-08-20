@@ -8,48 +8,38 @@ import com.msdragon.backend.trip.entity.TripStatus
 import io.swagger.v3.oas.annotations.media.Schema
 import java.time.LocalDate
 
-@Schema(description = "홈 화면 응답")
-data class HomeResponse(
+@Schema(description = "홈 나의 여행 응답")
+data class HomeMyTripsResponse(
 	@field:Schema(description = "가족 ID. 가족 매칭 전이면 null입니다.", example = "1", nullable = true)
 	val familyId: Long?,
 
 	@field:Schema(description = "로그인 사용자 역할", example = "child", allowableValues = ["child", "parent"])
 	val userRole: UserRole,
 
-	@field:Schema(description = "새 여행 생성 가능 여부. 현재 자녀만 true입니다.", example = "true")
-	val canCreateTrip: Boolean,
-
-	@field:Schema(description = "부모님 프로필 안내. 안내가 필요 없으면 null입니다.", nullable = true)
-	val profileGuide: HomeProfileGuideResponse?,
+	@field:Schema(description = "화면에서 확인할 부모별 프로필 완성 상태")
+	val parentProfiles: List<HomeParentProfileResponse>,
 
 	@field:Schema(description = "진행 중이거나 예정된 가족 여행 목록")
 	val trips: List<HomeTripSummaryResponse>,
+)
 
+@Schema(description = "홈 월별 추천 여행 응답")
+data class HomeMonthlyRecommendationsResponse(
 	@field:Schema(description = "추천 도시 기준 월", example = "5", minimum = "1", maximum = "12")
 	val recommendationMonth: Int,
 
 	@field:Schema(description = "해당 월 추천 도시 3개")
 	val recommendedCities: List<HomeRecommendedCityResponse>,
+)
 
+@Schema(description = "홈 축제 응답")
+data class HomeFestivalsResponse(
 	@field:Schema(description = "현재 진행 중이거나 30일 이내 시작하는 추천 축제. TourAPI 장애 시 빈 목록일 수 있습니다.")
 	val festivals: List<HomeFestivalResponse>,
 )
 
-@Schema(description = "홈 부모님 프로필 안내")
-data class HomeProfileGuideResponse(
-	@field:Schema(
-		description = "안내 종류",
-		example = "request_parent_profile",
-		allowableValues = ["complete_my_profile", "request_parent_profile"],
-	)
-	val type: HomeProfileGuideType,
-
-	@field:Schema(description = "프로필 작성이 필요한 부모 목록")
-	val targets: List<HomeProfileTargetResponse>,
-)
-
-@Schema(description = "홈 부모님 프로필 안내 대상")
-data class HomeProfileTargetResponse(
+@Schema(description = "홈 부모별 프로필 상태")
+data class HomeParentProfileResponse(
 	@field:Schema(description = "부모 사용자 ID", example = "2")
 	val userId: Long,
 
@@ -58,6 +48,9 @@ data class HomeProfileTargetResponse(
 
 	@field:Schema(description = "성별 기반 관계 이름", example = "엄마", nullable = true)
 	val relationLabel: String?,
+
+	@field:Schema(description = "부모 상세 프로필 완성 여부", example = "true")
+	val profileCompleted: Boolean,
 )
 
 @Schema(description = "홈 여행 카드")

@@ -74,7 +74,7 @@ class HomeControllerTest {
 	private lateinit var tripRepository: TripRepository
 
 	@Test
-	fun `자녀 홈은 진행 예정 여행과 부모 프로필 안내를 반환한다`() {
+	fun `자녀 홈은 섹션별로 여행과 추천 콘텐츠를 반환한다`() {
 		val today = LocalDate.now(SERVICE_ZONE_ID)
 		val child = saveUser(UserRole.CHILD, "home-child", "혜린", GenderType.FEMALE)
 		val mother = saveUser(UserRole.PARENT, "home-mother", "김영희", GenderType.FEMALE)
@@ -117,17 +117,21 @@ class HomeControllerTest {
 		)
 
 		mockMvc.perform(
-			get("/api/v1/home")
+			get("/api/v1/home/my-trips")
 				.header("Authorization", "Bearer ${tokenService.createAccessToken(child)}"),
 		)
 			.andExpect(status().isOk)
 			.andExpect(jsonPath("$.status").value(200))
 			.andExpect(jsonPath("$.data.userRole").value("child"))
-			.andExpect(jsonPath("$.data.canCreateTrip").value(true))
-			.andExpect(jsonPath("$.data.profileGuide.type").value("request_parent_profile"))
-			.andExpect(jsonPath("$.data.profileGuide.targets.length()").value(1))
-			.andExpect(jsonPath("$.data.profileGuide.targets[0].displayName").value("김철수"))
-			.andExpect(jsonPath("$.data.profileGuide.targets[0].relationLabel").value("아빠"))
+			.andExpect(jsonPath("$.data.canCreateTrip").doesNotExist())
+			.andExpect(jsonPath("$.data.profileGuide").doesNotExist())
+			.andExpect(jsonPath("$.data.parentProfiles.length()").value(2))
+			.andExpect(jsonPath("$.data.parentProfiles[0].displayName").value("김영희"))
+			.andExpect(jsonPath("$.data.parentProfiles[0].relationLabel").value("엄마"))
+			.andExpect(jsonPath("$.data.parentProfiles[0].profileCompleted").value(true))
+			.andExpect(jsonPath("$.data.parentProfiles[1].displayName").value("김철수"))
+			.andExpect(jsonPath("$.data.parentProfiles[1].relationLabel").value("아빠"))
+			.andExpect(jsonPath("$.data.parentProfiles[1].profileCompleted").value(false))
 			.andExpect(jsonPath("$.data.trips.length()").value(2))
 			.andExpect(jsonPath("$.data.trips[0].title").value("경주 가족 여행"))
 			.andExpect(jsonPath("$.data.trips[0].status").value("in_progress"))
@@ -137,9 +141,21 @@ class HomeControllerTest {
 			.andExpect(jsonPath("$.data.trips[1].dDay").value(48))
 			.andExpect(jsonPath("$.data.trips[1].primaryTheme").value("nature_scenery"))
 			.andExpect(jsonPath("$.data.trips[1].intensity").value("high"))
+
+		mockMvc.perform(
+			get("/api/v1/home/monthly-recommendations")
+				.header("Authorization", "Bearer ${tokenService.createAccessToken(child)}"),
+		)
+			.andExpect(status().isOk)
 			.andExpect(jsonPath("$.data.recommendationMonth").value(today.monthValue))
 			.andExpect(jsonPath("$.data.recommendedCities.length()").value(3))
 			.andExpect(jsonPath("$.data.recommendedCities[0].imageUrl").isString)
+
+		mockMvc.perform(
+			get("/api/v1/home/festivals")
+				.header("Authorization", "Bearer ${tokenService.createAccessToken(child)}"),
+		)
+			.andExpect(status().isOk)
 			.andExpect(jsonPath("$.data.festivals.length()").value(1))
 			.andExpect(jsonPath("$.data.festivals[0].title").value("안동 선유줄불놀이"))
 			.andExpect(jsonPath("$.data.festivals[0].tags[0]").value("안동"))
@@ -147,20 +163,21 @@ class HomeControllerTest {
 	}
 
 	@Test
-	fun `부모 홈은 여행 생성 권한 없이 본인 프로필 작성 안내를 반환한다`() {
+	fun `부모 나의 여행은 본인 프로필 완성 여부를 반환한다`() {
 		val parent = saveUser(UserRole.PARENT, "home-parent", "김영희", GenderType.FEMALE)
 
 		mockMvc.perform(
-			get("/api/v1/home")
+			get("/api/v1/home/my-trips")
 				.header("Authorization", "Bearer ${tokenService.createAccessToken(parent)}"),
 		)
 			.andExpect(status().isOk)
 			.andExpect(jsonPath("$.data.familyId").doesNotExist())
 			.andExpect(jsonPath("$.data.userRole").value("parent"))
-			.andExpect(jsonPath("$.data.canCreateTrip").value(false))
-			.andExpect(jsonPath("$.data.profileGuide.type").value("complete_my_profile"))
-			.andExpect(jsonPath("$.data.profileGuide.targets[0].userId").value(parent.id))
-			.andExpect(jsonPath("$.data.profileGuide.targets[0].relationLabel").value("엄마"))
+			.andExpect(jsonPath("$.data.canCreateTrip").doesNotExist())
+			.andExpect(jsonPath("$.data.parentProfiles.length()").value(1))
+			.andExpect(jsonPath("$.data.parentProfiles[0].userId").value(parent.id))
+			.andExpect(jsonPath("$.data.parentProfiles[0].relationLabel").value("엄마"))
+			.andExpect(jsonPath("$.data.parentProfiles[0].profileCompleted").value(false))
 			.andExpect(jsonPath("$.data.trips").isEmpty)
 	}
 

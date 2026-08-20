@@ -16,7 +16,7 @@
 | `family` | `com.msdragon.backend.family` | 가족 코드 발급, 가족 매칭, 가족 구성원 조회 |
 | `feedback` | `com.msdragon.backend.feedback` | 마지막 날 부모 평가 요청, 부모별 여행 피드백 제출과 현황 조회 |
 | `health` | `com.msdragon.backend.health` | health 체크 API (`controller/service/dto`) |
-| `home` | `com.msdragon.backend.home` | 홈 사용자 상태, 진행·예정 여행, 월별 추천 도시와 축제 집계 |
+| `home` | `com.msdragon.backend.home` | 홈 나의 여행, 월별 추천 도시, 축제 섹션 조회 |
 | `profile` | `com.msdragon.backend.profile` | 마이페이지 내 프로필 조회와 수정 |
 | `parentprofile` | `com.msdragon.backend.parentprofile` | 부모님 상세 프로필 작성/수정/조회와 추천용 여행 MBTI 현재값 저장 |
 | `pledge` | `com.msdragon.backend.pledge` | 여행 10계명 후보 제공과 여행별 확정 문구 저장 |

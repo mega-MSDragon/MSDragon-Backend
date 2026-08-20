@@ -7,10 +7,10 @@ import com.msdragon.backend.auth.repository.UserRepository
 import com.msdragon.backend.auth.support.AuthenticatedUser
 import com.msdragon.backend.common.exception.UnAuthorizedException
 import com.msdragon.backend.family.repository.FamilyMemberRepository
-import com.msdragon.backend.home.dto.HomeProfileGuideResponse
-import com.msdragon.backend.home.dto.HomeProfileGuideType
-import com.msdragon.backend.home.dto.HomeProfileTargetResponse
-import com.msdragon.backend.home.dto.HomeResponse
+import com.msdragon.backend.home.dto.HomeFestivalsResponse
+import com.msdragon.backend.home.dto.HomeMonthlyRecommendationsResponse
+import com.msdragon.backend.home.dto.HomeMyTripsResponse
+import com.msdragon.backend.home.dto.HomeParentProfileResponse
 import com.msdragon.backend.home.dto.HomeTripIntensity
 import com.msdragon.backend.home.dto.HomeTripSummaryResponse
 import com.msdragon.backend.parentprofile.entity.ParentProfileStatus
@@ -35,21 +35,16 @@ class HomeService(
 	private val homeDataService: HomeDataService,
 	private val homeDiscoveryService: HomeDiscoveryService,
 ) {
-	fun getHome(currentUser: AuthenticatedUser): HomeResponse {
+	fun getMyTrips(currentUser: AuthenticatedUser): HomeMyTripsResponse {
 		val today = LocalDate.now(SERVICE_ZONE_ID)
-		val data = homeDataService.getHomeData(currentUser, today)
-		val discovery = homeDiscoveryService.getDiscovery(today)
-		return HomeResponse(
-			familyId = data.familyId,
-			userRole = data.userRole,
-			canCreateTrip = data.canCreateTrip,
-			profileGuide = data.profileGuide,
-			trips = data.trips,
-			recommendationMonth = discovery.recommendationMonth,
-			recommendedCities = discovery.recommendedCities,
-			festivals = discovery.festivals,
-		)
+		return homeDataService.getMyTrips(currentUser, today)
 	}
+
+	fun getMonthlyRecommendations(): HomeMonthlyRecommendationsResponse =
+		homeDiscoveryService.getMonthlyRecommendations(LocalDate.now(SERVICE_ZONE_ID))
+
+	fun getFestivals(): HomeFestivalsResponse =
+		homeDiscoveryService.getFestivals(LocalDate.now(SERVICE_ZONE_ID))
 
 	companion object {
 		private val SERVICE_ZONE_ID: ZoneId = ZoneId.of("Asia/Seoul")
@@ -67,18 +62,16 @@ class HomeDataService(
 	private val logger = LoggerFactory.getLogger(javaClass)
 
 	@Transactional
-	fun getHomeData(currentUser: AuthenticatedUser, today: LocalDate): HomeData {
+	fun getMyTrips(currentUser: AuthenticatedUser, today: LocalDate): HomeMyTripsResponse {
 		val user = getLoginUser(currentUser.id)
 		val myMember = familyMemberRepository.findByUserId(currentUser.id)
 		val familyId = myMember?.family?.id
 		val trips = familyId?.let { getHomeTrips(it, today) }.orEmpty()
-		val profileGuide = getProfileGuide(user, familyId)
 
-		return HomeData(
+		return HomeMyTripsResponse(
 			familyId = familyId,
 			userRole = user.role,
-			canCreateTrip = user.role == UserRole.CHILD,
-			profileGuide = profileGuide,
+			parentProfiles = getParentProfiles(user, familyId),
 			trips = trips,
 		)
 	}
@@ -139,40 +132,20 @@ class HomeDataService(
 		}
 	}
 
-	private fun getProfileGuide(user: User, familyId: Long?): HomeProfileGuideResponse? =
-		when (user.role) {
-			UserRole.PARENT -> {
-				val completed = parentProfileRepository.findByUserId(requireNotNull(user.id))
-					?.status == ParentProfileStatus.COMPLETED
-				if (completed) null else HomeProfileGuideResponse(
-					type = HomeProfileGuideType.COMPLETE_MY_PROFILE,
-					targets = listOf(profileTargetOf(user)),
-				)
-			}
-			UserRole.CHILD -> {
-				val incompleteParents = familyId?.let {
-					familyMemberRepository.findAllByFamilyIdOrderByJoinedAtAsc(it)
-						.asSequence()
-						.filter { member -> member.memberRole == UserRole.PARENT }
-						.map { member -> member.user }
-						.filter { parent ->
-							parentProfileRepository.findByUserId(requireNotNull(parent.id))
-								?.status != ParentProfileStatus.COMPLETED
-						}
-						.map(::profileTargetOf)
-						.toList()
-				}.orEmpty()
-				incompleteParents.takeIf(List<HomeProfileTargetResponse>::isNotEmpty)?.let {
-					HomeProfileGuideResponse(
-						type = HomeProfileGuideType.REQUEST_PARENT_PROFILE,
-						targets = it,
-					)
-				}
-			}
+	private fun getParentProfiles(user: User, familyId: Long?): List<HomeParentProfileResponse> {
+		val parents = when (user.role) {
+			UserRole.PARENT -> listOf(user)
+			UserRole.CHILD -> familyId?.let {
+				familyMemberRepository.findAllByFamilyIdOrderByJoinedAtAsc(it)
+					.filter { member -> member.memberRole == UserRole.PARENT }
+					.map { member -> member.user }
+			}.orEmpty()
 		}
+		return parents.map(::parentProfileOf)
+	}
 
-	private fun profileTargetOf(parent: User): HomeProfileTargetResponse =
-		HomeProfileTargetResponse(
+	private fun parentProfileOf(parent: User): HomeParentProfileResponse =
+		HomeParentProfileResponse(
 			userId = requireNotNull(parent.id),
 			displayName = parent.displayName,
 			relationLabel = when (parent.gender) {
@@ -180,6 +153,8 @@ class HomeDataService(
 				GenderType.MALE -> "아빠"
 				GenderType.UNDISCLOSED -> null
 			},
+			profileCompleted = parentProfileRepository.findByUserId(requireNotNull(parent.id))
+				?.status == ParentProfileStatus.COMPLETED,
 		)
 
 	private fun getLoginUser(userId: Long): User =
@@ -191,11 +166,3 @@ class HomeDataService(
 		private val HOME_TRIP_STATUSES = setOf(TripStatus.PLANNING, TripStatus.READY, TripStatus.IN_PROGRESS)
 	}
 }
-
-data class HomeData(
-	val familyId: Long?,
-	val userRole: UserRole,
-	val canCreateTrip: Boolean,
-	val profileGuide: HomeProfileGuideResponse?,
-	val trips: List<HomeTripSummaryResponse>,
-)
