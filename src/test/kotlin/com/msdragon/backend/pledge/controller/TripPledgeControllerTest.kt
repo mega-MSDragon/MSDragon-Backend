@@ -254,6 +254,12 @@ class TripPledgeControllerTest {
 			.andExpect(jsonPath("$.data.signatures[0].role").value("child"))
 			.andExpect(jsonPath("$.data.signatures[0].signatureImageMimeType").value("image/png"))
 			.andExpect(jsonPath("$.data.signatures[0].signatureImageBase64").value(PNG_BASE64))
+			.andExpect(jsonPath("$.data.signers.length()").value(2))
+			.andExpect(jsonPath("$.data.signers[0].role").value("parent"))
+			.andExpect(jsonPath("$.data.signers[0].signed").value(false))
+			.andExpect(jsonPath("$.data.signers[0].signatureImageBase64").doesNotExist())
+			.andExpect(jsonPath("$.data.signers[1].role").value("child"))
+			.andExpect(jsonPath("$.data.signers[1].signed").value(true))
 			.andExpect(jsonPath("$.data.canSign").value(false))
 			.andExpect(jsonPath("$.data.requestedAt").isString)
 	}
@@ -316,6 +322,19 @@ class TripPledgeControllerTest {
 		)
 		check(LocalDateTime.parse(completedAt).nano % 1_000 == 0)
 
+		mockMvc.perform(
+			get("/api/v1/trips/${requireNotNull(trip.id)}/pledge")
+				.header("Authorization", "Bearer ${tokenService.createAccessToken(child)}"),
+		)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.data.signers.length()").value(3))
+			.andExpect(jsonPath("$.data.signers[0].userId").value(requireNotNull(firstParent.id)))
+			.andExpect(jsonPath("$.data.signers[0].signed").value(true))
+			.andExpect(jsonPath("$.data.signers[1].userId").value(requireNotNull(secondParent.id)))
+			.andExpect(jsonPath("$.data.signers[1].signed").value(false))
+			.andExpect(jsonPath("$.data.signers[2].userId").value(requireNotNull(child.id)))
+			.andExpect(jsonPath("$.data.signers[2].signed").value(true))
+
 		submitSignature(secondParent, trip)
 			.andExpect(status().isOk)
 			.andExpect(jsonPath("$.data.status").value("completed"))
@@ -335,7 +354,6 @@ class TripPledgeControllerTest {
 		saveReviewedPledge(child, trip)
 		submitSignature(child, trip, createPngBase64(0xFF111111.toInt())).andExpect(status().isOk)
 		submitSignature(parent, trip, createPngBase64(0xFF333333.toInt())).andExpect(status().isOk)
-		submitSignature(secondParent, trip, createPngBase64(0xFF555555.toInt())).andExpect(status().isOk)
 
 		val result = mockMvc.perform(
 			get("/api/v1/trips/${requireNotNull(trip.id)}/pledge/pdf")
@@ -366,10 +384,11 @@ class TripPledgeControllerTest {
 			check(text.contains("혜린"))
 			check(text.contains("엄마"))
 			check(text.contains("아빠"))
+			check(text.contains("서명 전"))
 			val imageCount = document.pages.sumOf { page ->
 				page.resources.xObjectNames.count { name -> page.resources.getXObject(name) is PDImageXObject }
 			}
-			check(imageCount >= 3)
+			check(imageCount >= 2)
 		}
 	}
 

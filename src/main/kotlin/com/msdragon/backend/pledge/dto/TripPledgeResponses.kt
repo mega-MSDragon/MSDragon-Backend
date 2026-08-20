@@ -8,6 +8,7 @@ import com.msdragon.backend.pledge.entity.TripPledge
 import com.msdragon.backend.pledge.entity.TripPledgeStatus
 import io.swagger.v3.oas.annotations.media.Schema
 import java.time.LocalDateTime
+import java.util.Base64
 
 @Schema(description = "여행 10계명 후보 응답")
 data class TripPledgeCandidatesResponse(
@@ -70,12 +71,16 @@ data class TripPledgeResponse(
 
 	@field:Schema(description = "현재까지 제출된 전체 참여자 서명. 모든 여행 참여자에게 동일하게 노출됩니다.")
 	val signatures: List<TripPledgeSignatureResponse>,
+
+	@field:Schema(description = "자녀와 참여 부모 전체의 서명 상태. 서명 전 참여자도 포함됩니다.")
+	val signers: List<TripPledgeSignerResponse>,
 ) {
 	companion object {
 		fun of(
 			pledge: TripPledge,
 			items: List<PledgeItem>,
 			signatures: List<PledgeSignature>,
+			signers: List<TripPledgeSignerResponse>,
 			canSign: Boolean,
 		): TripPledgeResponse =
 			TripPledgeResponse(
@@ -89,6 +94,54 @@ data class TripPledgeResponse(
 				completedAt = pledge.completedAt,
 				canSign = canSign,
 				signatures = signatures.map(TripPledgeSignatureResponse::from),
+				signers = signers,
+			)
+	}
+}
+
+@Schema(description = "여행 10계명 서명 대상자와 제출 상태")
+data class TripPledgeSignerResponse(
+	@field:Schema(description = "서명 대상 사용자 ID", example = "2")
+	val userId: Long,
+
+	@field:Schema(description = "서명 대상 역할", example = "parent", allowableValues = ["child", "parent"])
+	val role: UserRole,
+
+	@field:Schema(description = "화면 표시 관계", example = "엄마")
+	val relationLabel: String,
+
+	@field:Schema(description = "표시 이름", example = "김지영")
+	val displayName: String,
+
+	@field:Schema(description = "서명 제출 여부", example = "false")
+	val signed: Boolean,
+
+	@field:Schema(description = "서명 이미지 MIME 타입. 서명 전이면 null입니다.", example = "image/png", nullable = true)
+	val signatureImageMimeType: String?,
+
+	@field:Schema(description = "PNG Base64 문자열. 서명 전이면 null입니다.", nullable = true)
+	val signatureImageBase64: String?,
+
+	@field:Schema(description = "서명 시간. 서명 전이면 null입니다.", example = "2026-07-15T12:10:00", nullable = true)
+	val signedAt: LocalDateTime?,
+) {
+	companion object {
+		fun of(
+			userId: Long,
+			role: UserRole,
+			relationLabel: String,
+			displayName: String,
+			signature: PledgeSignature?,
+		): TripPledgeSignerResponse =
+			TripPledgeSignerResponse(
+				userId = userId,
+				role = role,
+				relationLabel = relationLabel,
+				displayName = displayName,
+				signed = signature != null,
+				signatureImageMimeType = signature?.signatureMimeType,
+				signatureImageBase64 = signature?.signatureImageData?.let(Base64.getEncoder()::encodeToString),
+				signedAt = signature?.signedAt,
 			)
 	}
 }
@@ -128,7 +181,7 @@ data class TripPledgeSignatureResponse(
 				role = signature.user.role,
 				displayName = signature.user.displayName,
 				signatureImageMimeType = signature.signatureMimeType,
-				signatureImageBase64 = java.util.Base64.getEncoder().encodeToString(signature.signatureImageData),
+				signatureImageBase64 = Base64.getEncoder().encodeToString(signature.signatureImageData),
 				signedAt = signature.signedAt,
 			)
 	}

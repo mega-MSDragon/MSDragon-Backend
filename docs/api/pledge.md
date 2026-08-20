@@ -18,6 +18,7 @@
 - 자녀와 참여 부모 최소 1명이 서명하면 상태는 `completed`가 됩니다.
 - `completed` 이후에도 아직 서명하지 않은 다른 참여 부모가 추가로 서명할 수 있습니다.
 - 모든 여행 참여자는 현재까지 제출된 전체 서명을 동일하게 조회합니다.
+- 확정본 응답의 `signers`에는 서명 여부와 관계없이 참여 부모 전체와 작성 자녀가 포함됩니다. 부모 2명 화면도 이 목록으로 구성합니다.
 - 서명은 PNG Base64로 받고 디코딩한 원본 바이트를 DB에 저장합니다.
 - 여행 수정으로 참여 부모 구성이 바뀌면 확정 문구와 모든 서명을 삭제합니다. 이후 조회는 새 확정본을 저장하기 전까지 HTTP `200`, 본문 `status=404`를 반환합니다.
 - 완료된 10계명은 저장된 문구와 전체 서명을 HTML에 합성해 요청 시 PDF로 생성하며 완성 파일은 저장하지 않습니다.
@@ -119,7 +120,29 @@
     "requestedAt": null,
     "completedAt": null,
     "canSign": true,
-    "signatures": []
+    "signatures": [],
+    "signers": [
+      {
+        "userId": 2,
+        "role": "parent",
+        "relationLabel": "엄마",
+        "displayName": "김지영",
+        "signed": false,
+        "signatureImageMimeType": null,
+        "signatureImageBase64": null,
+        "signedAt": null
+      },
+      {
+        "userId": 1,
+        "role": "child",
+        "relationLabel": "자녀",
+        "displayName": "김하늘",
+        "signed": false,
+        "signatureImageMimeType": null,
+        "signatureImageBase64": null,
+        "signedAt": null
+      }
+    ]
   }
 }
 ```
@@ -133,6 +156,9 @@
 - 작성 자녀는 `reviewed` 상태부터 조회할 수 있습니다.
 - 참여 부모는 자녀 서명 후 `signature_requested` 또는 `completed` 상태에서 조회할 수 있습니다.
 - 자녀와 모든 참여 부모에게 동일한 `signatures` 목록을 반환합니다.
+- `signatures`에는 제출된 서명만 자녀 우선, 부모 서명 시각순으로 포함됩니다.
+- `signers`에는 서명 전 참여자까지 모두 포함되며 부모를 참여자 순서대로 먼저, 작성 자녀를 마지막에 반환합니다.
+- `signers[].signed=false`이면 서명 이미지와 서명 시간은 `null`입니다. 클라이언트는 해당 칸을 `서명 전`으로 표시합니다.
 - `canSign`은 현재 사용자가 아직 본인 서명을 제출할 수 있는지를 나타냅니다.
 
 저장된 확정본이 없으면 HTTP `200`, 본문 `status=404`를 반환합니다.
@@ -162,7 +188,7 @@
 
 ### Response
 
-응답은 `GET /api/v1/trips/{tripId}/pledge`와 같은 `TripPledgeResponse`입니다. `signatures`에는 자녀를 먼저 표시하고 부모 서명을 서명 시각순으로 표시합니다.
+응답은 `GET /api/v1/trips/{tripId}/pledge`와 같은 `TripPledgeResponse`입니다. `signatures`에는 제출된 서명을, `signers`에는 서명 전 참여자를 포함한 전체 상태를 표시합니다.
 
 ## GET /api/v1/trips/{tripId}/pledge/pdf
 
@@ -170,7 +196,8 @@
 
 - 여행 참여자만 조회할 수 있습니다.
 - 상태가 `completed`여야 합니다. 즉 자녀와 참여 부모 최소 1명이 서명해야 합니다.
-- 완료 후 다른 참여 부모가 추가로 서명하면 다음 PDF 요청부터 해당 서명도 포함됩니다.
+- 부모 영역은 왼쪽, 자녀 영역은 오른쪽에 표시합니다. 참여 부모가 2명이면 부모 영역을 두 칸으로 나눕니다.
+- 완료 조건 충족 후 아직 서명하지 않은 다른 참여 부모도 이름과 `서명 전` 칸으로 표시하며, 추가 서명하면 다음 PDF 요청부터 이미지로 교체됩니다.
 - PDF에는 Pretendard 글꼴, 한글 순번, 원형 `서약 완료` 도장과 점선 서명 박스를 사용합니다.
 - 계약 번호는 확정 문구 작성 연도와 여행 10계명 ID로 계산하며 별도 DB 컬럼에 저장하지 않습니다.
 - 응답 시점에 PDF를 생성하며 DB나 파일 저장소에 완성 파일을 보관하지 않습니다.

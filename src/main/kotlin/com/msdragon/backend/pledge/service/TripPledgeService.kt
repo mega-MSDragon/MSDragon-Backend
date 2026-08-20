@@ -15,6 +15,7 @@ import com.msdragon.backend.pledge.dto.SavePledgeSignatureRequest
 import com.msdragon.backend.pledge.dto.SaveTripPledgeRequest
 import com.msdragon.backend.pledge.dto.TripPledgeCandidatesResponse
 import com.msdragon.backend.pledge.dto.TripPledgeResponse
+import com.msdragon.backend.pledge.dto.TripPledgeSignerResponse
 import com.msdragon.backend.pledge.entity.PledgeItem
 import com.msdragon.backend.pledge.entity.PledgeSignature
 import com.msdragon.backend.pledge.entity.PledgeTemplate
@@ -98,16 +99,17 @@ class TripPledgeService(
 				documentTitle = pledge.title ?: DEFAULT_TITLE,
 				items = pledgeItemRepository.findAllByTripPledgeIdOrderBySortOrderAsc(pledgeId)
 					.map(PledgeItem::content),
-				signatures = findOrderedSignatures(pledgeId).map { signature ->
+				signers = findOrderedSigners(trip, findOrderedSignatures(pledgeId)).map { signer ->
 					TripPledgePdfSignature(
-						role = signature.user.role,
-						relationLabel = signature.user.pledgeRelationLabel(),
-						displayName = signature.user.displayName,
-						mimeType = signature.signatureMimeType,
-						imageData = signature.signatureImageData,
-						signedAt = signature.signedAt,
+						role = signer.role,
+						relationLabel = signer.relationLabel,
+						displayName = signer.displayName,
+						mimeType = signer.signatureImageMimeType,
+						imageData = signer.signatureImageBase64?.let(Base64.getDecoder()::decode),
+						signedAt = signer.signedAt,
 					)
 				},
+				completed = true,
 			),
 		)
 		return TripPledgePdfFile(
@@ -186,6 +188,7 @@ class TripPledgeService(
 			pledge = pledge,
 			items = savedItems,
 			signatures = emptyList(),
+			signers = findOrderedSigners(trip, emptyList()),
 			canSign = true,
 		)
 	}
@@ -270,8 +273,27 @@ class TripPledgeService(
 			pledge = pledge,
 			items = pledgeItemRepository.findAllByTripPledgeIdOrderBySortOrderAsc(pledgeId),
 			signatures = signatures,
+			signers = findOrderedSigners(pledge.trip, signatures),
 			canSign = canSign(currentUser, pledge, signatures),
 		)
+	}
+
+	private fun findOrderedSigners(trip: Trip, signatures: List<PledgeSignature>): List<TripPledgeSignerResponse> {
+		val signaturesByUserId = signatures.associateBy { requireNotNull(it.user.id) }
+		val parents = tripParticipantRepository.findAllByTripIdOrderByIdAsc(requireNotNull(trip.id))
+			.map { it.user }
+			.filter { it.role == UserRole.PARENT }
+			.distinctBy { it.id }
+		val users = parents + trip.createdByUser
+		return users.map { user ->
+			TripPledgeSignerResponse.of(
+				userId = requireNotNull(user.id),
+				role = user.role,
+				relationLabel = user.pledgeRelationLabel(),
+				displayName = user.displayName,
+				signature = signaturesByUserId[user.id],
+			)
+		}
 	}
 
 	private fun findOrderedSignatures(pledgeId: Long): List<PledgeSignature> =

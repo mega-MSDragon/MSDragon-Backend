@@ -35,7 +35,8 @@ class TripPledgePdfRenderer {
 			document.slot("written-date-copy").text(data.documentDate.format(KOREAN_DATE_FORMAT))
 			document.slot("document-title").text(data.documentTitle)
 			appendItems(document.slot("pledge-items"), data.items)
-			appendSignatures(document.slot("signature-list"), data.signatures)
+			appendSignatures(document.slot("signature-list"), data.signers)
+			if (!data.completed) document.slot("completion-stamp").remove()
 			renderPdf(document)
 		} catch (exception: Exception) {
 			logger.error("여행 10계명 PDF 생성 실패: tripId={}", data.tripId, exception)
@@ -62,18 +63,32 @@ class TripPledgePdfRenderer {
 	}
 
 	private fun appendSignatures(container: Element, signatures: List<TripPledgePdfSignature>) {
-		container.empty().attr("class", "signature-list signature-count-${signatures.size.coerceAtMost(3)}")
-		signatures.forEach { signature ->
-			val card = container.appendElement("div").addClass("signature-card")
-			val owner = card.appendElement("div").addClass("signature-owner")
-			owner.appendElement("span").addClass("signature-role").text("서약인 · ${signature.relationLabel}")
-			owner.appendElement("span").addClass("signature-name").text(signature.displayName)
-			card.appendElement("div")
-				.addClass("signature-image-frame")
-				.appendElement("img")
-				.addClass("signature-image")
-				.attr("src", "data:${signature.mimeType};base64,${Base64.getEncoder().encodeToString(signature.imageData)}")
-				.attr("alt", "${signature.displayName} 서명")
+		container.empty()
+		listOf(UserRole.PARENT, UserRole.CHILD).forEach { role ->
+			val roleSigners = signatures.filter { it.role == role }
+			if (roleSigners.isEmpty()) return@forEach
+			val group = container.appendElement("div").addClass("signature-group")
+			val owner = group.appendElement("div").addClass("signature-owner")
+			owner.appendElement("span")
+				.addClass("signature-role")
+				.text("서약인 · ${if (role == UserRole.PARENT) "부모님" else "자녀"}")
+			owner.appendElement("span")
+				.addClass("signature-name")
+				.text(roleSigners.joinToString("·") { it.displayName })
+			val frames = group.appendElement("div")
+				.addClass("signature-frames")
+				.addClass("signature-frame-count-${roleSigners.size.coerceAtMost(2)}")
+			roleSigners.forEach { signature ->
+				val frame = frames.appendElement("div").addClass("signature-image-frame")
+				if (signature.imageData == null || signature.mimeType == null) {
+					frame.appendElement("span").addClass("signature-placeholder").text("서명 전")
+				} else {
+					frame.appendElement("img")
+						.addClass("signature-image")
+						.attr("src", "data:${signature.mimeType};base64,${Base64.getEncoder().encodeToString(signature.imageData)}")
+						.attr("alt", "${signature.displayName} 서명")
+				}
+			}
 		}
 	}
 
@@ -112,16 +127,17 @@ data class TripPledgePdfData(
 	val documentDate: LocalDate,
 	val documentTitle: String,
 	val items: List<String>,
-	val signatures: List<TripPledgePdfSignature>,
+	val signers: List<TripPledgePdfSignature>,
+	val completed: Boolean,
 )
 
 data class TripPledgePdfSignature(
 	val role: UserRole,
 	val relationLabel: String,
 	val displayName: String,
-	val mimeType: String,
-	val imageData: ByteArray,
-	val signedAt: LocalDateTime,
+	val mimeType: String?,
+	val imageData: ByteArray?,
+	val signedAt: LocalDateTime?,
 )
 
 data class TripPledgePdfFile(
