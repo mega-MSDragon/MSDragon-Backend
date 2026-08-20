@@ -19,6 +19,8 @@ import com.msdragon.backend.chat.openai.OpenAiToolCall
 import com.msdragon.backend.chat.repository.ChatMessageRepository
 import com.msdragon.backend.chat.repository.ChatSessionRepository
 import com.msdragon.backend.common.exception.BadRequestException
+import com.msdragon.backend.common.exception.InternalServerException
+import com.msdragon.backend.common.exception.NotFoundException
 import com.msdragon.backend.common.exception.UnAuthorizedException
 import com.msdragon.backend.supportfacility.entity.SupportFacilityType
 import com.msdragon.backend.supportfacility.service.SupportFacilityService
@@ -27,6 +29,7 @@ import com.msdragon.backend.trip.entity.ExternalApiProvider
 import com.msdragon.backend.trip.repository.TripRepository
 import com.msdragon.backend.trip.service.TripPlaceService
 import com.msdragon.backend.trip.service.TripService
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import tools.jackson.databind.ObjectMapper
@@ -151,15 +154,33 @@ class TravelChatService(
 		"get_place_detail" -> {
 			val stopId = call.arguments.longValue("stop_id")
 			val stop = context.days.asSequence().flatMap { it.stops.asSequence() }.firstOrNull { it.id == stopId }
-			val detail = if (stop?.sourceProvider == ExternalApiProvider.TOUR_API && stop.externalPlaceId != null) {
-				tripPlaceService.getPlaceDetail(currentUser, tripId, stop.externalPlaceId, stop.contentTypeId)
-			} else {
-				stop
-			}
+			val detail = stop?.let { getPlaceDetail(currentUser, tripId, it) }
 			objectMapper.writeValueAsString(detail ?: mapOf("error" to "TRIP_STOP_NOT_FOUND"))
 		}
 		"find_nearby_facilities" -> nearbyFacilities(call, currentUser, tripId, request)
 		else -> objectMapper.writeValueAsString(mapOf("error" to "UNSUPPORTED_TOOL"))
+	}
+
+	private fun getPlaceDetail(
+		currentUser: AuthenticatedUser,
+		tripId: Long,
+		stop: ChatTravelStopContext,
+	): Any {
+		if (stop.sourceProvider != ExternalApiProvider.TOUR_API || stop.externalPlaceId == null) {
+			return stop
+		}
+		return try {
+			tripPlaceService.getPlaceDetail(currentUser, tripId, stop.externalPlaceId, stop.contentTypeId)
+		} catch (exception: InternalServerException) {
+			logger.warn("TourAPI 방문지 상세 보강 실패로 코스 스냅샷을 사용합니다. tripId={}, stopId={}, reason={}", tripId, stop.id, exception.message)
+			stop
+		} catch (exception: NotFoundException) {
+			logger.warn("TourAPI 방문지 상세가 없어 코스 스냅샷을 사용합니다. tripId={}, stopId={}", tripId, stop.id)
+			stop
+		} catch (exception: BadRequestException) {
+			logger.warn("TourAPI 방문지 상세 요청값이 유효하지 않아 코스 스냅샷을 사용합니다. tripId={}, stopId={}, reason={}", tripId, stop.id, exception.message)
+			stop
+		}
 	}
 
 	private fun nearbyFacilities(
@@ -207,6 +228,7 @@ class TravelChatService(
 			.joinToString("") { "%02x".format(it) }
 
 	companion object {
+		private val logger = LoggerFactory.getLogger(TravelChatService::class.java)
 		private const val SYSTEM_PROMPT_VERSION = "travel-chat-v2"
 		private val CHAT_TOOLS = listOf(
 			OpenAiFunctionTool(

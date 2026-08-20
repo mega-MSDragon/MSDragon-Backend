@@ -26,6 +26,14 @@ import com.msdragon.backend.trip.entity.TripStop
 import com.msdragon.backend.trip.repository.TripDayRepository
 import com.msdragon.backend.trip.repository.TripRepository
 import com.msdragon.backend.trip.repository.TripStopRepository
+import com.msdragon.backend.trip.tourapi.TourApiAccessibility
+import com.msdragon.backend.trip.tourapi.TourApiClient
+import com.msdragon.backend.trip.tourapi.TourApiKeywordSearch
+import com.msdragon.backend.trip.tourapi.TourApiPlaceDetail
+import com.msdragon.backend.trip.tourapi.TourApiPlaceImage
+import com.msdragon.backend.trip.tourapi.TourApiPlaceIntro
+import com.msdragon.backend.trip.tourapi.TourApiPlaceSearch
+import com.msdragon.backend.trip.tourapi.TourApiPlaceSummary
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -226,6 +234,33 @@ class TravelChatControllerTest {
 		assertTrue(fakeOpenAiResponsesClient.requests.isEmpty())
 	}
 
+	@Test
+	fun `TourAPI 상세 보강이 실패해도 저장된 방문지 정보로 답변을 생성한다`() {
+		val child = saveUser("child-tour-api-fallback")
+		val tripId = createTrip(
+			child = child,
+			travelDate = LocalDate.now(SEOUL_ZONE),
+			externalPlaceId = "988449",
+		)
+		val stopId = requireNotNull(tripStopRepository.findAll().single().id)
+		fakeOpenAiResponsesClient.toolCall = OpenAiToolCall(
+			callId = "call_place_detail",
+			name = "get_place_detail",
+			arguments = mapOf("stop_id" to stopId),
+		)
+
+		mockMvc.perform(
+			post("/api/v1/trips/$tripId/chat/messages")
+				.header("Authorization", "Bearer ${tokenService.createAccessToken(child)}")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""{"message":"첨성대에 대해 설명해줄래?"}"""),
+		)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(200))
+
+		assertTrue(fakeOpenAiResponsesClient.toolOutput.orEmpty().contains("신라 시대의 천문 관측 시설입니다."))
+	}
+
 	private fun sendMessage(tripId: Long, token: String, message: String) {
 		mockMvc.perform(
 			post("/api/v1/trips/$tripId/chat/messages")
@@ -249,7 +284,11 @@ class TravelChatControllerTest {
 
 	private fun createTravelModeTrip(child: User): Long = createTrip(child, LocalDate.now(SEOUL_ZONE))
 
-	private fun createTrip(child: User, travelDate: LocalDate): Long {
+	private fun createTrip(
+		child: User,
+		travelDate: LocalDate,
+		externalPlaceId: String? = null,
+	): Long {
 		val family = familyRepository.save(Family(ownerUser = child))
 		familyMemberRepository.save(FamilyMember(family = family, user = child, memberRole = UserRole.CHILD))
 		val trip = tripRepository.save(
@@ -268,6 +307,8 @@ class TravelChatControllerTest {
 			TripStop(
 				tripDay = day,
 				sortOrder = 1,
+				externalPlaceId = externalPlaceId,
+				contentTypeId = externalPlaceId?.let { "12" },
 				name = "첨성대",
 				category = "역사 관광지",
 				address = "경상북도 경주시 첨성로 140-25",
@@ -294,11 +335,17 @@ class TravelChatControllerTest {
 		@Bean
 		@Primary
 		fun fakeOpenAiResponsesClient(): FakeOpenAiResponsesClient = FakeOpenAiResponsesClient()
+
+		@Bean
+		@Primary
+		fun failingTourApiClient(): TourApiClient = FailingTourApiClient()
 	}
 
 	class FakeOpenAiResponsesClient : OpenAiResponsesClient {
 		val requests = mutableListOf<OpenAiChatRequest>()
 		var failure: RuntimeException? = null
+		var toolCall: OpenAiToolCall? = null
+		var toolOutput: String? = null
 
 		override fun generate(
 			request: OpenAiChatRequest,
@@ -306,6 +353,7 @@ class TravelChatControllerTest {
 		): OpenAiChatResult {
 			requests += request
 			failure?.let { throw it }
+			toolCall?.let { toolOutput = toolExecutor(it) }
 			return OpenAiChatResult(
 				responseId = "resp_test",
 				content = "첫 장소는 첨성대입니다.",
@@ -316,7 +364,24 @@ class TravelChatControllerTest {
 		fun reset() {
 			requests.clear()
 			failure = null
+			toolCall = null
+			toolOutput = null
 		}
+	}
+
+	class FailingTourApiClient : TourApiClient {
+		override fun findPlaces(search: TourApiPlaceSearch): List<TourApiPlaceSummary> = emptyList()
+
+		override fun searchPlaces(search: TourApiKeywordSearch): List<TourApiPlaceSummary> = emptyList()
+
+		override fun getPlaceDetail(contentId: String): TourApiPlaceDetail =
+			throw InternalServerException("TourAPI 응답 형식이 올바르지 않습니다.")
+
+		override fun getPlaceIntro(contentId: String, contentTypeId: String): TourApiPlaceIntro? = null
+
+		override fun getPlaceImages(contentId: String): List<TourApiPlaceImage> = emptyList()
+
+		override fun getAccessibility(contentId: String): TourApiAccessibility? = null
 	}
 
 	companion object {

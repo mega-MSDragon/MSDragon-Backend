@@ -5,6 +5,7 @@ import com.msdragon.backend.auth.repository.UserRepository
 import com.msdragon.backend.auth.support.AuthenticatedUser
 import com.msdragon.backend.common.exception.BadRequestException
 import com.msdragon.backend.common.exception.ForbiddenException
+import com.msdragon.backend.common.exception.InternalServerException
 import com.msdragon.backend.common.exception.NotFoundException
 import com.msdragon.backend.common.exception.UnAuthorizedException
 import com.msdragon.backend.family.repository.FamilyMemberRepository
@@ -83,7 +84,10 @@ class TripPlaceService(
 		)
 	}
 
-	@Transactional(readOnly = true)
+	@Transactional(
+		readOnly = true,
+		noRollbackFor = [InternalServerException::class, NotFoundException::class, BadRequestException::class],
+	)
 	fun getPlaceDetail(
 		currentUser: AuthenticatedUser,
 		tripId: Long,
