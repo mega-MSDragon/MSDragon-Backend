@@ -5,7 +5,6 @@ import com.msdragon.backend.pledge.entity.PledgeItem
 import com.msdragon.backend.pledge.entity.PledgeSignature
 import com.msdragon.backend.pledge.entity.PledgeTemplate
 import com.msdragon.backend.pledge.entity.TripPledge
-import com.msdragon.backend.pledge.entity.TripPledgeStatus
 import io.swagger.v3.oas.annotations.media.Schema
 import java.time.LocalDateTime
 import java.util.Base64
@@ -36,28 +35,21 @@ data class PledgeTemplateResponse(
 	}
 }
 
-@Schema(description = "여행별 10계명 확정본 응답")
+@Schema(description = "여행 10계명 화면 응답")
 data class TripPledgeResponse(
-	@field:Schema(description = "여행 10계명 ID", example = "1")
-	val id: Long,
+	@field:Schema(description = "저장된 여행 10계명 ID. 저장 전이면 null입니다.", example = "1", nullable = true)
+	val id: Long?,
 
 	@field:Schema(description = "여행 ID", example = "1")
 	val tripId: Long,
 
-	@field:Schema(description = "문서 제목", example = "가족 여행 10계명", nullable = true)
-	val title: String?,
+	@field:Schema(description = "문서 제목", example = "가족 여행 10계명")
+	val title: String,
 
-	@field:Schema(
-		description = "10계명 진행 상태",
-		example = "reviewed",
-		allowableValues = ["draft", "reviewed", "signature_requested", "completed"],
-	)
-	val status: TripPledgeStatus,
-
-	@field:Schema(description = "확정된 10개 항목")
+	@field:Schema(description = "화면에 표시할 10개 항목. 저장 전에는 무작위 템플릿 후보입니다.")
 	val items: List<TripPledgeItemResponse>,
 
-	@field:Schema(description = "내용 확인 시간", example = "2026-07-15T12:00:00", nullable = true)
+	@field:Schema(description = "문구 저장 시간", example = "2026-07-15T12:00:00", nullable = true)
 	val reviewedAt: LocalDateTime?,
 
 	@field:Schema(description = "서명 요청 시간", example = "2026-07-15T12:10:00", nullable = true)
@@ -86,8 +78,7 @@ data class TripPledgeResponse(
 			TripPledgeResponse(
 				id = requireNotNull(pledge.id),
 				tripId = requireNotNull(pledge.trip.id),
-				title = pledge.title,
-				status = pledge.status,
+				title = pledge.title ?: DEFAULT_TITLE,
 				items = items.map(TripPledgeItemResponse::from),
 				reviewedAt = pledge.reviewedAt,
 				requestedAt = pledge.requestedAt,
@@ -96,6 +87,26 @@ data class TripPledgeResponse(
 				signatures = signatures.map(TripPledgeSignatureResponse::from),
 				signers = signers,
 			)
+
+		fun initial(
+			tripId: Long,
+			templates: List<PledgeTemplate>,
+			signers: List<TripPledgeSignerResponse>,
+		): TripPledgeResponse =
+			TripPledgeResponse(
+				id = null,
+				tripId = tripId,
+				title = DEFAULT_TITLE,
+				items = templates.mapIndexed(TripPledgeItemResponse::fromTemplate),
+				reviewedAt = null,
+				requestedAt = null,
+				completedAt = null,
+				canSign = false,
+				signatures = emptyList(),
+				signers = signers,
+			)
+
+		private const val DEFAULT_TITLE = "가족 여행 10계명"
 	}
 }
 
@@ -187,10 +198,10 @@ data class TripPledgeSignatureResponse(
 	}
 }
 
-@Schema(description = "여행 10계명 확정 항목")
+@Schema(description = "여행 10계명 화면 항목")
 data class TripPledgeItemResponse(
-	@field:Schema(description = "항목 ID", example = "1")
-	val id: Long,
+	@field:Schema(description = "저장된 항목 ID. 저장 전 후보이면 null입니다.", example = "1", nullable = true)
+	val id: Long?,
 
 	@field:Schema(description = "표시 순서", example = "1")
 	val sortOrder: Int,
@@ -198,7 +209,7 @@ data class TripPledgeItemResponse(
 	@field:Schema(description = "원본 템플릿 ID", example = "1", nullable = true)
 	val templateId: Long?,
 
-	@field:Schema(description = "확정 문구", example = "서로 재촉하지 않기")
+	@field:Schema(description = "화면 표시 문구", example = "서로 재촉하지 않기")
 	val content: String,
 
 	@field:Schema(description = "원본 템플릿을 수정 없이 사용했는지 여부", example = "true")
@@ -212,6 +223,15 @@ data class TripPledgeItemResponse(
 				templateId = item.pledgeTemplate?.id,
 				content = item.content,
 				isFromTemplate = item.isFromTemplate,
+			)
+
+		fun fromTemplate(index: Int, template: PledgeTemplate): TripPledgeItemResponse =
+			TripPledgeItemResponse(
+				id = null,
+				sortOrder = index + 1,
+				templateId = requireNotNull(template.id),
+				content = template.content,
+				isFromTemplate = true,
 			)
 	}
 }

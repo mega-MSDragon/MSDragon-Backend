@@ -5,9 +5,9 @@ import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Size
 
-@Schema(description = "여행 10계명 확정본 저장 요청")
+@Schema(description = "여행 10계명 저장 요청")
 data class SaveTripPledgeRequest(
-	@field:Schema(description = "확정할 10계명 항목. 배열 순서가 화면 표시 순서가 됩니다.")
+	@field:Schema(description = "저장할 10계명 항목. 배열 순서가 화면 표시 순서가 됩니다.")
 	@field:Valid
 	@field:Size(min = 10, max = 10, message = "여행 10계명은 정확히 10개여야 합니다.")
 	val items: List<SaveTripPledgeItemRequest>,
@@ -18,7 +18,7 @@ data class SaveTripPledgeItemRequest(
 	@field:Schema(description = "후보 템플릿 ID. 사용자가 직접 작성한 항목이면 생략할 수 있습니다.", example = "1", nullable = true)
 	val templateId: Long? = null,
 
-	@field:Schema(description = "확정 문구", example = "서로 재촉하지 않기")
+	@field:Schema(description = "저장할 문구", example = "서로 재촉하지 않기")
 	@field:NotBlank(message = "10계명 문구를 입력해주세요.")
 	@field:Size(max = 255, message = "10계명 문구는 255자 이하로 입력해주세요.")
 	val content: String,

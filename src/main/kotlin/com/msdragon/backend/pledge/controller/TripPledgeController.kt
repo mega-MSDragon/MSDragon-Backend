@@ -39,7 +39,8 @@ class TripPledgeController(
 ) {
 	@Operation(
 		summary = "여행 10계명 후보 조회",
-		description = "여행을 만든 자녀에게 활성 템플릿 중 중복 없는 무작위 후보 10개를 내려줍니다. 조회 결과 자체는 저장하지 않습니다.",
+		description = "미사용 API입니다. GET /api/v1/trips/{tripId}/pledge를 사용합니다.",
+		deprecated = true,
 	)
 	@ApiResponses(
 		value = [
@@ -57,8 +58,8 @@ class TripPledgeController(
 		)
 
 	@Operation(
-		summary = "여행 10계명 확정본 조회",
-		description = "여행별 확정 문구와 현재까지 제출된 전체 참여자 서명을 조회합니다. 부모는 자녀 서명 요청 후 조회할 수 있습니다.",
+		summary = "여행 10계명 화면 조회",
+		description = "저장 전에는 무작위 후보 10개와 서명 대상자를, 저장 후에는 저장된 문구와 현재까지 제출된 전체 참여자 서명을 조회합니다. 부모는 자녀 서명 후 조회할 수 있습니다.",
 	)
 	@ApiResponses(
 		value = [
@@ -77,13 +78,13 @@ class TripPledgeController(
 
 	@Operation(
 		summary = "여행 10계명 PDF 조회",
-		description = "완료된 여행 10계명의 확정 문구와 현재까지 제출된 전체 서명을 HTML 템플릿에 합성해 PDF 원본으로 반환합니다.",
+		description = "저장된 여행 10계명과 현재까지 제출된 전체 서명을 HTML 템플릿에 합성해 PDF 원본으로 반환합니다. 서명 전에도 생성할 수 있습니다.",
 	)
 	@ApiResponses(
 		value = [
 			SwaggerApiResponse(
 				responseCode = "200",
-				description = "처리 완료: PDF 생성 성공 또는 JSON 인증·정책 오류(status=400/401/403/404)",
+				description = "처리 완료: PDF 생성 성공 또는 JSON 인증·정책 오류(status=401/403/404)",
 				content = [
 					Content(mediaType = MediaType.APPLICATION_PDF_VALUE, schema = Schema(type = "string", format = "binary")),
 					Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = Schema(implementation = ApiResponse::class)),
@@ -107,8 +108,8 @@ class TripPledgeController(
 	}
 
 	@Operation(
-		summary = "여행 10계명 확정본 저장",
-		description = "본인 서명 화면으로 이동하기 직전에 수정 완료한 문구 10개를 여행별 확정본으로 저장합니다. 배열 순서가 표시 순서가 됩니다.",
+		summary = "여행 10계명 저장",
+		description = "본인 서명 화면으로 이동하기 직전에 수정한 문구 10개를 여행별로 저장합니다. 배열 순서가 표시 순서가 됩니다.",
 	)
 	@ApiResponses(
 		value = [

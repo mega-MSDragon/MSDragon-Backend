@@ -1025,10 +1025,13 @@ class TripControllerTest {
 		mockMvc.perform(
 			get("/api/v1/trips/$tripId/pledge")
 				.header("Authorization", "Bearer ${tokenService.createAccessToken(child)}"),
-		)
-			.andExpect(status().isOk)
-			.andExpect(jsonPath("$.status").value(404))
-			.andExpect(jsonPath("$.message").value("저장된 여행 10계명이 없습니다."))
+			)
+				.andExpect(status().isOk)
+				.andExpect(jsonPath("$.status").value(200))
+				.andExpect(jsonPath("$.data.id").doesNotExist())
+				.andExpect(jsonPath("$.data.items.length()").value(10))
+				.andExpect(jsonPath("$.data.signatures").isEmpty)
+				.andExpect(jsonPath("$.data.signers.length()").value(2))
 	}
 
 	@Test

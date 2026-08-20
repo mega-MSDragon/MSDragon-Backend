@@ -16,6 +16,7 @@ import com.msdragon.backend.family.repository.FamilyCodeUsageRepository
 import com.msdragon.backend.family.repository.FamilyMemberRepository
 import com.msdragon.backend.family.repository.FamilyRepository
 import com.msdragon.backend.parentprofile.repository.ParentProfileRepository
+import com.msdragon.backend.pledge.entity.TripPledgeStatus
 import com.msdragon.backend.pledge.repository.PledgeItemRepository
 import com.msdragon.backend.pledge.repository.PledgeSignatureRepository
 import com.msdragon.backend.pledge.repository.PledgeTemplateRepository
@@ -136,6 +137,38 @@ class TripPledgeControllerTest {
 	}
 
 	@Test
+	fun `저장 전 여행 10계명 화면은 후보 10개와 서명 대상자를 반환한다`() {
+		val (child, parent, trip) = createFamilyTrip()
+
+		val response = mockMvc.perform(
+			get("/api/v1/trips/${requireNotNull(trip.id)}/pledge")
+				.header("Authorization", "Bearer ${tokenService.createAccessToken(child)}"),
+		)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.data.id").doesNotExist())
+			.andExpect(jsonPath("$.data.status").doesNotExist())
+			.andExpect(jsonPath("$.data.title").value("가족 여행 10계명"))
+			.andExpect(jsonPath("$.data.items.length()").value(10))
+			.andExpect(jsonPath("$.data.items[0].id").doesNotExist())
+			.andExpect(jsonPath("$.data.items[0].sortOrder").value(1))
+			.andExpect(jsonPath("$.data.items[0].isFromTemplate").value(true))
+			.andExpect(jsonPath("$.data.canSign").value(false))
+			.andExpect(jsonPath("$.data.signatures").isEmpty)
+			.andExpect(jsonPath("$.data.signers.length()").value(2))
+			.andExpect(jsonPath("$.data.signers[0].userId").value(requireNotNull(parent.id)))
+			.andExpect(jsonPath("$.data.signers[0].signed").value(false))
+			.andExpect(jsonPath("$.data.signers[1].userId").value(requireNotNull(child.id)))
+			.andExpect(jsonPath("$.data.signers[1].signed").value(false))
+			.andReturn()
+			.response
+			.contentAsString
+
+		val templateIds: List<Int> = JsonPath.read(response, "$.data.items[*].templateId")
+		check(templateIds.distinct().size == 10)
+		check(tripPledgeRepository.findByTripId(requireNotNull(trip.id)) == null)
+	}
+
+	@Test
 	fun `활성 템플릿에서 중복 없는 여행 10계명 후보 10개를 조회한다`() {
 		val (child, _, trip) = createFamilyTrip()
 
@@ -152,10 +185,15 @@ class TripPledgeControllerTest {
 
 		val candidateIds: List<Int> = JsonPath.read(response, "$.data.candidates[*].id")
 		check(candidateIds.distinct().size == 10)
+
+		mockMvc.perform(get("/v3/api-docs"))
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.paths['/api/v1/trips/{tripId}/pledge/candidates'].get.deprecated").value(true))
+			.andExpect(jsonPath("$.components.schemas.TripPledgeResponse.properties.status").doesNotExist())
 	}
 
 	@Test
-	fun `수정한 문구 10개를 여행별 확정본으로 저장하고 조회한다`() {
+	fun `수정한 문구 10개를 여행별로 저장하고 조회한다`() {
 		val (child, _, trip) = createFamilyTrip()
 		val templates = pledgeTemplateRepository.findAllByIsActiveTrueOrderByIdAsc().take(10)
 		val items = templates.mapIndexed { index, template ->
@@ -172,7 +210,7 @@ class TripPledgeControllerTest {
 				.content(objectMapper.writeValueAsString(mapOf("items" to items))),
 		)
 			.andExpect(status().isOk)
-			.andExpect(jsonPath("$.data.status").value("reviewed"))
+			.andExpect(jsonPath("$.data.status").doesNotExist())
 			.andExpect(jsonPath("$.data.title").value("가족 여행 10계명"))
 			.andExpect(jsonPath("$.data.items.length()").value(10))
 			.andExpect(jsonPath("$.data.items[0].sortOrder").value(1))
@@ -180,6 +218,7 @@ class TripPledgeControllerTest {
 			.andExpect(jsonPath("$.data.items[0].isFromTemplate").value(false))
 			.andExpect(jsonPath("$.data.items[1].isFromTemplate").value(true))
 			.andExpect(jsonPath("$.data.reviewedAt").isString)
+		check(tripPledgeRepository.findByTripId(requireNotNull(trip.id))?.status == TripPledgeStatus.REVIEWED)
 
 		mockMvc.perform(
 			get("/api/v1/trips/${requireNotNull(trip.id)}/pledge")
@@ -207,7 +246,7 @@ class TripPledgeControllerTest {
 	}
 
 	@Test
-	fun `같은 템플릿을 중복해 확정본에 저장할 수 없다`() {
+	fun `같은 템플릿을 중복해 저장할 수 없다`() {
 		val (child, _, trip) = createFamilyTrip()
 		val templateId = requireNotNull(pledgeTemplateRepository.findAllByIsActiveTrueOrderByIdAsc().first().id)
 		val items = (1..10).map { index ->
@@ -248,7 +287,7 @@ class TripPledgeControllerTest {
 
 		submitSignature(child, trip)
 			.andExpect(status().isOk)
-			.andExpect(jsonPath("$.data.status").value("signature_requested"))
+			.andExpect(jsonPath("$.data.status").doesNotExist())
 			.andExpect(jsonPath("$.data.signatures.length()").value(1))
 			.andExpect(jsonPath("$.data.signatures[0].userId").value(requireNotNull(child.id)))
 			.andExpect(jsonPath("$.data.signatures[0].role").value("child"))
@@ -262,6 +301,7 @@ class TripPledgeControllerTest {
 			.andExpect(jsonPath("$.data.signers[1].signed").value(true))
 			.andExpect(jsonPath("$.data.canSign").value(false))
 			.andExpect(jsonPath("$.data.requestedAt").isString)
+		check(tripPledgeRepository.findByTripId(requireNotNull(trip.id))?.status == TripPledgeStatus.SIGNATURE_REQUESTED)
 	}
 
 	@Test
@@ -283,11 +323,12 @@ class TripPledgeControllerTest {
 
 		submitSignature(parent, trip)
 			.andExpect(status().isOk)
-			.andExpect(jsonPath("$.data.status").value("completed"))
+			.andExpect(jsonPath("$.data.status").doesNotExist())
 			.andExpect(jsonPath("$.data.signatures.length()").value(2))
 			.andExpect(jsonPath("$.data.signatures[0].userId").value(requireNotNull(child.id)))
 			.andExpect(jsonPath("$.data.signatures[1].userId").value(requireNotNull(parent.id)))
 			.andExpect(jsonPath("$.data.completedAt").isString)
+		check(tripPledgeRepository.findByTripId(requireNotNull(trip.id))?.status == TripPledgeStatus.COMPLETED)
 
 		listOf(child, parent).forEach { participant ->
 			mockMvc.perform(
@@ -337,7 +378,7 @@ class TripPledgeControllerTest {
 
 		submitSignature(secondParent, trip)
 			.andExpect(status().isOk)
-			.andExpect(jsonPath("$.data.status").value("completed"))
+			.andExpect(jsonPath("$.data.status").doesNotExist())
 			.andExpect(jsonPath("$.data.completedAt").value(completedAt))
 			.andExpect(jsonPath("$.data.signatures.length()").value(3))
 			.andExpect(jsonPath("$.data.signatures[2].userId").value(requireNotNull(secondParent.id)))
@@ -393,20 +434,24 @@ class TripPledgeControllerTest {
 	}
 
 	@Test
-	fun `참여 부모 서명 전에는 여행 10계명 PDF를 생성할 수 없다`() {
+	fun `서명 전에도 빈 서명란이 포함된 여행 10계명 PDF를 생성한다`() {
 		val (child, _, trip) = createFamilyTrip()
 		saveReviewedPledge(child, trip)
-		submitSignature(child, trip).andExpect(status().isOk)
 
-		mockMvc.perform(
+		val result = mockMvc.perform(
 			get("/api/v1/trips/${requireNotNull(trip.id)}/pledge/pdf")
 				.accept(MediaType.APPLICATION_PDF)
 				.header("Authorization", "Bearer ${tokenService.createAccessToken(child)}"),
 		)
 			.andExpect(status().isOk)
-			.andExpect(jsonPath("$.status").value(400))
-			.andExpect { result -> check(result.response.contentType == MediaType.APPLICATION_JSON_VALUE) }
-			.andExpect(jsonPath("$.message").value("자녀와 참여 부모 최소 1명이 서명해야 PDF를 생성할 수 있습니다."))
+			.andReturn()
+
+		check(result.response.contentType == MediaType.APPLICATION_PDF_VALUE)
+		Loader.loadPDF(result.response.contentAsByteArray).use { document ->
+			val text = PDFTextStripper().getText(document)
+			check(text.contains("서명 전"))
+			check(!text.contains("서약 완료"))
+		}
 	}
 
 	@Test

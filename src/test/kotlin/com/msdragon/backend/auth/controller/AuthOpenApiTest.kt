@@ -167,8 +167,8 @@ class AuthOpenApiTest {
 					.value(500),
 			)
 			.andExpect(
-				jsonPath("$.paths['/api/v1/trips/{tripId}/pledge/pdf'].get.responses['200'].content['application/json'].examples.badRequest.value.status")
-					.value(400),
+				jsonPath("$.paths['/api/v1/trips/{tripId}/pledge/pdf'].get.responses['200'].content['application/json'].examples.badRequest")
+					.doesNotExist(),
 			)
 			.andExpect(
 				jsonPath("$.paths['/api/v1/trips/{tripId}/pledge/pdf'].get.responses['200'].content['application/pdf'].examples")

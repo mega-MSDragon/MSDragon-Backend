@@ -56,14 +56,9 @@ class TripPledgeService(
 			throw BadRequestException("이미 저장된 여행 10계명이 있습니다.")
 		}
 
-		val activeTemplates = pledgeTemplateRepository.findAllByIsActiveTrueOrderByIdAsc()
-		if (activeTemplates.size < PLEDGE_ITEM_COUNT) {
-			throw InternalServerException("여행 10계명 후보가 부족합니다.")
-		}
-
 		return TripPledgeCandidatesResponse(
 			tripId = tripId,
-			candidates = activeTemplates.shuffled().take(PLEDGE_ITEM_COUNT).map(PledgeTemplateResponse::from),
+			candidates = activeTemplates().shuffled().take(PLEDGE_ITEM_COUNT).map(PledgeTemplateResponse::from),
 		)
 	}
 
@@ -71,8 +66,7 @@ class TripPledgeService(
 	fun getPledge(currentUser: AuthenticatedUser, tripId: Long): TripPledgeResponse {
 		val user = getLoginUser(currentUser.id)
 		val trip = getTrip(tripId)
-		val pledge = tripPledgeRepository.findByTripId(tripId)
-			?: throw NotFoundException("저장된 여행 10계명이 없습니다.")
+		val pledge = tripPledgeRepository.findByTripId(tripId) ?: return initialPledgeResponse(user, trip)
 		validatePledgeViewer(user, trip, pledge)
 
 		return pledgeResponse(pledge, user)
@@ -85,10 +79,6 @@ class TripPledgeService(
 		val pledge = tripPledgeRepository.findByTripId(tripId)
 			?: throw NotFoundException("저장된 여행 10계명이 없습니다.")
 		validatePledgeViewer(user, trip, pledge)
-		if (pledge.status != TripPledgeStatus.COMPLETED) {
-			throw BadRequestException("자녀와 참여 부모 최소 1명이 서명해야 PDF를 생성할 수 있습니다.")
-		}
-
 		val pledgeId = requireNotNull(pledge.id)
 		val documentDate = requireNotNull(pledge.reviewedAt).toLocalDate()
 		val pdfContent = tripPledgePdfRenderer.render(
@@ -109,7 +99,7 @@ class TripPledgeService(
 						signedAt = signer.signedAt,
 					)
 				},
-				completed = true,
+				completed = pledge.status == TripPledgeStatus.COMPLETED,
 			),
 		)
 		return TripPledgePdfFile(
@@ -277,6 +267,23 @@ class TripPledgeService(
 			canSign = canSign(currentUser, pledge, signatures),
 		)
 	}
+
+	private fun initialPledgeResponse(user: User, trip: Trip): TripPledgeResponse {
+		validatePledgeCreator(user, trip)
+		val templates = activeTemplates().shuffled().take(PLEDGE_ITEM_COUNT)
+		return TripPledgeResponse.initial(
+			tripId = requireNotNull(trip.id),
+			templates = templates,
+			signers = findOrderedSigners(trip, emptyList()),
+		)
+	}
+
+	private fun activeTemplates(): List<PledgeTemplate> =
+		pledgeTemplateRepository.findAllByIsActiveTrueOrderByIdAsc().also { templates ->
+			if (templates.size < PLEDGE_ITEM_COUNT) {
+				throw InternalServerException("여행 10계명 후보가 부족합니다.")
+			}
+		}
 
 	private fun findOrderedSigners(trip: Trip, signatures: List<PledgeSignature>): List<TripPledgeSignerResponse> {
 		val signaturesByUserId = signatures.associateBy { requireNotNull(it.user.id) }
