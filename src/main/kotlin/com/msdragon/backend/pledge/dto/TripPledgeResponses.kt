@@ -58,7 +58,7 @@ data class TripPledgeResponse(
 	@field:Schema(description = "서명 완료 시간", example = "2026-07-15T12:20:00", nullable = true)
 	val completedAt: LocalDateTime?,
 
-	@field:Schema(description = "현재 로그인 사용자가 아직 본인 서명을 제출할 수 있는지 여부", example = "true")
+	@field:Schema(description = "현재 로그인 사용자가 서명 단계를 진행할 수 있는지 여부. 저장 전이면 items를 먼저 PUT으로 저장해야 합니다.", example = "true")
 	val canSign: Boolean,
 
 	@field:Schema(description = "현재까지 제출된 전체 참여자 서명. 모든 여행 참여자에게 동일하게 노출됩니다.")
@@ -101,7 +101,7 @@ data class TripPledgeResponse(
 				reviewedAt = null,
 				requestedAt = null,
 				completedAt = null,
-				canSign = false,
+				canSign = true,
 				signatures = emptyList(),
 				signers = signers,
 			)

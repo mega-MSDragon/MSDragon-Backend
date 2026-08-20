@@ -156,7 +156,8 @@
 
 - 저장된 10계명이 없으면 `id`와 `items[].id`가 `null`인 무작위 템플릿 후보 10개를 반환합니다.
 - 저장 전 후보는 조회만으로 DB에 저장되지 않으므로 다시 조회하면 조합이 바뀔 수 있습니다.
-- 저장 전에는 `canSign=false`, `signatures=[]`이며 `signers`에는 모든 참여자가 `signed=false`로 포함됩니다.
+- 저장 전에도 작성 자녀의 `canSign=true`이며, `signatures=[]`, `signers`에는 모든 참여자가 `signed=false`로 포함됩니다.
+- 저장 전 `canSign=true`는 서명 단계로 진행할 수 있다는 뜻입니다. 문구를 수정하지 않았더라도 현재 `items`를 `PUT /pledge`로 먼저 저장한 뒤 서명 API를 호출해야 합니다.
 - 저장 후에는 사용자가 수정해 저장한 문구와 현재까지 제출된 전체 참여자 서명을 반환합니다.
 - 응답에 10계명 내부 진행 상태는 노출하지 않습니다.
 
@@ -191,7 +192,7 @@
     "reviewedAt": null,
     "requestedAt": null,
     "completedAt": null,
-    "canSign": false,
+    "canSign": true,
     "signatures": [],
     "signers": []
   }

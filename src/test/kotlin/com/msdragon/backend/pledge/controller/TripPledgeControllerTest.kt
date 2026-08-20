@@ -152,7 +152,7 @@ class TripPledgeControllerTest {
 			.andExpect(jsonPath("$.data.items[0].id").doesNotExist())
 			.andExpect(jsonPath("$.data.items[0].sortOrder").value(1))
 			.andExpect(jsonPath("$.data.items[0].isFromTemplate").value(true))
-			.andExpect(jsonPath("$.data.canSign").value(false))
+			.andExpect(jsonPath("$.data.canSign").value(true))
 			.andExpect(jsonPath("$.data.signatures").isEmpty)
 			.andExpect(jsonPath("$.data.signers.length()").value(2))
 			.andExpect(jsonPath("$.data.signers[0].userId").value(requireNotNull(parent.id)))
