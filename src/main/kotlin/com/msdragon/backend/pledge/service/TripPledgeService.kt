@@ -35,6 +35,7 @@ import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
 import java.util.Base64
+import kotlin.random.Random
 
 @Service
 class TripPledgeService(
@@ -191,8 +192,7 @@ class TripPledgeService(
 	): TripPledgeResponse {
 		val user = getLoginUser(currentUser.id)
 		val trip = getTrip(tripId)
-		val pledge = tripPledgeRepository.findByTripId(tripId)
-			?: throw NotFoundException("저장된 여행 10계명이 없습니다.")
+		val pledge = tripPledgeRepository.findByTripId(tripId) ?: saveDefaultPledge(user, trip)
 		val pledgeId = requireNotNull(pledge.id)
 
 		if (pledgeSignatureRepository.findByTripPledgeIdAndUserId(pledgeId, requireNotNull(user.id)) != null) {
@@ -270,13 +270,38 @@ class TripPledgeService(
 
 	private fun initialPledgeResponse(user: User, trip: Trip): TripPledgeResponse {
 		validatePledgeCreator(user, trip)
-		val templates = activeTemplates().shuffled().take(PLEDGE_ITEM_COUNT)
 		return TripPledgeResponse.initial(
 			tripId = requireNotNull(trip.id),
-			templates = templates,
+			templates = defaultTemplates(requireNotNull(trip.id)),
 			signers = findOrderedSigners(trip, emptyList()),
 		)
 	}
+
+	private fun saveDefaultPledge(user: User, trip: Trip): TripPledge {
+		validatePledgeEditable(user, trip)
+		val pledge = tripPledgeRepository.save(
+			TripPledge(
+				trip = trip,
+				createdByUser = user,
+			),
+		)
+		pledge.review(DEFAULT_TITLE, currentTimestamp())
+		pledgeItemRepository.saveAll(
+			defaultTemplates(requireNotNull(trip.id)).mapIndexed { index, template ->
+				PledgeItem(
+					tripPledge = pledge,
+					pledgeTemplate = template,
+					sortOrder = index + 1,
+					content = template.content,
+					isFromTemplate = true,
+				)
+			},
+		)
+		return pledge
+	}
+
+	private fun defaultTemplates(tripId: Long): List<PledgeTemplate> =
+		activeTemplates().shuffled(Random(tripId.hashCode())).take(PLEDGE_ITEM_COUNT)
 
 	private fun activeTemplates(): List<PledgeTemplate> =
 		pledgeTemplateRepository.findAllByIsActiveTrueOrderByIdAsc().also { templates ->

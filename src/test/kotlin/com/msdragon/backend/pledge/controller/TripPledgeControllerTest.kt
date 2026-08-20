@@ -169,6 +169,40 @@ class TripPledgeControllerTest {
 	}
 
 	@Test
+	fun `기본 후보를 수정하거나 별도로 저장하지 않아도 자녀가 바로 서명할 수 있다`() {
+		val (child, _, trip) = createFamilyTrip()
+		val tripId = requireNotNull(trip.id)
+		val initialResponse = mockMvc.perform(
+			get("/api/v1/trips/$tripId/pledge")
+				.header("Authorization", "Bearer ${tokenService.createAccessToken(child)}"),
+		)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.data.canSign").value(true))
+			.andReturn()
+			.response
+			.contentAsString
+		val initialTemplateIds: List<Int> = JsonPath.read(initialResponse, "$.data.items[*].templateId")
+
+		val signedResponse = submitSignature(child, trip)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.data.id").isNumber)
+			.andExpect(jsonPath("$.data.items.length()").value(10))
+			.andExpect(jsonPath("$.data.signatures.length()").value(1))
+			.andExpect(jsonPath("$.data.signers[1].userId").value(requireNotNull(child.id)))
+			.andExpect(jsonPath("$.data.signers[1].signed").value(true))
+			.andExpect(jsonPath("$.data.canSign").value(false))
+			.andReturn()
+			.response
+			.contentAsString
+		val savedTemplateIds: List<Int> = JsonPath.read(signedResponse, "$.data.items[*].templateId")
+
+		check(savedTemplateIds == initialTemplateIds)
+		check(tripPledgeRepository.findByTripId(tripId)?.status == TripPledgeStatus.SIGNATURE_REQUESTED)
+		check(pledgeItemRepository.count() == 10L)
+		check(pledgeSignatureRepository.count() == 1L)
+	}
+
+	@Test
 	fun `활성 템플릿에서 중복 없는 여행 10계명 후보 10개를 조회한다`() {
 		val (child, _, trip) = createFamilyTrip()
 
