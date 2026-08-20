@@ -154,15 +154,15 @@ class HttpTourApiClient(
 			throw InternalServerException("TourAPI 호출 중 오류가 발생했습니다.")
 		}
 		if (response.statusCode() !in 200..299) {
-			throw InternalServerException("TourAPI 호출에 실패했습니다.")
+			throw InternalServerException("TourAPI 호출에 실패했습니다: operation=$operation, httpStatus=${response.statusCode()}")
 		}
 
 		val parsedBody = parseJson(response.body())
-		val responseMap = parsedBody.map("response") ?: throw InternalServerException("TourAPI 응답 형식이 올바르지 않습니다.")
+		val responseMap = parsedBody.map("response") ?: throw directApiError(parsedBody, operation)
 		val header = responseMap.map("header")
 		val resultCode = header?.string("resultCode")
 		if (resultCode != null && resultCode != "0000") {
-			throw InternalServerException("TourAPI 응답이 실패했습니다: ${header.string("resultMsg") ?: resultCode}")
+			throw tourApiError(operation, resultCode, header.string("resultMsg"))
 		}
 
 		val body = responseMap.map("body") ?: return emptyList()
@@ -173,6 +173,19 @@ class HttpTourApiClient(
 			else -> emptyList()
 		}
 	}
+
+	private fun directApiError(parsedBody: Map<String, Any?>, operation: String): InternalServerException {
+		val resultCode = parsedBody.string("resultCode")
+		if (resultCode != null && resultCode != "0000") {
+			return tourApiError(operation, resultCode, parsedBody.string("resultMsg"))
+		}
+		return InternalServerException("TourAPI 응답 형식이 올바르지 않습니다: operation=$operation")
+	}
+
+	private fun tourApiError(operation: String, resultCode: String, resultMessage: String?): InternalServerException =
+		InternalServerException(
+			"TourAPI 응답이 실패했습니다: operation=$operation, resultCode=$resultCode, resultMsg=${resultMessage ?: "unknown"}",
+		)
 
 	private fun url(operation: String, params: Map<String, String>): String {
 		val serviceKey = tourApiProperties.serviceKey.trimToNull()

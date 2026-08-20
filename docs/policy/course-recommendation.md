@@ -161,5 +161,6 @@ TourAPI 분류체계 대분류 기준으로 부모 프로필 신호를 매핑합
 - 여러 지역을 묶은 destination은 각 지역을 조회한 뒤 `contentId` 기준으로 중복 제거합니다.
 - 검색 요청의 `category`도 `restaurant`, `attraction` 중 하나이며 해당 콘텐츠 타입만 내려줍니다. 숙박은 제외합니다.
 - 검색 상세 API는 `detailCommon2`, `detailIntro2`, `detailImage2`, `detailWithTour2`를 조회해 장소 표시 정보, 이미지 목록, 운영시간, 휴무일, 이용요금, 무장애 주요 문자열과 원본 응답 일부를 내려줍니다.
+- TourAPI가 HTTP 200으로 최상위 `resultCode`, `resultMsg` 오류를 반환하는 경우에도 실패한 operation과 실제 오류 코드를 서버 예외 로그에 남깁니다.
 - 외부 API가 특정 상세값을 제공하지 않으면 해당 필드는 `null`, 이미지가 없으면 `imageUrls=[]`로 반환합니다.
 - 검색/상세 API는 `trip_stops`를 직접 수정하지 않습니다. 실제 반영은 클라이언트가 선택한 장소들을 `PUT /api/v1/trips/{tripId}/course`로 저장할 때 이루어집니다.
