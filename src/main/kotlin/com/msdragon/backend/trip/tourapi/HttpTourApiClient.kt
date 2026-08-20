@@ -108,7 +108,6 @@ class HttpTourApiClient(
 				"pageNo" to "1",
 				"contentId" to contentId,
 				"imageYN" to "Y",
-				"subImageYN" to "Y",
 			),
 		).map { item ->
 			TourApiPlaceImage(

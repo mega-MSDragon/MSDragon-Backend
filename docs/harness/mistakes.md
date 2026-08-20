@@ -258,3 +258,19 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse as SwaggerApiResponse
 - 바이너리 응답은 성공 media type을 유지하고 JSON 오류 예시에만 정규화를 적용합니다.
 - OpenAPI 테스트는 `application/json.schema`, `application/json.examples`, 불필요한 `*/*` 제거를 함께 확인합니다.
 - 성공 예시는 응답 schema의 `data`를 재귀적으로 생성하고, 서로 다른 도메인의 중첩 객체·배열 필드까지 테스트합니다.
+
+### 2026-08-20: TourAPI 서비스별 요청 파라미터 검증 누락
+
+**상황**
+
+- 무장애 TourAPI `KorWithService2/detailImage2`에 지원하지 않는 `subImageYN`을 전송해 장소 상세 API가 `INVALID_REQUEST_PARAMETER_ERROR(subImageYN)`로 실패했습니다.
+
+**원인**
+
+- 다른 TourAPI 서비스나 이전 문서의 파라미터를 현재 사용하는 `KorWithService2`에도 동일하게 적용할 수 있다고 가정했습니다.
+- 정상 응답 파싱만 테스트하고 실제 요청 쿼리의 파라미터 목록을 검증하지 않았습니다.
+
+**재발 방지 규칙**
+
+- TourAPI 연동 시 서비스명과 operation별 최신 활용 매뉴얼에 명시된 파라미터만 전송합니다.
+- 외부 API 요청 테스트에서 필수 파라미터뿐 아니라 지원하지 않는 파라미터가 빠져 있는지도 확인합니다.
