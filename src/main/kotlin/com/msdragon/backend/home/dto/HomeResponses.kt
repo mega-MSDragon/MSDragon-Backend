@@ -1,5 +1,6 @@
 package com.msdragon.backend.home.dto
 
+import com.fasterxml.jackson.annotation.JsonProperty
 import com.msdragon.backend.auth.entity.UserRole
 import com.msdragon.backend.parentprofile.entity.TravelThemeCode
 import com.msdragon.backend.trip.dto.TripDestinationResponse
@@ -77,7 +78,8 @@ data class HomeTripSummaryResponse(
 	)
 	val status: TripStatus,
 
-	@field:Schema(description = "여행 시작까지 남은 일수. 진행 중이면 null입니다.", example = "48", nullable = true)
+	@get:Schema(name = "dDay", description = "여행 시작까지 남은 일수. 진행 중이면 null입니다.", example = "48", nullable = true)
+	@get:JsonProperty("dDay")
 	val dDay: Int?,
 
 	@field:Schema(

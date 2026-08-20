@@ -175,4 +175,20 @@ class AuthOpenApiTest {
 					.doesNotExist(),
 			)
 	}
+
+	@Test
+	fun `홈 여행의 디데이 필드명은 실제 응답과 같은 dDay로 노출된다`() {
+		mockMvc.perform(get("/v3/api-docs"))
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.components.schemas.HomeTripSummaryResponse.properties.dDay").exists())
+			.andExpect(jsonPath("$.components.schemas.HomeTripSummaryResponse.properties.dday").doesNotExist())
+			.andExpect(
+				jsonPath("$.paths['/api/v1/home/my-trips'].get.responses['200'].content['application/json'].examples.success.value.data.trips[0].dDay")
+					.value(48),
+			)
+			.andExpect(
+				jsonPath("$.paths['/api/v1/home/my-trips'].get.responses['200'].content['application/json'].examples.success.value.data.trips[0].dday")
+					.doesNotExist(),
+			)
+	}
 }
