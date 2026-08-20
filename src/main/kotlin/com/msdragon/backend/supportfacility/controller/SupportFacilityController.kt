@@ -4,6 +4,7 @@ import com.msdragon.backend.auth.support.AuthenticatedUser
 import com.msdragon.backend.auth.support.CurrentUser
 import com.msdragon.backend.common.config.BEARER_AUTH_SCHEME
 import com.msdragon.backend.common.response.ApiResponse
+import com.msdragon.backend.supportfacility.dto.NearbyCafeResponse
 import com.msdragon.backend.supportfacility.dto.NearbyMedicalFacilityResponse
 import com.msdragon.backend.supportfacility.dto.NearbyRestroomResponse
 import com.msdragon.backend.supportfacility.entity.SupportFacilityType
@@ -27,6 +28,31 @@ import org.springframework.web.bind.annotation.RestController
 class SupportFacilityController(
 	private val supportFacilityService: SupportFacilityService,
 ) {
+	@Operation(
+		summary = "현재 위치 주변 카페 조회",
+		description = "여행 기간 중 같은 가족 구성원이 현재 위치 기준 직선거리 5km 이내 카페를 가까운 순으로 최대 10개 조회합니다.",
+	)
+	@ApiResponses(
+		value = [
+			SwaggerApiResponse(responseCode = "200", description = "처리 완료: 조회 성공(status=200) 또는 요청·인증·정책 오류(status=400/401/403/404)"),
+			SwaggerApiResponse(responseCode = "500", description = "Tmap API 또는 서버 오류(status=500)"),
+		],
+	)
+	@GetMapping("/{tripId}/nearby-cafes")
+	fun getNearbyCafes(
+		@CurrentUser currentUser: AuthenticatedUser,
+		@Parameter(description = "여행 ID", example = "1")
+		@PathVariable tripId: Long,
+		@Parameter(description = "현재 위치 WGS84 위도", example = "35.1587")
+		@RequestParam latitude: Double,
+		@Parameter(description = "현재 위치 WGS84 경도", example = "129.1604")
+		@RequestParam longitude: Double,
+	): ApiResponse<List<NearbyCafeResponse>> =
+		ApiResponse.success(
+			message = "주변 카페 조회 성공",
+			data = supportFacilityService.getNearbyCafes(currentUser, tripId, latitude, longitude),
+		)
+
 	@Operation(
 		summary = "현재 위치 주변 공중화장실 조회",
 		description = "여행 기간 중 같은 가족 구성원이 현재 위치 기준 직선거리 5km 이내 공중화장실을 가까운 순으로 최대 10개 조회합니다.",

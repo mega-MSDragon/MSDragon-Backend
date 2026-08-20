@@ -437,6 +437,7 @@ class TripControllerTest {
 			.andExpect(jsonPath("$.data.currentDayNumber").value(1))
 			.andExpect(jsonPath("$.data.currentTripDayId").isNumber)
 			.andExpect(jsonPath("$.data.isLastDay").value(false))
+			.andExpect(jsonPath("$.data.participants.length()").value(2))
 			.andExpect(jsonPath("$.data.pledgeCompleted").value(false))
 			.andExpect(jsonPath("$.data.days.length()").value(2))
 
@@ -493,6 +494,35 @@ class TripControllerTest {
 			.andExpect(jsonPath("$.data[9].name").value("화장실 10"))
 			.andExpect(jsonPath("$.data[?(@.name == '화장실 11')]").isEmpty)
 			.andExpect(jsonPath("$.data[?(@.name == '범위 밖 화장실')]").isEmpty)
+	}
+
+	@Test
+	fun `여행 중에는 현재 위치 주변 카페를 Tmap에서 조회한다`() {
+		val child = saveUser(UserRole.CHILD, "child-cafe", "혜린")
+		val mother = saveUser(UserRole.PARENT, "parent-cafe", "엄마", GenderType.FEMALE)
+		connectFamily(child, mother)
+		saveCompletedParentProfile(mother)
+		val tripId = createTrip(child, mother, futureDate(0), futureDate(0))
+		fakeTmapPoiClient.cafes += TmapPoi(
+			id = "cafe-1",
+			name = "해운대 바다 카페",
+			address = "부산 해운대구 해운대해변로 264",
+			latitude = "37.5758692".toBigDecimal(),
+			longitude = "126.9694817".toBigDecimal(),
+			phone = "051-123-4567",
+		)
+
+		mockMvc.perform(
+			get("/api/v1/trips/$tripId/nearby-cafes")
+				.header("Authorization", "Bearer ${tokenService.createAccessToken(mother)}")
+				.param("latitude", "37.5758692")
+				.param("longitude", "126.9684817"),
+		)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.data.length()").value(1))
+			.andExpect(jsonPath("$.data[0].id").value("cafe-1"))
+			.andExpect(jsonPath("$.data[0].name").value("해운대 바다 카페"))
+			.andExpect(jsonPath("$.data[0].distanceMeters").value(88))
 	}
 
 	@Test
@@ -2018,6 +2048,7 @@ class TripControllerTest {
 
 	class FakeTmapPoiClient : TmapPoiClient {
 		val poisByType: MutableMap<SupportFacilityType, List<TmapPoi>> = mutableMapOf()
+		val cafes: MutableList<TmapPoi> = mutableListOf()
 		val requests: MutableList<FakeTmapPoiRequest> = mutableListOf()
 		var exception: RuntimeException? = null
 
@@ -2033,8 +2064,19 @@ class TripControllerTest {
 			return poisByType[facilityType].orEmpty()
 		}
 
+		override fun findNearbyCafes(
+			latitude: BigDecimal,
+			longitude: BigDecimal,
+			radiusKilometers: Int,
+			limit: Int,
+		): List<TmapPoi> {
+			exception?.let { throw it }
+			return cafes.toList()
+		}
+
 		fun reset() {
 			poisByType.clear()
+			cafes.clear()
 			requests.clear()
 			exception = null
 		}

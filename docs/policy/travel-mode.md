@@ -33,6 +33,7 @@
 
 - 클라이언트가 처음 표시할 현재 일차를 알 수 있도록 `currentDayNumber`, `currentTripDayId`를 반환합니다.
 - 마지막 날 전용 UI 판단을 위해 `isLastDay`를 반환합니다.
+- 헤더의 함께 가는 사람 표시에 사용할 `participants`를 반환합니다.
 - 여행 10계명이 자녀와 참여 부모 최소 1명의 서명으로 완료되었는지 `pledgeCompleted`로 반환합니다.
 - 날짜 탭 전환과 지도·일정 표시에 사용할 수 있도록 전체 일자별 경로와 방문지 `days`를 함께 반환합니다.
 - 클라이언트는 `currentDayNumber`에 해당하는 일자를 처음 선택하고, 이후 사용자가 다른 날짜 탭을 선택하면 같은 응답의 `days`를 사용합니다.
@@ -40,10 +41,11 @@
 
 ## 주변 편의시설
 
+- 카페는 `GET /api/v1/trips/{tripId}/nearby-cafes`에서 조회합니다.
 - 공중화장실은 여행 모드 기본 응답과 분리된 `GET /api/v1/trips/{tripId}/nearby-restrooms`에서 조회합니다.
 - 병원은 `GET /api/v1/trips/{tripId}/nearby-hospitals`, 약국은 `GET /api/v1/trips/{tripId}/nearby-pharmacies`에서 조회합니다.
 - 같은 가족 구성원이 여행 기간 중 현재 위치를 전달해 사용할 수 있습니다.
-- 공중화장실은 DB 적재 데이터, 병원·약국은 Tmap POI 실시간 검색 결과를 사용합니다.
+- 공중화장실은 DB 적재 데이터, 카페·병원·약국은 Tmap POI 실시간 검색 결과를 사용합니다.
 - 상세 조회 기준은 `docs/policy/nearby-support-facilities.md`를 따릅니다.
 
 ## AI 챗봇

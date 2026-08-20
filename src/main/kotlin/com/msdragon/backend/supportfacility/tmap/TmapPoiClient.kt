@@ -21,6 +21,13 @@ interface TmapPoiClient {
 		radiusKilometers: Int,
 		limit: Int,
 	): List<TmapPoi>
+
+	fun findNearbyCafes(
+		latitude: BigDecimal,
+		longitude: BigDecimal,
+		radiusKilometers: Int,
+		limit: Int,
+	): List<TmapPoi>
 }
 
 data class TmapPoi(
@@ -47,11 +54,38 @@ class HttpTmapPoiClient(
 		longitude: BigDecimal,
 		radiusKilometers: Int,
 		limit: Int,
+	): List<TmapPoi> = findNearby(
+		category = category(facilityType),
+		latitude = latitude,
+		longitude = longitude,
+		radiusKilometers = radiusKilometers,
+		limit = limit,
+	)
+
+	override fun findNearbyCafes(
+		latitude: BigDecimal,
+		longitude: BigDecimal,
+		radiusKilometers: Int,
+		limit: Int,
+	): List<TmapPoi> = findNearby(
+		category = "카페",
+		latitude = latitude,
+		longitude = longitude,
+		radiusKilometers = radiusKilometers,
+		limit = limit,
+	)
+
+	private fun findNearby(
+		category: String,
+		latitude: BigDecimal,
+		longitude: BigDecimal,
+		radiusKilometers: Int,
+		limit: Int,
 	): List<TmapPoi> {
 		val appKey = tmapProperties.appKey.trimToNull()
 			?: throw InternalServerException("Tmap 앱키 설정이 완료되지 않았습니다.")
 		val request = HttpRequest.newBuilder(
-			URI.create(url(facilityType, latitude, longitude, radiusKilometers, limit, appKey)),
+			URI.create(url(category, latitude, longitude, radiusKilometers, limit, appKey)),
 		)
 			.timeout(tmapProperties.requestTimeout)
 			.header("Accept", "application/json")
@@ -61,26 +95,26 @@ class HttpTmapPoiClient(
 			httpClient.send(request, HttpResponse.BodyHandlers.ofString())
 		} catch (exception: InterruptedException) {
 			Thread.currentThread().interrupt()
-			throw InternalServerException("Tmap 주변 의료시설 조회가 중단되었습니다.")
+			throw InternalServerException("Tmap 주변 장소 조회가 중단되었습니다.")
 		} catch (_: Exception) {
-			throw InternalServerException("Tmap 주변 의료시설 조회 중 오류가 발생했습니다.")
+			throw InternalServerException("Tmap 주변 장소 조회 중 오류가 발생했습니다.")
 		}
 		if (response.statusCode() !in 200..299) {
-			throw InternalServerException("Tmap 주변 의료시설 조회에 실패했습니다. status=${response.statusCode()}")
+			throw InternalServerException("Tmap 주변 장소 조회에 실패했습니다. status=${response.statusCode()}")
 		}
 
 		val body = try {
 			objectMapper.readValue(response.body(), TmapPoiAroundResponse::class.java)
 		} catch (_: Exception) {
-			throw InternalServerException("Tmap 주변 의료시설 응답을 해석할 수 없습니다.")
+			throw InternalServerException("Tmap 주변 장소 응답을 해석할 수 없습니다.")
 		}
 		val searchPoiInfo = body.searchPoiInfo
-			?: throw InternalServerException("Tmap 주변 의료시설 응답 형식이 올바르지 않습니다.")
+			?: throw InternalServerException("Tmap 주변 장소 응답 형식이 올바르지 않습니다.")
 		return searchPoiInfo.pois?.poi.orEmpty().mapNotNull(TmapPoiItem::toPoi)
 	}
 
 	private fun url(
-		facilityType: SupportFacilityType,
+		category: String,
 		latitude: BigDecimal,
 		longitude: BigDecimal,
 		radiusKilometers: Int,
@@ -89,7 +123,7 @@ class HttpTmapPoiClient(
 	): String =
 		"${tmapProperties.baseUri.trimEnd('/')}/pois/search/around" +
 			"?version=1&page=1&count=$limit" +
-			"&categories=${encode(category(facilityType))}" +
+			"&categories=${encode(category)}" +
 			"&centerLon=${longitude.toPlainString()}&centerLat=${latitude.toPlainString()}" +
 			"&radius=$radiusKilometers&reqCoordType=WGS84GEO&resCoordType=WGS84GEO" +
 			"&sort=distance&appKey=${encode(appKey)}"

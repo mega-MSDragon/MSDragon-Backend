@@ -78,6 +78,14 @@ class TmapPoiClientTest {
 			assertTrue(rawQuery.contains("count=10"))
 			assertTrue(rawQuery.contains("sort=distance"))
 			assertTrue(rawQuery.contains("appKey=test-key"))
+
+			client.findNearbyCafes(
+				latitude = "37.5758692".toBigDecimal(),
+				longitude = "126.9684817".toBigDecimal(),
+				radiusKilometers = 5,
+				limit = 10,
+			)
+			assertTrue(rawQuery.contains("categories=%EC%B9%B4%ED%8E%98"))
 		} finally {
 			server.stop(0)
 		}

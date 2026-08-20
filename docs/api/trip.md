@@ -40,6 +40,7 @@
 - 서울 날짜 기준 시작일이 되면 준비 여부와 관계없이 여행 상태를 `in_progress`, 종료일 다음 날부터 `completed`로 자동 동기화합니다.
 - 여행 모드는 시작일 00:00부터 종료일 23:59까지 같은 가족 구성원 모두가 이용할 수 있습니다. 여행 참여자로 선택되지 않은 가족 구성원도 포함합니다.
 - 여행 모드 주변 공중화장실은 DB 적재 데이터를 조회하고, 병원·약국은 Tmap POI 주변 카테고리 검색 결과를 실시간으로 조회합니다.
+- 여행 모드 주변 카페는 Tmap POI 주변 카테고리 검색 결과를 실시간으로 조회합니다.
 
 ---
 
@@ -53,6 +54,7 @@
 | `GET` | `/api/v1/trips/{tripId}` | 여행 상세 조회 |
 | `GET` | `/api/v1/trips/{tripId}/course` | 여행 코스 조회 |
 | `GET` | `/api/v1/trips/{tripId}/travel-mode` | 현재 일차와 전체 코스를 포함한 여행 모드 조회 |
+| `GET` | `/api/v1/trips/{tripId}/nearby-cafes` | 현재 위치 주변 카페 조회 |
 | `GET` | `/api/v1/trips/{tripId}/nearby-restrooms` | 현재 위치 주변 공중화장실 조회 |
 | `GET` | `/api/v1/trips/{tripId}/nearby-hospitals` | 현재 위치 주변 병원 조회 |
 | `GET` | `/api/v1/trips/{tripId}/nearby-pharmacies` | 현재 위치 주변 약국 조회 |
@@ -524,6 +526,22 @@
     "currentDayNumber": 1,
     "currentTripDayId": 1,
     "isLastDay": false,
+    "participants": [
+      {
+        "userId": 1,
+        "displayName": "혜린",
+        "role": "child",
+        "gender": "female",
+        "relationLabel": null
+      },
+      {
+        "userId": 2,
+        "displayName": "김지영",
+        "role": "parent",
+        "gender": "female",
+        "relationLabel": "엄마"
+      }
+    ],
     "pledgeCompleted": true,
     "days": [
       {
@@ -993,6 +1011,15 @@ TourAPI 서비스키가 서버에 설정되어 있지 않거나 TourAPI 호출�
 | `note` | string | false | 최대 255자. `null` 또는 공백이면 기존 메모 삭제 |
 
 응답 `data`는 수정된 `TripStopResponse`입니다. 여행을 만든 자녀만 `planning`, `ready`, `in_progress` 상태에서 호출할 수 있습니다.
+
+---
+
+## GET /api/v1/trips/{tripId}/nearby-cafes
+
+여행 기간 중 같은 가족 구성원이 현재 위치 기준 5km 이내 카페를 가까운 순으로 최대 10개 조회합니다.
+서버는 Tmap POI 주변 카테고리 검색의 `카페` 카테고리를 실시간으로 조회하며 결과를 DB에 저장하지 않습니다.
+
+Query Parameters와 접근 정책은 주변 공중화장실 조회 API와 같습니다. 응답에는 Tmap POI ID, 이름, 주소, 좌표, 현재 위치와의 직선거리(m), 전화번호가 포함됩니다.
 
 ---
 

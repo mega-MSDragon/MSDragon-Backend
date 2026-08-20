@@ -417,6 +417,9 @@ data class TripTravelModeResponse(
 	@field:Schema(description = "여행 마지막 날 여부", example = "false")
 	val isLastDay: Boolean,
 
+	@field:Schema(description = "헤더와 참여자 표시에 사용하는 여행 참여자")
+	val participants: List<TripParticipantResponse>,
+
 	@field:Schema(description = "자녀와 참여 부모 최소 1명의 여행 10계명 서명 완료 여부", example = "true")
 	val pledgeCompleted: Boolean,
 

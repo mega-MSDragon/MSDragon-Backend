@@ -2,6 +2,7 @@ package com.msdragon.backend.supportfacility.service
 
 import com.msdragon.backend.auth.support.AuthenticatedUser
 import com.msdragon.backend.common.exception.BadRequestException
+import com.msdragon.backend.supportfacility.dto.NearbyCafeResponse
 import com.msdragon.backend.supportfacility.dto.NearbyMedicalFacilityResponse
 import com.msdragon.backend.supportfacility.dto.NearbyRestroomResponse
 import com.msdragon.backend.supportfacility.entity.SupportFacility
@@ -97,6 +98,38 @@ class SupportFacilityService(
 				NearbyMedicalFacilityResponse(
 					id = result.poi.id,
 					type = facilityType,
+					name = result.poi.name,
+					address = result.poi.address,
+					latitude = result.poi.latitude,
+					longitude = result.poi.longitude,
+					distanceMeters = result.distanceMeters.roundToInt(),
+					phone = result.poi.phone,
+				)
+			}
+	}
+
+	fun getNearbyCafes(
+		currentUser: AuthenticatedUser,
+		tripId: Long,
+		latitude: Double,
+		longitude: Double,
+	): List<NearbyCafeResponse> {
+		validateCoordinate(latitude, longitude)
+		tripService.validateTravelModeAccess(currentUser, tripId)
+
+		return tmapPoiClient.findNearbyCafes(
+			latitude = BigDecimal.valueOf(latitude),
+			longitude = BigDecimal.valueOf(longitude),
+			radiusKilometers = SEARCH_RADIUS_KILOMETERS,
+			limit = RESULT_LIMIT,
+		)
+			.map { poi -> MedicalFacilityDistance(poi, distanceMeters(latitude, longitude, poi.latitude, poi.longitude)) }
+			.filter { it.distanceMeters <= SEARCH_RADIUS_METERS }
+			.sortedWith(compareBy<MedicalFacilityDistance> { it.distanceMeters }.thenBy { it.poi.id })
+			.take(RESULT_LIMIT)
+			.map { result ->
+				NearbyCafeResponse(
+					id = result.poi.id,
 					name = result.poi.name,
 					address = result.poi.address,
 					latitude = result.poi.latitude,

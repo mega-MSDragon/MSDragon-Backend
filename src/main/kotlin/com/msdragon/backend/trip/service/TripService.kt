@@ -148,6 +148,7 @@ class TripService(
 			currentDayNumber = currentDay.dayNumber,
 			currentTripDayId = currentDay.tripDayId,
 			isLastDay = today == trip.endDate,
+			participants = course.participants,
 			pledgeCompleted = tripPledgeService.isCompleted(tripId),
 			days = course.days,
 		)
