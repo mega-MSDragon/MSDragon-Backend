@@ -19,7 +19,7 @@ class OpenAiResponsesClientTest {
 	private lateinit var objectMapper: ObjectMapper
 
 	@Test
-	fun `Responses API 요청을 보내고 assistant output text를 추출한다`() {
+	fun `Responses API 요청을 보내고 답변과 추천 질문을 추출한다`() {
 		var authorization = ""
 		var requestBody = ""
 		val server = HttpServer.create(InetSocketAddress(0), 0)
@@ -33,7 +33,7 @@ class OpenAiResponsesClientTest {
 				  "output": [{
 				    "type": "message",
 				    "role": "assistant",
-				    "content": [{"type": "output_text", "text": "오늘 첫 장소는 첨성대입니다."}]
+				    "content": [{"type": "output_text", "text": "{\"answer\":\"오늘 첫 장소는 첨성대입니다.\",\"suggestedQuestions\":[\"첨성대는 어떤 곳이야?\",\"그다음 장소는 어디야?\"]}"}]
 				  }],
 				  "usage": {"input_tokens": 20, "output_tokens": 8}
 				}
@@ -63,12 +63,16 @@ class OpenAiResponsesClientTest {
 
 			assertEquals("resp_123", result.responseId)
 			assertEquals("오늘 첫 장소는 첨성대입니다.", result.content)
+			assertEquals(listOf("첨성대는 어떤 곳이야?", "그다음 장소는 어디야?"), result.suggestedQuestions)
 			assertEquals(20, result.usage?.get("input_tokens"))
 			assertEquals("Bearer test-openai-key", authorization)
 			assertTrue(requestBody.contains("\"model\":\"gpt-5.6-luna\""))
 			assertTrue(requestBody.contains("\"store\":false"))
 			assertTrue(requestBody.contains("\"effort\":\"none\""))
 			assertTrue(requestBody.contains("\"safety_identifier\":\"anonymous-user-hash\""))
+			assertTrue(requestBody.contains("\"type\":\"json_schema\""))
+			assertTrue(requestBody.contains("\"name\":\"travel_chat_response\""))
+			assertTrue(requestBody.contains("\"suggestedQuestions\""))
 			assertFalse(requestBody.contains("test-openai-key"))
 		} finally {
 			server.stop(0)
@@ -101,7 +105,7 @@ class OpenAiResponsesClientTest {
 				  "output": [{
 				    "type": "message",
 				    "role": "assistant",
-				    "content": [{"type": "output_text", "text": "첫 장소는 첨성대예용."}]
+				    "content": [{"type": "output_text", "text": "{\"answer\":\"첫 장소는 첨성대예용.\",\"suggestedQuestions\":[\"첨성대는 어떤 곳이야?\",\"근처 맛집도 알려줘\"]}"}]
 				  }]
 				}
 				""".trimIndent()
@@ -143,6 +147,7 @@ class OpenAiResponsesClientTest {
 
 			assertEquals("resp_final", result.responseId)
 			assertEquals("첫 장소는 첨성대예용.", result.content)
+			assertEquals(listOf("첨성대는 어떤 곳이야?", "근처 맛집도 알려줘"), result.suggestedQuestions)
 			assertEquals(2, requestBodies.size)
 			assertTrue(requestBodies.first().contains("\"name\":\"get_trip_schedule\""))
 			assertTrue(requestBodies.first().contains("\"type\":\"web_search\""))

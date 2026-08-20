@@ -126,6 +126,8 @@ class TravelChatControllerTest {
 			.andExpect(jsonPath("$.data.userMessage.content").value("오늘 첫 장소가 어디야?"))
 			.andExpect(jsonPath("$.data.assistantMessage.sender").value("assistant"))
 			.andExpect(jsonPath("$.data.assistantMessage.content").value("첫 장소는 첨성대입니다."))
+			.andExpect(jsonPath("$.data.suggestedQuestions[0]").value("첨성대는 어떤 곳이야?"))
+			.andExpect(jsonPath("$.data.suggestedQuestions[1]").value("그다음 방문지는 어디야?"))
 
 		mockMvc.perform(
 			get("/api/v1/trips/$tripId/chat/messages")
@@ -135,6 +137,8 @@ class TravelChatControllerTest {
 			.andExpect(jsonPath("$.data.messages.length()").value(2))
 			.andExpect(jsonPath("$.data.messages[0].sender").value("user"))
 			.andExpect(jsonPath("$.data.messages[1].sender").value("assistant"))
+			.andExpect(jsonPath("$.data.suggestedQuestions[0]").value("첨성대는 어떤 곳이야?"))
+			.andExpect(jsonPath("$.data.suggestedQuestions[1]").value("그다음 방문지는 어디야?"))
 
 		assertEquals(1, fakeOpenAiResponsesClient.requests.size)
 		val aiRequest = fakeOpenAiResponsesClient.requests.single()
@@ -147,6 +151,23 @@ class TravelChatControllerTest {
 			aiRequest.tools.map { it.name },
 		)
 		assertTrue(aiRequest.webSearchEnabled)
+	}
+
+	@Test
+	fun `첫 대화 전에는 기본 추천 질문을 반환한다`() {
+		val child = saveUser("child-initial-questions")
+		val tripId = createTravelModeTrip(child)
+
+		mockMvc.perform(
+			get("/api/v1/trips/$tripId/chat/messages")
+				.header("Authorization", "Bearer ${tokenService.createAccessToken(child)}"),
+		)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.data.sessionId").doesNotExist())
+			.andExpect(jsonPath("$.data.messages.length()").value(0))
+			.andExpect(jsonPath("$.data.suggestedQuestions[0]").value("오늘 일정 알려줘"))
+			.andExpect(jsonPath("$.data.suggestedQuestions[1]").value("첫 방문지는 어떤 곳이야?"))
+			.andExpect(jsonPath("$.data.suggestedQuestions[2]").value("가까운 화장실 어디야?"))
 	}
 
 	@Test
@@ -358,6 +379,7 @@ class TravelChatControllerTest {
 			return OpenAiChatResult(
 				responseId = "resp_test",
 				content = "첫 장소는 첨성대입니다.",
+				suggestedQuestions = listOf("첨성대는 어떤 곳이야?", "그다음 방문지는 어디야?"),
 				usage = mapOf("input_tokens" to 10, "output_tokens" to 5),
 			)
 		}

@@ -52,11 +52,12 @@ class TravelChatService(
 	@Transactional
 	fun getMessages(currentUser: AuthenticatedUser, tripId: Long): ChatConversationResponse {
 		tripService.validateTravelModeAccess(currentUser, tripId)
-		val session = findSession(currentUser.id, tripId) ?: return ChatConversationResponse.empty()
+		val session = findSession(currentUser.id, tripId) ?: return ChatConversationResponse.empty(INITIAL_SUGGESTED_QUESTIONS)
+		val messages = chatMessageRepository.findAllByChatSessionIdOrderByIdAsc(requireNotNull(session.id))
 		return ChatConversationResponse(
 			sessionId = requireNotNull(session.id),
-			messages = chatMessageRepository.findAllByChatSessionIdOrderByIdAsc(requireNotNull(session.id))
-				.map(ChatMessageResponse::from),
+			messages = messages.map(ChatMessageResponse::from),
+			suggestedQuestions = latestSuggestedQuestions(messages),
 		)
 	}
 
@@ -115,6 +116,7 @@ class TravelChatService(
 						"responseId" to aiResult.responseId,
 						"model" to openAiProperties.model,
 						"usage" to aiResult.usage,
+						"suggestedQuestions" to aiResult.suggestedQuestions,
 					),
 				),
 			),
@@ -124,7 +126,25 @@ class TravelChatService(
 			sessionId = requireNotNull(session.id),
 			userMessage = ChatMessageResponse.from(userMessage),
 			assistantMessage = ChatMessageResponse.from(assistantMessage),
+			suggestedQuestions = aiResult.suggestedQuestions,
 		)
+	}
+
+	private fun latestSuggestedQuestions(messages: List<ChatMessage>): List<String> {
+		val metadata = messages.lastOrNull { it.sender == ChatSender.ASSISTANT }?.metadata
+			?: return INITIAL_SUGGESTED_QUESTIONS
+		return try {
+			objectMapper.readTree(metadata)["suggestedQuestions"]
+				?.asSequence()
+				?.mapNotNull { it.asString().trim().takeIf(String::isNotEmpty) }
+				?.distinct()
+				?.take(3)
+				?.toList()
+				?.takeIf { it.size in 2..3 }
+				?: INITIAL_SUGGESTED_QUESTIONS
+		} catch (_: Exception) {
+			INITIAL_SUGGESTED_QUESTIONS
+		}
 	}
 
 	private fun findSession(userId: Long, tripId: Long): ChatSession? =
@@ -230,7 +250,12 @@ class TravelChatService(
 
 	companion object {
 		private val logger = LoggerFactory.getLogger(TravelChatService::class.java)
-		private const val SYSTEM_PROMPT_VERSION = "travel-chat-v3"
+		private const val SYSTEM_PROMPT_VERSION = "travel-chat-v4"
+		private val INITIAL_SUGGESTED_QUESTIONS = listOf(
+			"오늘 일정 알려줘",
+			"첫 방문지는 어떤 곳이야?",
+			"가까운 화장실 어디야?",
+		)
 		private val CHAT_TOOLS = listOf(
 			OpenAiFunctionTool(
 				name = "get_trip_schedule",

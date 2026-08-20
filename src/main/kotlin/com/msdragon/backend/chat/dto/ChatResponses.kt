@@ -37,9 +37,16 @@ data class ChatConversationResponse(
 
 	@field:Schema(description = "시간순 메시지 목록")
 	val messages: List<ChatMessageResponse>,
+
+	@field:Schema(
+		description = "현재 화면에 표시할 추천 질문 목록",
+		example = "[\"오늘 일정 알려줘\", \"첫 방문지는 어떤 곳이야?\", \"가까운 화장실 어디야?\"]",
+	)
+	val suggestedQuestions: List<String>,
 ) {
 	companion object {
-		fun empty(): ChatConversationResponse = ChatConversationResponse(sessionId = null, messages = emptyList())
+		fun empty(suggestedQuestions: List<String>): ChatConversationResponse =
+			ChatConversationResponse(sessionId = null, messages = emptyList(), suggestedQuestions = suggestedQuestions)
 	}
 }
 
@@ -53,4 +60,10 @@ data class ChatMessageExchangeResponse(
 
 	@field:Schema(description = "AI 답변")
 	val assistantMessage: ChatMessageResponse,
+
+	@field:Schema(
+		description = "AI 답변 맥락에 맞춘 다음 추천 질문 2~3개",
+		example = "[\"첨성대 관람 시간은 얼마나 걸려?\", \"그다음 방문지는 어디야?\"]",
+	)
+	val suggestedQuestions: List<String>,
 )
