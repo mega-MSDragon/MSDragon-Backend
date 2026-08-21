@@ -24,7 +24,7 @@ import org.springframework.web.bind.annotation.RestController
 class HomeController(
 	private val homeService: HomeService,
 ) {
-	@Operation(summary = "홈 나의 여행 조회", description = "사용자 역할, 부모별 프로필 완성 여부와 진행·예정 여행을 조회합니다.")
+	@Operation(summary = "홈 나의 여행 조회", description = "사용자 역할, 부모별 프로필 완성 여부와 진행·완료·예정 여행을 조회합니다. 완료 여행에는 제출된 부모별 별점이 포함됩니다.")
 	@ApiResponses(
 		value = [
 			SwaggerApiResponse(responseCode = "200", description = "처리 완료: 조회 성공(status=200) 또는 인증 오류(status=401)"),

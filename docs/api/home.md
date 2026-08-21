@@ -53,7 +53,15 @@
         "status": "in_progress",
         "dDay": null,
         "primaryTheme": "history_culture",
-        "intensity": "low"
+		"intensity": "low",
+		"ratings": [
+		  {
+			"parentUserId": 2,
+			"displayName": "김영희",
+			"relationLabel": "엄마",
+			"overallRating": 4.5
+		  }
+		]
       }
     ]
   }
@@ -66,10 +74,11 @@
 | `userRole` | enum | false | `child`, `parent` |
 | `parentProfiles` | array | false | 자녀는 연결된 부모 전체, 부모는 본인 한 건 |
 | `parentProfiles[].profileCompleted` | boolean | false | 해당 부모의 상세 프로필 완성 여부 |
-| `trips` | array | false | `in_progress`, `planning`, `ready` 여행만 포함 |
+| `trips` | array | false | `in_progress`, `completed`, `planning`, `ready` 여행 포함 |
 | `trips[].dDay` | number | true | 시작일까지 남은 일수. 진행 중이면 `null` |
 | `trips[].primaryTheme` | enum | true | 여행 생성 당시 부모 프로필 스냅샷에서 계산한 대표 테마 |
 | `trips[].intensity` | enum | true | `low`, `normal`, `high`. 스냅샷이 없으면 `null` |
+| `trips[].ratings` | array | false | 제출된 부모별 이름, 관계명, 별점. 아직 제출된 피드백이 없으면 빈 배열 |
 
 클라이언트는 `userRole=child`일 때만 새 여행 생성 기능을 노출합니다. `parentProfiles[].profileCompleted=false`인 부모가 있으면 해당 부모의 프로필 작성 또는 요청 UI를 표시합니다.
 

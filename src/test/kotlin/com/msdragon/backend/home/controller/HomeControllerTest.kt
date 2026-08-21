@@ -11,6 +11,9 @@ import com.msdragon.backend.family.entity.Family
 import com.msdragon.backend.family.entity.FamilyMember
 import com.msdragon.backend.family.repository.FamilyMemberRepository
 import com.msdragon.backend.family.repository.FamilyRepository
+import com.msdragon.backend.feedback.entity.FeedbackBodyCondition
+import com.msdragon.backend.feedback.entity.TripFeedback
+import com.msdragon.backend.feedback.repository.TripFeedbackRepository
 import com.msdragon.backend.home.tourapi.HomeTourApiClient
 import com.msdragon.backend.home.tourapi.HomeTourApiFestival
 import com.msdragon.backend.parentprofile.entity.FoodPreference
@@ -73,6 +76,9 @@ class HomeControllerTest {
 	@Autowired
 	private lateinit var tripRepository: TripRepository
 
+	@Autowired
+	private lateinit var tripFeedbackRepository: TripFeedbackRepository
+
 	@Test
 	fun `자녀 홈은 섹션별로 여행과 추천 콘텐츠를 반환한다`() {
 		val today = LocalDate.now(SERVICE_ZONE_ID)
@@ -82,13 +88,25 @@ class HomeControllerTest {
 		val family = connectFamily(child, mother, father)
 		val motherProfile = saveCompletedProfile(mother, WalkingPace.SLOW, TravelThemeCode.HISTORY_CULTURE)
 
-		saveTrip(
+		val completedTrip = saveTrip(
 			family = family,
 			child = child,
 			title = "지난 여행",
 			startDate = today.minusDays(5),
 			endDate = today.minusDays(4),
 			snapshot = snapshot(mother, motherProfile, WalkingPace.SLOW, TravelThemeCode.HISTORY_CULTURE, today),
+		)
+		tripFeedbackRepository.save(
+			TripFeedback(
+				trip = completedTrip,
+				parentUser = mother,
+				overallRating = "4.5".toBigDecimal(),
+				bodyCondition = FeedbackBodyCondition.COMFORTABLE,
+				bestTripStopId = 1,
+				bestPlaceNameSnapshot = "첨성대",
+				freeComment = null,
+				submittedAt = LocalDateTime.now(),
+			),
 		)
 		saveTrip(
 			family = family,
@@ -132,15 +150,23 @@ class HomeControllerTest {
 			.andExpect(jsonPath("$.data.parentProfiles[1].displayName").value("김철수"))
 			.andExpect(jsonPath("$.data.parentProfiles[1].relationLabel").value("아빠"))
 			.andExpect(jsonPath("$.data.parentProfiles[1].profileCompleted").value(false))
-			.andExpect(jsonPath("$.data.trips.length()").value(2))
+			.andExpect(jsonPath("$.data.trips.length()").value(3))
 			.andExpect(jsonPath("$.data.trips[0].title").value("경주 가족 여행"))
 			.andExpect(jsonPath("$.data.trips[0].status").value("in_progress"))
 			.andExpect(jsonPath("$.data.trips[0].primaryTheme").value("history_culture"))
 			.andExpect(jsonPath("$.data.trips[0].intensity").value("low"))
-			.andExpect(jsonPath("$.data.trips[1].title").value("우리 가족 힐링 여행"))
-			.andExpect(jsonPath("$.data.trips[1].dDay").value(48))
-			.andExpect(jsonPath("$.data.trips[1].primaryTheme").value("nature_scenery"))
-			.andExpect(jsonPath("$.data.trips[1].intensity").value("high"))
+			.andExpect(jsonPath("$.data.trips[0].ratings").isEmpty)
+			.andExpect(jsonPath("$.data.trips[1].title").value("지난 여행"))
+			.andExpect(jsonPath("$.data.trips[1].status").value("completed"))
+			.andExpect(jsonPath("$.data.trips[1].ratings.length()").value(1))
+			.andExpect(jsonPath("$.data.trips[1].ratings[0].parentUserId").value(mother.id))
+			.andExpect(jsonPath("$.data.trips[1].ratings[0].displayName").value("김영희"))
+			.andExpect(jsonPath("$.data.trips[1].ratings[0].relationLabel").value("엄마"))
+			.andExpect(jsonPath("$.data.trips[1].ratings[0].overallRating").value(4.5))
+			.andExpect(jsonPath("$.data.trips[2].title").value("우리 가족 힐링 여행"))
+			.andExpect(jsonPath("$.data.trips[2].dDay").value(48))
+			.andExpect(jsonPath("$.data.trips[2].primaryTheme").value("nature_scenery"))
+			.andExpect(jsonPath("$.data.trips[2].intensity").value("high"))
 
 		mockMvc.perform(
 			get("/api/v1/home/monthly-recommendations")

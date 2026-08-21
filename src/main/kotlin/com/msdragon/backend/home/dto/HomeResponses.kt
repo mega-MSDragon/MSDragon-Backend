@@ -7,6 +7,7 @@ import com.msdragon.backend.trip.dto.TripDestinationResponse
 import com.msdragon.backend.trip.entity.TripDestinationCode
 import com.msdragon.backend.trip.entity.TripStatus
 import io.swagger.v3.oas.annotations.media.Schema
+import java.math.BigDecimal
 import java.time.LocalDate
 
 @Schema(description = "홈 나의 여행 응답")
@@ -20,7 +21,7 @@ data class HomeMyTripsResponse(
 	@field:Schema(description = "화면에서 확인할 부모별 프로필 완성 상태")
 	val parentProfiles: List<HomeParentProfileResponse>,
 
-	@field:Schema(description = "진행 중이거나 예정된 가족 여행 목록")
+	@field:Schema(description = "진행 중, 완료 또는 예정된 가족 여행 목록")
 	val trips: List<HomeTripSummaryResponse>,
 )
 
@@ -74,7 +75,7 @@ data class HomeTripSummaryResponse(
 	@field:Schema(
 		description = "홈에 노출되는 여행 상태",
 		example = "in_progress",
-		allowableValues = ["planning", "ready", "in_progress"],
+		allowableValues = ["planning", "ready", "in_progress", "completed"],
 	)
 	val status: TripStatus,
 
@@ -97,6 +98,24 @@ data class HomeTripSummaryResponse(
 		nullable = true,
 	)
 	val intensity: HomeTripIntensity?,
+
+	@field:Schema(description = "참여 부모가 제출한 별점 목록. 아직 제출하지 않았으면 빈 배열입니다.")
+	val ratings: List<HomeTripRatingResponse>,
+)
+
+@Schema(description = "홈 완료 여행의 부모 별점")
+data class HomeTripRatingResponse(
+	@field:Schema(description = "별점을 제출한 부모 사용자 ID", example = "2")
+	val parentUserId: Long,
+
+	@field:Schema(description = "부모 이름 또는 닉네임", example = "김영희")
+	val displayName: String,
+
+	@field:Schema(description = "성별 기반 관계 이름", example = "엄마", nullable = true)
+	val relationLabel: String?,
+
+	@field:Schema(description = "부모가 제출한 전체 만족도", example = "4.5", minimum = "0.0", maximum = "5.0")
+	val overallRating: BigDecimal,
 )
 
 @Schema(description = "홈 월별 추천 도시")

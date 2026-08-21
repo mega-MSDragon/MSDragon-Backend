@@ -7,11 +7,14 @@ import com.msdragon.backend.auth.repository.UserRepository
 import com.msdragon.backend.auth.support.AuthenticatedUser
 import com.msdragon.backend.common.exception.UnAuthorizedException
 import com.msdragon.backend.family.repository.FamilyMemberRepository
+import com.msdragon.backend.feedback.entity.TripFeedback
+import com.msdragon.backend.feedback.repository.TripFeedbackRepository
 import com.msdragon.backend.home.dto.HomeFestivalsResponse
 import com.msdragon.backend.home.dto.HomeMonthlyRecommendationsResponse
 import com.msdragon.backend.home.dto.HomeMyTripsResponse
 import com.msdragon.backend.home.dto.HomeParentProfileResponse
 import com.msdragon.backend.home.dto.HomeTripIntensity
+import com.msdragon.backend.home.dto.HomeTripRatingResponse
 import com.msdragon.backend.home.dto.HomeTripSummaryResponse
 import com.msdragon.backend.parentprofile.entity.ParentProfileStatus
 import com.msdragon.backend.parentprofile.entity.TravelThemeCode
@@ -19,6 +22,7 @@ import com.msdragon.backend.parentprofile.entity.WalkingPace
 import com.msdragon.backend.parentprofile.repository.ParentProfileRepository
 import com.msdragon.backend.trip.dto.TripDestinationResponse
 import com.msdragon.backend.trip.dto.TripRecommendationSnapshotResponse
+import com.msdragon.backend.trip.dto.relationLabelOf
 import com.msdragon.backend.trip.entity.Trip
 import com.msdragon.backend.trip.entity.TripStatus
 import com.msdragon.backend.trip.repository.TripRepository
@@ -57,6 +61,7 @@ class HomeDataService(
 	private val familyMemberRepository: FamilyMemberRepository,
 	private val parentProfileRepository: ParentProfileRepository,
 	private val tripRepository: TripRepository,
+	private val tripFeedbackRepository: TripFeedbackRepository,
 	private val objectMapper: ObjectMapper,
 ) {
 	private val logger = LoggerFactory.getLogger(javaClass)
@@ -76,8 +81,8 @@ class HomeDataService(
 		)
 	}
 
-	private fun getHomeTrips(familyId: Long, today: LocalDate): List<HomeTripSummaryResponse> =
-		tripRepository.findAllByFamilyIdAndDeletedAtIsNullOrderByStartDateAscIdAsc(familyId)
+	private fun getHomeTrips(familyId: Long, today: LocalDate): List<HomeTripSummaryResponse> {
+		val trips = tripRepository.findAllByFamilyIdAndDeletedAtIsNullOrderByStartDateAscIdAsc(familyId)
 			.onEach { it.synchronizeStatus(today) }
 			.filter { it.status in HOME_TRIP_STATUSES }
 			.sortedWith(
@@ -85,9 +90,17 @@ class HomeDataService(
 					.thenBy { it.startDate }
 					.thenBy { it.id },
 			)
-			.map { trip -> toHomeTrip(trip, today) }
+		val feedbacksByTripId = tripFeedbackRepository.findAllByTripIdIn(trips.map { requireNotNull(it.id) })
+			.sortedBy { it.parentUser.id }
+			.groupBy { requireNotNull(it.trip.id) }
+		return trips.map { trip -> toHomeTrip(trip, today, feedbacksByTripId[trip.id].orEmpty()) }
+	}
 
-	private fun toHomeTrip(trip: Trip, today: LocalDate): HomeTripSummaryResponse {
+	private fun toHomeTrip(
+		trip: Trip,
+		today: LocalDate,
+		feedbacks: List<TripFeedback>,
+	): HomeTripSummaryResponse {
 		val snapshot = readRecommendationSnapshot(trip)
 		return HomeTripSummaryResponse(
 			id = requireNotNull(trip.id),
@@ -100,6 +113,14 @@ class HomeDataService(
 				?.let { ChronoUnit.DAYS.between(today, it).toInt() },
 			primaryTheme = snapshot?.let(::primaryThemeOf),
 			intensity = snapshot?.let(::intensityOf),
+			ratings = feedbacks.map { feedback ->
+				HomeTripRatingResponse(
+					parentUserId = requireNotNull(feedback.parentUser.id),
+					displayName = feedback.parentUser.displayName,
+					relationLabel = relationLabelOf(feedback.parentUser),
+					overallRating = feedback.overallRating,
+				)
+			},
 		)
 	}
 
@@ -163,6 +184,11 @@ class HomeDataService(
 			?: throw UnAuthorizedException("로그인할 수 없는 사용자입니다.")
 
 	companion object {
-		private val HOME_TRIP_STATUSES = setOf(TripStatus.PLANNING, TripStatus.READY, TripStatus.IN_PROGRESS)
+		private val HOME_TRIP_STATUSES = setOf(
+			TripStatus.PLANNING,
+			TripStatus.READY,
+			TripStatus.IN_PROGRESS,
+			TripStatus.COMPLETED,
+		)
 	}
 }

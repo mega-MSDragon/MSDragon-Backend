@@ -8,5 +8,7 @@ interface TripFeedbackRepository : JpaRepository<TripFeedback, Long> {
 
 	fun findAllByTripIdOrderByParentUserIdAsc(tripId: Long): List<TripFeedback>
 
+	fun findAllByTripIdIn(tripIds: Collection<Long>): List<TripFeedback>
+
 	fun countByTripId(tripId: Long): Long
 }
