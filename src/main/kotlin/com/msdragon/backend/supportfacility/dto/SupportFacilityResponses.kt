@@ -80,4 +80,11 @@ data class NearbyCafeResponse(
 
 	@field:Schema(description = "전화번호", example = "051-123-4567", nullable = true)
 	val phone: String?,
+
+	@field:Schema(
+		description = "한국관광공사 데이터로 보강한 카페 썸네일 URL. 일치하는 이미지가 없으면 null입니다.",
+		example = "https://tong.visitkorea.or.kr/cms/resource/00/1234500_image2_1.jpg",
+		nullable = true,
+	)
+	val thumbnailImageUrl: String?,
 )

@@ -41,6 +41,7 @@ import com.msdragon.backend.trip.repository.TripStopRepository
 import com.msdragon.backend.trip.tourapi.TourApiAccessibility
 import com.msdragon.backend.trip.tourapi.TourApiClient
 import com.msdragon.backend.trip.tourapi.TourApiKeywordSearch
+import com.msdragon.backend.trip.tourapi.TourApiLocationSearch
 import com.msdragon.backend.trip.tourapi.TourApiPlaceDetail
 import com.msdragon.backend.trip.tourapi.TourApiPlaceImage
 import com.msdragon.backend.trip.tourapi.TourApiPlaceIntro
@@ -511,6 +512,21 @@ class TripControllerTest {
 			longitude = "126.9694817".toBigDecimal(),
 			phone = "051-123-4567",
 		)
+		fakeTourApiClient.nearbyPlaces += TourApiPlaceSummary(
+			contentId = "tour-cafe-1",
+			contentTypeId = "39",
+			title = "해운대 바다 카페",
+			address = "부산 해운대구 해운대해변로 264",
+			latitude = "37.5758692".toBigDecimal(),
+			longitude = "126.9694817".toBigDecimal(),
+			tel = "051-123-4567",
+			firstImage = "https://example.com/cafe.jpg",
+			firstImageThumbnail = "https://example.com/cafe-thumb.jpg",
+			lclsSystm1 = null,
+			lclsSystm2 = null,
+			lclsSystm3 = null,
+			raw = emptyMap(),
+		)
 
 		mockMvc.perform(
 			get("/api/v1/trips/$tripId/nearby-cafes")
@@ -523,6 +539,7 @@ class TripControllerTest {
 			.andExpect(jsonPath("$.data[0].id").value("cafe-1"))
 			.andExpect(jsonPath("$.data[0].name").value("해운대 바다 카페"))
 			.andExpect(jsonPath("$.data[0].distanceMeters").value(88))
+			.andExpect(jsonPath("$.data[0].thumbnailImageUrl").value("https://example.com/cafe-thumb.jpg"))
 	}
 
 	@Test
@@ -1971,6 +1988,7 @@ class TripControllerTest {
 
 	class FakeTourApiClient : TourApiClient {
 		val placesByContentType: MutableMap<String, List<TourApiPlaceSummary>> = mutableMapOf()
+		val nearbyPlaces: MutableList<TourApiPlaceSummary> = mutableListOf()
 		val detailsByContentId: MutableMap<String, TourApiPlaceDetail> = mutableMapOf()
 		val introsByContentId: MutableMap<String, TourApiPlaceIntro> = mutableMapOf()
 		val imagesByContentId: MutableMap<String, List<TourApiPlaceImage>> = mutableMapOf()
@@ -1979,6 +1997,9 @@ class TripControllerTest {
 
 		override fun findPlaces(search: TourApiPlaceSearch): List<TourApiPlaceSummary> =
 			placesByContentType[search.contentTypeId].orEmpty()
+
+		override fun findNearbyPlaces(search: TourApiLocationSearch): List<TourApiPlaceSummary> =
+			nearbyPlaces.toList()
 
 		override fun searchPlaces(search: TourApiKeywordSearch): List<TourApiPlaceSummary> =
 			keywordPlaces
@@ -2001,6 +2022,7 @@ class TripControllerTest {
 
 		fun reset() {
 			placesByContentType.clear()
+			nearbyPlaces.clear()
 			detailsByContentId.clear()
 			introsByContentId.clear()
 			imagesByContentId.clear()

@@ -29,6 +29,7 @@ import com.msdragon.backend.trip.repository.TripStopRepository
 import com.msdragon.backend.trip.tourapi.TourApiAccessibility
 import com.msdragon.backend.trip.tourapi.TourApiClient
 import com.msdragon.backend.trip.tourapi.TourApiKeywordSearch
+import com.msdragon.backend.trip.tourapi.TourApiLocationSearch
 import com.msdragon.backend.trip.tourapi.TourApiPlaceDetail
 import com.msdragon.backend.trip.tourapi.TourApiPlaceImage
 import com.msdragon.backend.trip.tourapi.TourApiPlaceIntro
@@ -401,6 +402,8 @@ class TravelChatControllerTest {
 
 	class FailingTourApiClient : TourApiClient {
 		override fun findPlaces(search: TourApiPlaceSearch): List<TourApiPlaceSummary> = emptyList()
+
+		override fun findNearbyPlaces(search: TourApiLocationSearch): List<TourApiPlaceSummary> = emptyList()
 
 		override fun searchPlaces(search: TourApiKeywordSearch): List<TourApiPlaceSummary> = emptyList()
 

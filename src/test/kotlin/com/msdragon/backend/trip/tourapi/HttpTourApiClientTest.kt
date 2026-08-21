@@ -13,6 +13,55 @@ import kotlin.test.assertTrue
 
 class HttpTourApiClientTest {
 	@Test
+	fun `위치 기반 음식점 조회는 일반 관광 API에서 썸네일을 읽는다`() {
+		val query = AtomicReference<String>()
+		val server = HttpServer.create(InetSocketAddress(0), 0)
+		server.createContext("/KorService2/locationBasedList2") { exchange ->
+			query.set(exchange.requestURI.rawQuery)
+			val body =
+				"""
+				{"response":{"header":{"resultCode":"0000","resultMsg":"OK"},"body":{"items":{"item":[{
+				  "contentid":"cafe-1","contenttypeid":"39","title":"해운대 바다 카페",
+				  "mapy":"35.159132","mapx":"129.161181",
+				  "firstimage":"https://example.com/cafe.jpg",
+				  "firstimage2":"https://example.com/cafe-thumb.jpg"
+				}]}}}}
+				""".trimIndent().toByteArray()
+			exchange.responseHeaders.add("Content-Type", "application/json")
+			exchange.sendResponseHeaders(200, body.size.toLong())
+			exchange.responseBody.use { it.write(body) }
+		}
+		server.start()
+
+		try {
+			val client = HttpTourApiClient(
+				TourApiProperties(
+					baseUri = "http://localhost:${server.address.port}/WithTourService2",
+					generalBaseUri = "http://localhost:${server.address.port}/KorService2",
+					serviceKey = "test-key",
+				),
+			)
+
+			val result = client.findNearbyPlaces(
+				TourApiLocationSearch(
+					latitude = "35.1587".toBigDecimal(),
+					longitude = "129.1604".toBigDecimal(),
+					radiusMeters = 5000,
+					contentTypeId = "39",
+				),
+			)
+
+			assertEquals("https://example.com/cafe-thumb.jpg", result.single().firstImageThumbnail)
+			assertTrue(query.get().contains("contentTypeId=39"))
+			assertTrue(query.get().contains("mapX=129.1604"))
+			assertTrue(query.get().contains("mapY=35.1587"))
+			assertTrue(query.get().contains("radius=5000"))
+		} finally {
+			server.stop(0)
+		}
+	}
+
+	@Test
 	fun `최상위 TourAPI 오류 응답의 작업명과 오류 코드를 전달한다`() {
 		val server = HttpServer.create(InetSocketAddress(0), 0)
 		server.createContext("/detailCommon2") { exchange ->

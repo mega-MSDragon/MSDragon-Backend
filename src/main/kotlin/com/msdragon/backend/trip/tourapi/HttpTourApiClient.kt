@@ -35,6 +35,24 @@ class HttpTourApiClient(
 		return items.mapNotNull { item -> item.toPlaceSummary(defaultContentTypeId = search.contentTypeId) }
 	}
 
+	override fun findNearbyPlaces(search: TourApiLocationSearch): List<TourApiPlaceSummary> {
+		val items = requestItems(
+			operation = "locationBasedList2",
+			params = mapOf(
+				"numOfRows" to search.numOfRows.toString(),
+				"pageNo" to search.pageNo.toString(),
+				"arrange" to "E",
+				"contentTypeId" to search.contentTypeId,
+				"mapX" to search.longitude.toPlainString(),
+				"mapY" to search.latitude.toPlainString(),
+				"radius" to search.radiusMeters.toString(),
+			),
+			baseUri = tourApiProperties.generalBaseUri,
+		)
+
+		return items.mapNotNull { item -> item.toPlaceSummary(defaultContentTypeId = search.contentTypeId) }
+	}
+
 	override fun searchPlaces(search: TourApiKeywordSearch): List<TourApiPlaceSummary> {
 		val items = requestItems(
 			operation = "searchKeyword2",
@@ -139,8 +157,12 @@ class HttpTourApiClient(
 		)
 	}
 
-	private fun requestItems(operation: String, params: Map<String, String>): List<Map<String, Any?>> {
-		val request = HttpRequest.newBuilder(URI.create(url(operation, params)))
+	private fun requestItems(
+		operation: String,
+		params: Map<String, String>,
+		baseUri: String = tourApiProperties.baseUri,
+	): List<Map<String, Any?>> {
+		val request = HttpRequest.newBuilder(URI.create(url(baseUri, operation, params)))
 			.timeout(tourApiProperties.requestTimeout)
 			.GET()
 			.build()
@@ -186,7 +208,7 @@ class HttpTourApiClient(
 			"TourAPI 응답이 실패했습니다: operation=$operation, resultCode=$resultCode, resultMsg=${resultMessage ?: "unknown"}",
 		)
 
-	private fun url(operation: String, params: Map<String, String>): String {
+	private fun url(baseUri: String, operation: String, params: Map<String, String>): String {
 		val serviceKey = tourApiProperties.serviceKey.trimToNull()
 			?: throw InternalServerException("TourAPI 서비스키 설정이 완료되지 않았습니다.")
 		val baseParams = mapOf(
@@ -198,7 +220,7 @@ class HttpTourApiClient(
 		val query = (baseParams + params)
 			.entries
 			.joinToString("&") { (key, value) -> "${key.encode()}=${value.encode()}" }
-		return "${tourApiProperties.baseUri.trimEnd('/')}/$operation?$query"
+		return "${baseUri.trimEnd('/')}/$operation?$query"
 	}
 
 	private fun parseJson(body: String): Map<String, Any?> =

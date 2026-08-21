@@ -2,6 +2,7 @@ package com.msdragon.backend.supportfacility.service
 
 import com.msdragon.backend.auth.support.AuthenticatedUser
 import com.msdragon.backend.common.exception.BadRequestException
+import com.msdragon.backend.common.exception.InternalServerException
 import com.msdragon.backend.supportfacility.dto.NearbyCafeResponse
 import com.msdragon.backend.supportfacility.dto.NearbyMedicalFacilityResponse
 import com.msdragon.backend.supportfacility.dto.NearbyRestroomResponse
@@ -11,6 +12,10 @@ import com.msdragon.backend.supportfacility.repository.SupportFacilityRepository
 import com.msdragon.backend.supportfacility.tmap.TmapPoi
 import com.msdragon.backend.supportfacility.tmap.TmapPoiClient
 import com.msdragon.backend.trip.service.TripService
+import com.msdragon.backend.trip.tourapi.TourApiClient
+import com.msdragon.backend.trip.tourapi.TourApiLocationSearch
+import com.msdragon.backend.trip.tourapi.TourApiPlaceSummary
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.math.BigDecimal
 import kotlin.math.abs
@@ -24,6 +29,7 @@ import kotlin.math.sqrt
 class SupportFacilityService(
 	private val supportFacilityRepository: SupportFacilityRepository,
 	private val tmapPoiClient: TmapPoiClient,
+	private val tourApiClient: TourApiClient,
 	private val tripService: TripService,
 ) {
 	fun getNearbyRestrooms(
@@ -117,7 +123,7 @@ class SupportFacilityService(
 		validateCoordinate(latitude, longitude)
 		tripService.validateTravelModeAccess(currentUser, tripId)
 
-		return tmapPoiClient.findNearbyCafes(
+		val cafes = tmapPoiClient.findNearbyCafes(
 			latitude = BigDecimal.valueOf(latitude),
 			longitude = BigDecimal.valueOf(longitude),
 			radiusKilometers = SEARCH_RADIUS_KILOMETERS,
@@ -127,6 +133,9 @@ class SupportFacilityService(
 			.filter { it.distanceMeters <= SEARCH_RADIUS_METERS }
 			.sortedWith(compareBy<MedicalFacilityDistance> { it.distanceMeters }.thenBy { it.poi.id })
 			.take(RESULT_LIMIT)
+		val imageCandidates = findNearbyCafeImages(latitude, longitude)
+
+		return cafes
 			.map { result ->
 				NearbyCafeResponse(
 					id = result.poi.id,
@@ -136,9 +145,52 @@ class SupportFacilityService(
 					longitude = result.poi.longitude,
 					distanceMeters = result.distanceMeters.roundToInt(),
 					phone = result.poi.phone,
+					thumbnailImageUrl = matchingThumbnail(result.poi, imageCandidates),
 				)
 			}
 	}
+
+	private fun findNearbyCafeImages(latitude: Double, longitude: Double): List<TourApiPlaceSummary> =
+		try {
+			tourApiClient.findNearbyPlaces(
+				TourApiLocationSearch(
+					latitude = BigDecimal.valueOf(latitude),
+					longitude = BigDecimal.valueOf(longitude),
+					radiusMeters = SEARCH_RADIUS_METERS.toInt(),
+					contentTypeId = TOUR_API_FOOD_CONTENT_TYPE_ID,
+				),
+			).filter { !it.firstImageThumbnail.isNullOrBlank() || !it.firstImage.isNullOrBlank() }
+		} catch (exception: InternalServerException) {
+			logger.warn("TourAPI 카페 썸네일 보강에 실패했습니다. reason={}", exception.message)
+			emptyList()
+		}
+
+	private fun matchingThumbnail(poi: TmapPoi, candidates: List<TourApiPlaceSummary>): String? {
+		val normalizedPoiName = normalizeName(poi.name)
+		return candidates.asSequence()
+			.filter { candidate ->
+				val candidateName = normalizeName(candidate.title)
+				candidateName.contains(normalizedPoiName) || normalizedPoiName.contains(candidateName)
+			}
+			.mapNotNull { candidate ->
+				val candidateLatitude = candidate.latitude ?: return@mapNotNull null
+				val candidateLongitude = candidate.longitude ?: return@mapNotNull null
+				val distance = distanceMeters(
+					poi.latitude.toDouble(),
+					poi.longitude.toDouble(),
+					candidateLatitude,
+					candidateLongitude,
+				)
+				candidate to distance
+			}
+			.filter { (_, distance) -> distance <= CAFE_IMAGE_MATCH_RADIUS_METERS }
+			.minByOrNull { (_, distance) -> distance }
+			?.first
+			?.let { it.firstImageThumbnail ?: it.firstImage }
+	}
+
+	private fun normalizeName(value: String): String =
+		value.lowercase().filter(Char::isLetterOrDigit)
 
 	private fun validateCoordinate(latitude: Double, longitude: Double) {
 		if (!latitude.isFinite() || latitude !in -90.0..90.0) {
@@ -177,10 +229,13 @@ class SupportFacilityService(
 	)
 
 	companion object {
+		private val logger = LoggerFactory.getLogger(SupportFacilityService::class.java)
 		private const val RESULT_LIMIT = 10
 		private const val SEARCH_RADIUS_KILOMETERS = 5
 		private const val SEARCH_RADIUS_METERS = 5_000.0
 		private const val METERS_PER_LATITUDE_DEGREE = 111_320.0
 		private const val EARTH_RADIUS_METERS = 6_371_000.0
+		private const val CAFE_IMAGE_MATCH_RADIUS_METERS = 200.0
+		private const val TOUR_API_FOOD_CONTENT_TYPE_ID = "39"
 	}
 }

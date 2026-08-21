@@ -20,6 +20,15 @@ data class TourApiPlaceSearch(
 	val pageNo: Int = 1,
 )
 
+data class TourApiLocationSearch(
+	val latitude: BigDecimal,
+	val longitude: BigDecimal,
+	val radiusMeters: Int,
+	val contentTypeId: String,
+	val numOfRows: Int = 100,
+	val pageNo: Int = 1,
+)
+
 data class TourApiKeywordSearch(
 	val region: TourApiRegion,
 	val keyword: String,

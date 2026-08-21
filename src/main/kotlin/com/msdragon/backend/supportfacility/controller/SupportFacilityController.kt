@@ -30,7 +30,7 @@ class SupportFacilityController(
 ) {
 	@Operation(
 		summary = "현재 위치 주변 카페 조회",
-		description = "여행 기간 중 같은 가족 구성원이 현재 위치 기준 직선거리 5km 이내 카페를 가까운 순으로 최대 10개 조회합니다.",
+		description = "여행 기간 중 같은 가족 구성원이 현재 위치 기준 직선거리 5km 이내 카페를 가까운 순으로 최대 10개 조회합니다. 한국관광공사 데이터에서 같은 카페를 확인할 수 있으면 썸네일 URL을 함께 반환합니다.",
 	)
 	@ApiResponses(
 		value = [

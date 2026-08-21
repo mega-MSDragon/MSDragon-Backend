@@ -28,6 +28,9 @@
 - 카페는 `GET /api/v1/trips/{tripId}/nearby-cafes`로 조회합니다.
 - Tmap `명칭(POI) 주변 카테고리 검색` API에 `categories=카페`, `radius=5`, `count=10`, `sort=distance`로 요청합니다.
 - 병원·약국과 같은 응답 좌표·거리 계산 정책을 적용하고 DB에는 저장하지 않습니다.
+- 썸네일은 한국관광공사 일반 관광 API `GET https://apis.data.go.kr/B551011/KorService2/locationBasedList2`의 음식점(`contentTypeId=39`) 결과로 보강합니다.
+- 현재 위치 반경 5km 음식점을 한 번 조회한 뒤, 정규화한 장소명이 서로 포함되고 Tmap 카페 좌표와 200m 이내인 결과만 같은 장소로 판단합니다.
+- 일치 결과가 있으면 `firstimage2`, `firstimage` 순서로 `thumbnailImageUrl`을 반환합니다. 일치 이미지가 없거나 TourAPI 호출이 실패하면 `null`이며 Tmap 카페 목록은 정상 반환합니다.
 
 ## 공중화장실 조회
 
