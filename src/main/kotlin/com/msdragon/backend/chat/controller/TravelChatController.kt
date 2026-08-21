@@ -31,7 +31,7 @@ class TravelChatController(
 ) {
 	@Operation(
 		summary = "여행 AI 대화 이력 조회",
-		description = "여행 기간 중 같은 가족 구성원이 본인의 여행별 AI 대화 이력과 현재 표시할 추천 질문을 조회합니다. 아직 질문하지 않았으면 빈 대화와 최초 추천 질문을 반환합니다.",
+		description = "여행 기간 중 같은 가족 구성원이 본인의 여행별 AI 대화 이력과 현재 표시할 추천 질문을 조회합니다. 아직 질문하지 않았으면 저장되지 않은 AI 인사말 한 건과 최초 추천 질문을 반환합니다.",
 	)
 	@ApiResponses(
 		value = [

@@ -52,7 +52,8 @@ class TravelChatService(
 	@Transactional
 	fun getMessages(currentUser: AuthenticatedUser, tripId: Long): ChatConversationResponse {
 		tripService.validateTravelModeAccess(currentUser, tripId)
-		val session = findSession(currentUser.id, tripId) ?: return ChatConversationResponse.empty(INITIAL_SUGGESTED_QUESTIONS)
+		val session = findSession(currentUser.id, tripId)
+			?: return ChatConversationResponse.initial(INITIAL_GREETING, INITIAL_SUGGESTED_QUESTIONS)
 		val messages = chatMessageRepository.findAllByChatSessionIdOrderByIdAsc(requireNotNull(session.id))
 		return ChatConversationResponse(
 			sessionId = requireNotNull(session.id),
@@ -251,6 +252,7 @@ class TravelChatService(
 	companion object {
 		private val logger = LoggerFactory.getLogger(TravelChatService::class.java)
 		private const val SYSTEM_PROMPT_VERSION = "travel-chat-v4"
+		private const val INITIAL_GREETING = "안녕하세요. 여행 중 궁금한 내용을 편하게 물어봐용."
 		private val INITIAL_SUGGESTED_QUESTIONS = listOf(
 			"오늘 일정 알려줘",
 			"첫 방문지는 어떤 곳이야?",

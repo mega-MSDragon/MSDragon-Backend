@@ -154,7 +154,7 @@ class TravelChatControllerTest {
 	}
 
 	@Test
-	fun `첫 대화 전에는 기본 추천 질문을 반환한다`() {
+	fun `첫 대화 전에는 저장되지 않은 인사말과 기본 추천 질문을 반환한다`() {
 		val child = saveUser("child-initial-questions")
 		val tripId = createTravelModeTrip(child)
 
@@ -164,10 +164,17 @@ class TravelChatControllerTest {
 		)
 			.andExpect(status().isOk)
 			.andExpect(jsonPath("$.data.sessionId").doesNotExist())
-			.andExpect(jsonPath("$.data.messages.length()").value(0))
+			.andExpect(jsonPath("$.data.messages.length()").value(1))
+			.andExpect(jsonPath("$.data.messages[0].id").doesNotExist())
+			.andExpect(jsonPath("$.data.messages[0].sender").value("assistant"))
+			.andExpect(jsonPath("$.data.messages[0].content").value("안녕하세요. 여행 중 궁금한 내용을 편하게 물어봐용."))
+			.andExpect(jsonPath("$.data.messages[0].createdAt").doesNotExist())
 			.andExpect(jsonPath("$.data.suggestedQuestions[0]").value("오늘 일정 알려줘"))
 			.andExpect(jsonPath("$.data.suggestedQuestions[1]").value("첫 방문지는 어떤 곳이야?"))
 			.andExpect(jsonPath("$.data.suggestedQuestions[2]").value("가까운 화장실 어디야?"))
+
+		assertEquals(0, chatSessionRepository.count())
+		assertEquals(0, chatMessageRepository.count())
 	}
 
 	@Test

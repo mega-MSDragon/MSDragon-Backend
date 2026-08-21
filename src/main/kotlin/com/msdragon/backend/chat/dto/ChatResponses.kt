@@ -7,8 +7,8 @@ import java.time.LocalDateTime
 
 @Schema(description = "채팅 메시지")
 data class ChatMessageResponse(
-	@field:Schema(description = "메시지 ID", example = "1")
-	val id: Long,
+	@field:Schema(description = "메시지 ID. 저장되지 않은 최초 인사말은 null입니다.", example = "1", nullable = true)
+	val id: Long?,
 
 	@field:Schema(description = "발신자", example = "assistant", allowableValues = ["user", "assistant"])
 	val sender: ChatSender,
@@ -16,8 +16,8 @@ data class ChatMessageResponse(
 	@field:Schema(description = "메시지 내용", example = "오늘 첫 번째 방문지는 오도리 공원입니다.")
 	val content: String,
 
-	@field:Schema(description = "생성 시간", example = "2026-08-06T11:30:00")
-	val createdAt: LocalDateTime,
+	@field:Schema(description = "생성 시간. 저장되지 않은 최초 인사말은 null입니다.", example = "2026-08-06T11:30:00", nullable = true)
+	val createdAt: LocalDateTime?,
 ) {
 	companion object {
 		fun from(message: ChatMessage): ChatMessageResponse =
@@ -45,8 +45,22 @@ data class ChatConversationResponse(
 	val suggestedQuestions: List<String>,
 ) {
 	companion object {
-		fun empty(suggestedQuestions: List<String>): ChatConversationResponse =
-			ChatConversationResponse(sessionId = null, messages = emptyList(), suggestedQuestions = suggestedQuestions)
+		fun initial(
+			greeting: String,
+			suggestedQuestions: List<String>,
+		): ChatConversationResponse =
+			ChatConversationResponse(
+				sessionId = null,
+				messages = listOf(
+					ChatMessageResponse(
+						id = null,
+						sender = ChatSender.ASSISTANT,
+						content = greeting,
+						createdAt = null,
+					),
+				),
+				suggestedQuestions = suggestedQuestions,
+			)
 	}
 }
 
