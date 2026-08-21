@@ -128,6 +128,7 @@ class TripFeedbackService(
 				submittedAt = currentDateTime(),
 			),
 		)
+		trip.complete()
 		val reportReady = reportReady(tripId)
 		if (reportReady) {
 			filialReportService.generateIfReady(trip)

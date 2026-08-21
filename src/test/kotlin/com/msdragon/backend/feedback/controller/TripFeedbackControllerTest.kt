@@ -27,6 +27,7 @@ import com.msdragon.backend.trip.entity.TripDay
 import com.msdragon.backend.trip.entity.TripDestinationCode
 import com.msdragon.backend.trip.entity.TripParticipant
 import com.msdragon.backend.trip.entity.TripStop
+import com.msdragon.backend.trip.entity.TripStatus
 import com.msdragon.backend.trip.repository.TripDayRepository
 import com.msdragon.backend.trip.repository.TripParticipantRepository
 import com.msdragon.backend.trip.repository.TripRepository
@@ -182,6 +183,8 @@ class TripFeedbackControllerTest {
 			.andExpect(jsonPath("$.data.bestPlace.name").value("오도리 공원"))
 			.andExpect(jsonPath("$.data.freeComment").value("다음에도 함께 가고 싶어요."))
 			.andExpect(jsonPath("$.data.reportReady").value(false))
+
+		check(tripRepository.findById(tripId).orElseThrow().status == TripStatus.COMPLETED)
 
 		mockMvc.perform(
 			get("/api/v1/trips/$tripId/feedback/me")
@@ -445,6 +448,8 @@ class TripFeedbackControllerTest {
 		)
 			.andExpect(status().isOk)
 		check(filialReportRepository.count() == 1L)
+		fixture.trip.status = TripStatus.IN_PROGRESS
+		tripRepository.saveAndFlush(fixture.trip)
 
 		mockMvc.perform(
 			put("/api/v1/trips/$tripId")
@@ -488,6 +493,8 @@ class TripFeedbackControllerTest {
 				.content(feedbackBody(stopId = requireNotNull(fixture.stop.id))),
 		)
 			.andExpect(status().isOk)
+		fixture.trip.status = TripStatus.IN_PROGRESS
+		tripRepository.saveAndFlush(fixture.trip)
 
 		mockMvc.perform(
 			put("/api/v1/trips/$tripId")
