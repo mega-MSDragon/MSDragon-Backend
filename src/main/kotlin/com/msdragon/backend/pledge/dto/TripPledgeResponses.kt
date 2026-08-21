@@ -92,6 +92,7 @@ data class TripPledgeResponse(
 			tripId: Long,
 			templates: List<PledgeTemplate>,
 			signers: List<TripPledgeSignerResponse>,
+			canSign: Boolean,
 		): TripPledgeResponse =
 			TripPledgeResponse(
 				id = null,
@@ -101,7 +102,7 @@ data class TripPledgeResponse(
 				reviewedAt = null,
 				requestedAt = null,
 				completedAt = null,
-				canSign = true,
+				canSign = canSign,
 				signatures = emptyList(),
 				signers = signers,
 			)

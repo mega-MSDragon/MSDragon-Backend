@@ -24,6 +24,7 @@ import com.msdragon.backend.pledge.repository.TripPledgeRepository
 import com.msdragon.backend.trip.entity.Trip
 import com.msdragon.backend.trip.entity.TripDestinationCode
 import com.msdragon.backend.trip.entity.TripParticipant
+import com.msdragon.backend.trip.entity.TripStatus
 import com.msdragon.backend.trip.repository.TripDayRepository
 import com.msdragon.backend.trip.repository.TripParticipantRepository
 import com.msdragon.backend.trip.repository.TripRepository
@@ -200,6 +201,43 @@ class TripPledgeControllerTest {
 		check(tripPledgeRepository.findByTripId(tripId)?.status == TripPledgeStatus.SIGNATURE_REQUESTED)
 		check(pledgeItemRepository.count() == 10L)
 		check(pledgeSignatureRepository.count() == 1L)
+	}
+
+	@Test
+	fun `여행 중에도 자녀가 여행 10계명을 저장하고 서명할 수 있다`() {
+		val (child, _, trip) = createFamilyTrip()
+		trip.status = TripStatus.IN_PROGRESS
+		tripRepository.saveAndFlush(trip)
+
+		mockMvc.perform(
+			get("/api/v1/trips/${requireNotNull(trip.id)}/pledge")
+				.header("Authorization", "Bearer ${tokenService.createAccessToken(child)}"),
+		)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.data.canSign").value(true))
+
+		saveReviewedPledge(child, trip)
+		check(tripPledgeRepository.findByTripId(requireNotNull(trip.id))?.status == TripPledgeStatus.REVIEWED)
+
+		submitSignature(child, trip)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(200))
+			.andExpect(jsonPath("$.data.canSign").value(false))
+		check(tripPledgeRepository.findByTripId(requireNotNull(trip.id))?.status == TripPledgeStatus.SIGNATURE_REQUESTED)
+	}
+
+	@Test
+	fun `완료된 여행의 저장 전 10계명은 서명할 수 없는 상태로 조회한다`() {
+		val (child, _, trip) = createFamilyTrip()
+		trip.status = TripStatus.COMPLETED
+		tripRepository.saveAndFlush(trip)
+
+		mockMvc.perform(
+			get("/api/v1/trips/${requireNotNull(trip.id)}/pledge")
+				.header("Authorization", "Bearer ${tokenService.createAccessToken(child)}"),
+		)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.data.canSign").value(false))
 	}
 
 	@Test

@@ -274,6 +274,7 @@ class TripPledgeService(
 			tripId = requireNotNull(trip.id),
 			templates = defaultTemplates(requireNotNull(trip.id)),
 			signers = findOrderedSigners(trip, emptyList()),
+			canSign = trip.status in PLEDGE_EDITABLE_TRIP_STATUSES,
 		)
 	}
 
@@ -347,8 +348,8 @@ class TripPledgeService(
 
 	private fun validatePledgeEditable(user: User, trip: Trip) {
 		validatePledgeCreator(user, trip)
-		if (trip.status !in setOf(TripStatus.PLANNING, TripStatus.READY)) {
-			throw BadRequestException("여행 준비 중에만 여행 10계명을 작성할 수 있습니다.")
+		if (trip.status !in PLEDGE_EDITABLE_TRIP_STATUSES) {
+			throw BadRequestException("여행 준비 중이거나 여행 중에만 여행 10계명을 작성할 수 있습니다.")
 		}
 	}
 
@@ -391,7 +392,7 @@ class TripPledgeService(
 		return when (user.role) {
 			UserRole.CHILD ->
 				pledge.trip.createdByUser.id == user.id &&
-					pledge.trip.status in setOf(TripStatus.PLANNING, TripStatus.READY) &&
+					pledge.trip.status in PLEDGE_EDITABLE_TRIP_STATUSES &&
 					pledge.status == TripPledgeStatus.REVIEWED
 
 			UserRole.PARENT ->
@@ -428,6 +429,11 @@ class TripPledgeService(
 		private const val DEFAULT_TITLE = "가족 여행 10계명"
 		private const val PNG_MIME_TYPE = "image/png"
 		private const val MAX_SIGNATURE_IMAGE_BYTES = 512 * 1024
+		private val PLEDGE_EDITABLE_TRIP_STATUSES = setOf(
+			TripStatus.PLANNING,
+			TripStatus.READY,
+			TripStatus.IN_PROGRESS,
+		)
 		private val PNG_HEADER = byteArrayOf(
 			0x89.toByte(),
 			0x50,

@@ -109,7 +109,7 @@ class TripPledgeController(
 
 	@Operation(
 		summary = "여행 10계명 저장",
-		description = "본인 서명 화면으로 이동하기 직전에 수정한 문구 10개를 여행별로 저장합니다. 배열 순서가 표시 순서가 됩니다.",
+		description = "여행 준비 중 또는 여행 중에 수정한 문구 10개를 저장합니다. 본인 서명 화면으로 이동하기 직전에 호출하며 배열 순서가 표시 순서가 됩니다.",
 	)
 	@ApiResponses(
 		value = [
@@ -129,7 +129,7 @@ class TripPledgeController(
 
 	@Operation(
 		summary = "여행 10계명 본인 서명 저장",
-		description = "현재 사용자의 PNG 서명을 저장합니다. 자녀가 먼저 서명해야 하며, 참여 부모는 전체 완료 후에도 본인 서명을 추가할 수 있습니다.",
+		description = "현재 사용자의 PNG 서명을 저장합니다. 자녀는 여행 준비 중 또는 여행 중에 서명할 수 있으며, 참여 부모는 자녀 서명 후 전체 완료 여부와 관계없이 본인 서명을 추가할 수 있습니다.",
 	)
 	@ApiResponses(
 		value = [
