@@ -72,6 +72,9 @@ data class HomeTripSummaryResponse(
 	@field:Schema(description = "여행 종료일", example = "2026-07-28")
 	val endDate: LocalDate,
 
+	@field:Schema(description = "당일치기 여부. true이면 목록에서 startDate만 표시합니다.", example = "false")
+	val dayTrip: Boolean,
+
 	@field:Schema(
 		description = "홈에 노출되는 여행 상태",
 		example = "in_progress",

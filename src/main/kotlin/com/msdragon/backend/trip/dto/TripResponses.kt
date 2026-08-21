@@ -172,6 +172,9 @@ data class TripSummaryResponse(
 	@field:Schema(description = "여행 종료일", example = "2026-07-11")
 	val endDate: LocalDate,
 
+	@field:Schema(description = "당일치기 여부. true이면 목록에서 startDate만 표시합니다.", example = "false")
+	val dayTrip: Boolean,
+
 	@field:Schema(description = "여행 상태", example = "planning", allowableValues = ["planning", "ready", "in_progress", "completed", "stopped", "archived"])
 	val status: TripStatus,
 
@@ -186,6 +189,7 @@ data class TripSummaryResponse(
 				destination = TripDestinationResponse.from(trip.destinationCode),
 				startDate = trip.startDate,
 				endDate = trip.endDate,
+				dayTrip = trip.startDate == trip.endDate,
 				status = trip.status,
 				participantCount = participantCount,
 			)

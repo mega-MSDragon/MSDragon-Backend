@@ -418,6 +418,7 @@ class TripControllerTest {
 			.andExpect(status().isOk)
 			.andExpect(jsonPath("$.data.trips.length()").value(1))
 			.andExpect(jsonPath("$.data.trips[0].id").value(tripId))
+			.andExpect(jsonPath("$.data.trips[0].dayTrip").value(true))
 	}
 
 	@Test

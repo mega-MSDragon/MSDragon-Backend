@@ -362,6 +362,7 @@
         },
         "startDate": "2026-07-10",
         "endDate": "2026-07-11",
+		"dayTrip": false,
         "status": "planning",
         "participantCount": 2
       }
@@ -369,6 +370,8 @@
   }
 }
 ```
+
+목록에서 `dayTrip=true`이면 `startDate`와 `endDate`가 같은 당일치기 여행입니다. 클라이언트는 날짜를 한 번만 표시하고, `dayTrip=false`이면 시작일과 종료일을 함께 표시합니다.
 
 ---
 

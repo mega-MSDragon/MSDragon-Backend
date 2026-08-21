@@ -50,6 +50,7 @@
         },
         "startDate": "2026-05-10",
         "endDate": "2026-05-11",
+		"dayTrip": false,
         "status": "in_progress",
         "dDay": null,
         "primaryTheme": "history_culture",
@@ -75,6 +76,7 @@
 | `parentProfiles` | array | false | 자녀는 연결된 부모 전체, 부모는 본인 한 건 |
 | `parentProfiles[].profileCompleted` | boolean | false | 해당 부모의 상세 프로필 완성 여부 |
 | `trips` | array | false | `in_progress`, `completed`, `planning`, `ready` 여행 포함 |
+| `trips[].dayTrip` | boolean | false | 시작일과 종료일이 같은 당일치기 여부. `true`이면 날짜를 한 번만 표시 |
 | `trips[].dDay` | number | true | 시작일까지 남은 일수. 진행 중이면 `null` |
 | `trips[].primaryTheme` | enum | true | 여행 생성 당시 부모 프로필 스냅샷에서 계산한 대표 테마 |
 | `trips[].intensity` | enum | true | `low`, `normal`, `high`. 스냅샷이 없으면 `null` |

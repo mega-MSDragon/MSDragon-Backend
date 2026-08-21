@@ -93,7 +93,7 @@ class HomeControllerTest {
 			child = child,
 			title = "지난 여행",
 			startDate = today.minusDays(5),
-			endDate = today.minusDays(4),
+			endDate = today.minusDays(5),
 			snapshot = snapshot(mother, motherProfile, WalkingPace.SLOW, TravelThemeCode.HISTORY_CULTURE, today),
 		)
 		tripFeedbackRepository.save(
@@ -158,6 +158,7 @@ class HomeControllerTest {
 			.andExpect(jsonPath("$.data.trips[0].ratings").isEmpty)
 			.andExpect(jsonPath("$.data.trips[1].title").value("지난 여행"))
 			.andExpect(jsonPath("$.data.trips[1].status").value("completed"))
+			.andExpect(jsonPath("$.data.trips[1].dayTrip").value(true))
 			.andExpect(jsonPath("$.data.trips[1].ratings.length()").value(1))
 			.andExpect(jsonPath("$.data.trips[1].ratings[0].parentUserId").value(mother.id))
 			.andExpect(jsonPath("$.data.trips[1].ratings[0].displayName").value("김영희"))

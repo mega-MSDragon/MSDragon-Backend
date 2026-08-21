@@ -108,6 +108,7 @@ class HomeDataService(
 			destination = TripDestinationResponse.from(trip.destinationCode),
 			startDate = trip.startDate,
 			endDate = trip.endDate,
+			dayTrip = trip.startDate == trip.endDate,
 			status = trip.status,
 			dDay = trip.startDate.takeIf(today::isBefore)
 				?.let { ChronoUnit.DAYS.between(today, it).toInt() },
