@@ -62,8 +62,9 @@
 
 ## 여행 도시 매핑
 
-TourAPI 2025년 매뉴얼 기준으로 legacy `areaCode` 대신 법정동 코드 `lDongRegnCd`, `lDongSignguCd`를 사용합니다.
+TourAPI 법정동 코드 응답을 기준으로 legacy `areaCode` 대신 `lDongRegnCd`, `lDongSignguCd`를 사용합니다.
 광역 단위 도시는 시도 코드만 사용하고, 여러 도시를 묶은 catalog는 관련 시군구를 모두 조회합니다.
+여수 코드는 2026년 8월 21일 실제 `areaBasedList2` 응답 기준으로 갱신했습니다.
 
 | destinationCode | 조회 지역 |
 |-----------------|-----------|
@@ -71,7 +72,7 @@ TourAPI 2025년 매뉴얼 기준으로 legacy `areaCode` 대신 법정동 코드
 | `gangneung_sokcho` | `51-150` 강릉시, `51-210` 속초시 |
 | `gyeongju` | `47-130` 경주시 |
 | `busan` | `26` 부산광역시 |
-| `yeosu` | `46-130` 여수시 |
+| `yeosu` | `12-130` 여수시 |
 | `incheon` | `28` 인천광역시 |
 | `jeonju` | `52-111` 전주시 완산구, `52-113` 전주시 덕진구 |
 | `jeju` | `50-110` 제주시, `50-130` 서귀포시 |

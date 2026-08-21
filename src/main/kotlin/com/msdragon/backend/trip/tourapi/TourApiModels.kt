@@ -129,7 +129,7 @@ data class DestinationTourApiPolicy(
 			),
 			TripDestinationCode.GYEONGJU to listOf(TourApiRegion("47", "130", "경주시")),
 			TripDestinationCode.BUSAN to listOf(TourApiRegion("26", displayName = "부산광역시")),
-			TripDestinationCode.YEOSU to listOf(TourApiRegion("46", "130", "여수시")),
+			TripDestinationCode.YEOSU to listOf(TourApiRegion("12", "130", "여수시")),
 			TripDestinationCode.INCHEON to listOf(TourApiRegion("28", displayName = "인천광역시")),
 			TripDestinationCode.JEONJU to listOf(
 				TourApiRegion("52", "111", "전주시 완산구"),
