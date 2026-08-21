@@ -13,12 +13,23 @@ import kotlin.test.assertTrue
 
 class HomeDiscoveryServiceTest {
 	@Test
+	fun `모든 월은 중복 없는 추천 도시 5개를 제공한다`() {
+		Month.entries.forEach { month ->
+			val destinations = HomeRecommendationPolicy.destinationsFor(month)
+			assertEquals(5, destinations.size)
+			assertEquals(5, destinations.distinct().size)
+		}
+	}
+
+	@Test
 	fun `5월 추천 도시는 디자인 확정 순서를 따른다`() {
 		assertEquals(
 			listOf(
 				TripDestinationCode.GANGNEUNG_SOKCHO,
 				TripDestinationCode.GYEONGJU,
 				TripDestinationCode.BUSAN,
+				TripDestinationCode.JEJU,
+				TripDestinationCode.YEOSU,
 			),
 			HomeRecommendationPolicy.destinationsFor(Month.MAY),
 		)
@@ -49,16 +60,16 @@ class HomeDiscoveryServiceTest {
 		val recommendations = service.getMonthlyRecommendations(LocalDate.of(2026, 5, 1))
 
 		assertEquals(5, recommendations.recommendationMonth)
-		assertEquals(3, recommendations.recommendedCities.size)
+		assertEquals(5, recommendations.recommendedCities.size)
 		assertTrue(recommendations.recommendedCities.all { it.imageUrl == null })
 		assertNull(recommendations.recommendedCities.first().imageUrl)
-		assertEquals(3, imageCalls)
+		assertEquals(5, imageCalls)
 		assertEquals(0, festivalCalls)
 
 		val festivals = service.getFestivals(LocalDate.of(2026, 5, 1))
 
 		assertTrue(festivals.festivals.isEmpty())
-		assertEquals(3, imageCalls)
+		assertEquals(5, imageCalls)
 		assertEquals(1, festivalCalls)
 	}
 }

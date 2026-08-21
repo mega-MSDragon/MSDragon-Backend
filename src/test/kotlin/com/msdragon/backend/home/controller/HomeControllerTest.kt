@@ -148,7 +148,7 @@ class HomeControllerTest {
 		)
 			.andExpect(status().isOk)
 			.andExpect(jsonPath("$.data.recommendationMonth").value(today.monthValue))
-			.andExpect(jsonPath("$.data.recommendedCities.length()").value(3))
+			.andExpect(jsonPath("$.data.recommendedCities.length()").value(5))
 			.andExpect(jsonPath("$.data.recommendedCities[0].imageUrl").isString)
 
 		mockMvc.perform(

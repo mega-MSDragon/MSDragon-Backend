@@ -29,7 +29,7 @@ data class HomeMonthlyRecommendationsResponse(
 	@field:Schema(description = "추천 도시 기준 월", example = "5", minimum = "1", maximum = "12")
 	val recommendationMonth: Int,
 
-	@field:Schema(description = "해당 월 추천 도시 3개")
+	@field:Schema(description = "해당 월 고정 추천 도시 5개")
 	val recommendedCities: List<HomeRecommendedCityResponse>,
 )
 

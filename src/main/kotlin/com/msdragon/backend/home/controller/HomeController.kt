@@ -39,7 +39,7 @@ class HomeController(
 			data = homeService.getMyTrips(currentUser),
 		)
 
-	@Operation(summary = "홈 월별 추천 여행 조회", description = "서울 기준 현재 월과 해당 월의 추천 도시 3개를 조회합니다.")
+	@Operation(summary = "홈 월별 추천 여행 조회", description = "서울 기준 현재 월과 해당 월의 고정 추천 도시 5개를 조회합니다.")
 	@ApiResponses(
 		value = [
 			SwaggerApiResponse(responseCode = "200", description = "처리 완료: 조회 성공(status=200) 또는 인증 오류(status=401)"),

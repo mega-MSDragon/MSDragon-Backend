@@ -52,22 +52,22 @@
 
 ## 월별 추천 도시
 
-추천 도시는 서버 정책으로 월마다 3개를 고정합니다. 앱은 `code`를 화면 이동 값으로 사용하고 `imageUrl`이 없으면 로컬 기본 이미지를 사용합니다.
+추천 도시는 서버 정책으로 월마다 5개를 고정합니다. 별도 개수 파라미터는 받지 않으며 앱은 `code`를 화면 이동 값으로 사용하고 `imageUrl`이 없으면 로컬 기본 이미지를 사용합니다.
 
 | 월 | 추천 도시 코드 |
 |----|----------------|
-| 1월 | `gangneung_sokcho`, `incheon`, `seoul` |
-| 2월 | `busan`, `jeju`, `yeosu` |
-| 3월 | `gyeongju`, `jeonju`, `daegu` |
-| 4월 | `jeju`, `suwon_yongin`, `gyeongju` |
-| 5월 | `gangneung_sokcho`, `gyeongju`, `busan` |
-| 6월 | `busan`, `yeosu`, `jeju` |
-| 7월 | `gangneung_sokcho`, `tongyeong_geoje_namhae`, `busan` |
-| 8월 | `gangneung_sokcho`, `jeju`, `incheon` |
-| 9월 | `gyeongju`, `jeonju`, `pohang_andong` |
-| 10월 | `gyeongju`, `suwon_yongin`, `daegu` |
-| 11월 | `jeju`, `yeosu`, `tongyeong_geoje_namhae` |
-| 12월 | `seoul`, `gangneung_sokcho`, `busan` |
+| 1월 | `gangneung_sokcho`, `incheon`, `seoul`, `busan`, `jeju` |
+| 2월 | `busan`, `jeju`, `yeosu`, `gyeongju`, `seoul` |
+| 3월 | `gyeongju`, `jeonju`, `daegu`, `seoul`, `jeju` |
+| 4월 | `jeju`, `suwon_yongin`, `gyeongju`, `jeonju`, `yeosu` |
+| 5월 | `gangneung_sokcho`, `gyeongju`, `busan`, `jeju`, `yeosu` |
+| 6월 | `busan`, `yeosu`, `jeju`, `gangneung_sokcho`, `tongyeong_geoje_namhae` |
+| 7월 | `gangneung_sokcho`, `tongyeong_geoje_namhae`, `busan`, `yeosu`, `jeju` |
+| 8월 | `gangneung_sokcho`, `jeju`, `incheon`, `busan`, `tongyeong_geoje_namhae` |
+| 9월 | `gyeongju`, `jeonju`, `pohang_andong`, `seoul`, `suwon_yongin` |
+| 10월 | `gyeongju`, `suwon_yongin`, `daegu`, `jeonju`, `pohang_andong` |
+| 11월 | `jeju`, `yeosu`, `tongyeong_geoje_namhae`, `busan`, `gyeongju` |
+| 12월 | `seoul`, `gangneung_sokcho`, `busan`, `jeju`, `incheon` |
 
 대표 이미지는 국문 관광정보 서비스 `KorService2/areaBasedList2`를 이미지 우선 정렬 `arrange=Q`로 조회합니다.
 

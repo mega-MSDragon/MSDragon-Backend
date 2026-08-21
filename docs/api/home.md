@@ -96,7 +96,7 @@
 ```
 
 - `recommendationMonth`: 추천 정책에 사용한 서울 기준 월입니다.
-- `recommendedCities`: 월별 고정 추천 도시 3개입니다.
+- `recommendedCities`: 월별 고정 추천 도시 5개입니다.
 - `imageUrl=null`: TourAPI 이미지 조회에 실패한 경우이며 앱의 도시별 기본 이미지를 사용합니다.
 
 ## GET /api/v1/home/festivals
