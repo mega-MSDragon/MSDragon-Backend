@@ -13,10 +13,18 @@ app:
     oauth:
       kakao:
         user-info-uri: https://kapi.kakao.com/v2/user/me
+        unlink-uri: https://kapi.kakao.com/v1/user/unlink
+        admin-key: ${APP_AUTH_KAKAO_ADMIN_KEY:}
       apple:
         issuer: https://appleid.apple.com
         jwks-uri: https://appleid.apple.com/auth/keys
         client-id: ${APP_AUTH_APPLE_CLIENT_ID:}
+        token-uri: https://appleid.apple.com/auth/token
+        revoke-uri: https://appleid.apple.com/auth/revoke
+        team-id: ${APP_AUTH_APPLE_TEAM_ID:}
+        key-id: ${APP_AUTH_APPLE_KEY_ID:}
+        private-key: ${APP_AUTH_APPLE_PRIVATE_KEY:}
+      request-timeout: ${APP_AUTH_OAUTH_REQUEST_TIMEOUT:PT5S}
   tour-api:
     base-uri: https://apis.data.go.kr/B551011/KorWithService2
     general-base-uri: https://apis.data.go.kr/B551011/KorService2

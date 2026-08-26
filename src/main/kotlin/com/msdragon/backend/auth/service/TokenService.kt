@@ -44,7 +44,15 @@ class TokenService(
 		)
 	}
 
-	fun createSignupToken(oAuthUserInfo: OAuthUserInfo): String =
+	/**
+	 * 신규 가입자는 아직 users row가 없어 provider refresh token을 저장할 곳이 없다.
+	 * 가입 완료까지 서버 서명 토큰에 실어 전달한다.
+	 *
+	 * ponytail: signup token은 서명만 하고 암호화하지 않으므로 클라이언트가 claim을 읽을 수 있다.
+	 * 앱은 이미 같은 authorizationCode를 가지고 있었고 토큰 수명이 30분이라 MVP에서는 감수한다.
+	 * 서버 보관이 필요해지면 미가입자용 임시 저장소를 도입한다.
+	 */
+	fun createSignupToken(oAuthUserInfo: OAuthUserInfo, oauthRefreshToken: String? = null): String =
 		createJwt(
 			subject = oAuthUserInfo.subject,
 			expiresIn = authProperties.jwt.signupTokenExpiration,
@@ -52,6 +60,7 @@ class TokenService(
 				"token_type" to SIGNUP_TOKEN_TYPE,
 				"provider" to oAuthUserInfo.provider.value,
 				"display_name" to oAuthUserInfo.displayName,
+				"oauth_refresh_token" to oauthRefreshToken,
 			),
 		)
 
@@ -69,6 +78,7 @@ class TokenService(
 			provider = OAuthProvider.from(providerValue),
 			subject = claims.subject,
 			displayName = claims.getStringClaim("display_name"),
+			oauthRefreshToken = claims.getStringClaim("oauth_refresh_token"),
 		)
 	}
 
@@ -155,4 +165,5 @@ data class SignupTokenClaims(
 	val provider: OAuthProvider,
 	val subject: String,
 	val displayName: String?,
+	val oauthRefreshToken: String? = null,
 )

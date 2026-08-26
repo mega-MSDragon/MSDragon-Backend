@@ -21,6 +21,14 @@ data class SocialLoginRequest(
 	@field:NotBlank(message = "소셜 로그인 토큰을 입력해주세요.")
 	val token: String,
 
+	@field:Schema(
+		description = "애플 로그인 시 함께 받은 authorizationCode. 탈퇴 시 애플 연결 해제에 필요하므로 iOS는 항상 전달하는 것을 권장합니다. 카카오는 보내지 않습니다.",
+		example = "apple-authorization-code",
+		nullable = true,
+		requiredMode = Schema.RequiredMode.NOT_REQUIRED,
+	)
+	val authorizationCode: String? = null,
+
 	@field:Schema(description = "요청이 발생한 앱 플랫폼. 통계/디버깅용 선택 값입니다.", example = "ios", allowableValues = ["ios", "android", "web"], nullable = true)
 	val platform: DevicePlatform? = null,
 )

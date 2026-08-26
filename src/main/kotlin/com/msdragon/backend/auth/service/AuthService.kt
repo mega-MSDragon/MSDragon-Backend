@@ -17,6 +17,7 @@ import com.msdragon.backend.auth.repository.UserRefreshTokenRepository
 import com.msdragon.backend.auth.repository.UserRepository
 import com.msdragon.backend.common.exception.BadRequestException
 import com.msdragon.backend.common.exception.UnAuthorizedException
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
@@ -32,7 +33,9 @@ class AuthService(
 ) {
 	@Transactional
 	fun socialLogin(request: SocialLoginRequest): AuthResponse {
-		val oAuthUserInfo = oAuthClientResolver.resolve(request.provider).verify(request.token)
+		val oAuthClient = oAuthClientResolver.resolve(request.provider)
+		val oAuthUserInfo = oAuthClient.verify(request.token)
+		val oauthRefreshToken = exchangeOauthRefreshToken(oAuthClient, request)
 		val user = userRepository.findByOauthProviderAndOauthSubjectAndDeletedAtIsNull(
 			oauthProvider = oAuthUserInfo.provider,
 			oauthSubject = oAuthUserInfo.subject,
@@ -41,12 +44,27 @@ class AuthService(
 		if (user == null) {
 			return AuthResponse(
 				signupRequired = true,
-				signupToken = tokenService.createSignupToken(oAuthUserInfo),
+				signupToken = tokenService.createSignupToken(oAuthUserInfo, oauthRefreshToken),
 			)
 		}
 
 		user.updateLastLogin()
+		user.updateOauthRefreshToken(oauthRefreshToken)
 		return createLoginResponse(user, request.platform)
+	}
+
+	/**
+	 * 탈퇴 시 연결 해제에 쓸 provider refresh token을 미리 확보한다.
+	 * 실패해도 로그인은 정상 진행한다. 로그인을 막을 만한 사유가 아니다.
+	 */
+	private fun exchangeOauthRefreshToken(oAuthClient: OAuthClient, request: SocialLoginRequest): String? {
+		val authorizationCode = request.authorizationCode?.takeIf { it.isNotBlank() } ?: return null
+		return try {
+			oAuthClient.exchangeRefreshToken(authorizationCode)
+		} catch (e: Exception) {
+			log.warn("provider refresh token 교환에 실패했습니다. provider={}", request.provider.value, e)
+			null
+		}
 	}
 
 	@Transactional
@@ -66,6 +84,7 @@ class AuthService(
 			}
 			existingUser.completeSignup(request.role, request.displayName.trim(), request.ageBand, gender)
 			existingUser.updateLastLogin()
+			existingUser.updateOauthRefreshToken(signupClaims.oauthRefreshToken)
 			saveSignupConsents(existingUser, request)
 			return createLoginResponse(existingUser, request.platform)
 		}
@@ -77,6 +96,7 @@ class AuthService(
 			displayName = request.displayName.trim(),
 			ageBand = request.ageBand,
 			gender = gender,
+			oauthRefreshToken = signupClaims.oauthRefreshToken,
 			signupCompletedAt = LocalDateTime.now(),
 			lastLoginAt = LocalDateTime.now(),
 		)
@@ -166,6 +186,7 @@ class AuthService(
 	}
 
 	companion object {
+		private val log = LoggerFactory.getLogger(AuthService::class.java)
 		private const val PRIVACY_CONSENT_VERSION = "v1"
 		private const val LOCATION_BASED_FACILITY_CONSENT_VERSION = "v1"
 	}

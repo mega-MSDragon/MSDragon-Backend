@@ -60,8 +60,31 @@ Compose로 실행하면 PostgreSQL도 host port로 publish됩니다. 기본 포�
 | `APP_AUTH_JWT_SECRET` | 서비스 access/signup JWT 서명 secret. 32바이트 이상 필요 |
 | `APP_AUTH_ACCESS_TOKEN_EXPIRATION` | Access token 만료 시간. ISO-8601 Duration, 개발 테스트 기본값 `P365D` |
 | `APP_AUTH_APPLE_CLIENT_ID` | Apple identity token의 audience 검증에 사용할 client id 또는 iOS Bundle ID |
+| `APP_AUTH_APPLE_TEAM_ID` | 탈퇴 시 애플 연결 해제용 Apple Developer 팀 ID |
+| `APP_AUTH_APPLE_KEY_ID` | 탈퇴 시 애플 연결 해제용 Sign in with Apple 키의 Key ID |
+| `APP_AUTH_APPLE_PRIVATE_KEY` | 탈퇴 시 애플 연결 해제용 `.p8` 개인키. Git에 커밋하지 않음 |
+| `APP_AUTH_KAKAO_ADMIN_KEY` | 탈퇴 시 카카오 연결 끊기용 어드민 키. Git에 커밋하지 않음 |
+| `APP_AUTH_OAUTH_REQUEST_TIMEOUT` | 소셜 provider 호출 timeout. ISO-8601 Duration, 기본값 `PT5S` |
 
 `APP_AUTH_APPLE_CLIENT_ID`가 비어 있으면 Apple 로그인 요청은 설정 오류로 실패합니다. 카카오 로그인은 앱에서 받은 access token으로 Kakao user info API를 호출합니다.
+
+연결 해제용 키 4개는 비어 있어도 애플리케이션이 실행되고 탈퇴도 정상 동작합니다. 다만 provider 앱 연결이 남으므로 실제 배포 전에는 설정해야 합니다. 자세한 정책은 `docs/policy/account-withdrawal.md`를 확인합니다.
+
+### `.env`를 읽는 실행 방식 구분
+
+`.env`는 Docker Compose가 읽는 파일이고 Spring Boot가 직접 읽지 않습니다.
+
+- `docker compose up` — `.env`를 읽습니다. 단, `docker-compose.yml`의 `environment`에 나열된 변수만 컨테이너에 전달되므로 새 변수를 추가할 때 `docker-compose.yml`도 함께 수정해야 합니다.
+- `./gradlew bootRun` — `.env`를 읽지 않습니다. 셸에서 `export` 하거나 IntelliJ 실행 구성의 환경 변수에 넣습니다.
+
+```bash
+# bootRun으로 연결 해제까지 확인할 때
+export APP_AUTH_APPLE_TEAM_ID=XXXXXXXXXX
+export APP_AUTH_APPLE_KEY_ID=YYYYYYYYYY
+export APP_AUTH_APPLE_PRIVATE_KEY="$(tr -d '\n' < ~/AuthKey_YYYYYYYYYY.p8 | sed 's/-----[A-Z ]*-----//g')"
+export APP_AUTH_KAKAO_ADMIN_KEY=zzzzzzzz
+./gradlew bootRun
+```
 현재 access token 기본값은 공모전 개발 테스트를 위해 365일로 길게 설정되어 있습니다. 운영 정책을 적용할 때는 `APP_AUTH_ACCESS_TOKEN_EXPIRATION=PT1H`처럼 줄입니다.
 
 ---

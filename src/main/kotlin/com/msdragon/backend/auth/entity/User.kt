@@ -36,6 +36,13 @@ class User(
 	@Column(name = "gender", nullable = false, length = 20)
 	var gender: GenderType = GenderType.UNDISCLOSED,
 
+	/**
+	 * 탈퇴 시 provider 연결 해제(revoke)에 사용하는 provider refresh token.
+	 * 자격증명이므로 로그에 남기지 않는다. 현재는 애플만 사용한다.
+	 */
+	@Column(name = "oauth_refresh_token", length = 512)
+	var oauthRefreshToken: String? = null,
+
 	@Column(name = "signup_completed_at")
 	var signupCompletedAt: LocalDateTime? = null,
 
@@ -67,6 +74,13 @@ class User(
 		lastLoginAt = LocalDateTime.now()
 	}
 
+	/** 재로그인 시 코드 교환이 없었으면 기존 값을 지우지 않는다. */
+	fun updateOauthRefreshToken(oauthRefreshToken: String?) {
+		if (!oauthRefreshToken.isNullOrBlank()) {
+			this.oauthRefreshToken = oauthRefreshToken
+		}
+	}
+
 	fun withdraw(withdrawnAt: LocalDateTime, withdrawnOauthSubject: String) {
 		oauthSubject = withdrawnOauthSubject
 		displayName = WITHDRAWN_DISPLAY_NAME
@@ -74,6 +88,7 @@ class User(
 		gender = GenderType.UNDISCLOSED
 		signupCompletedAt = null
 		lastLoginAt = null
+		oauthRefreshToken = null
 		deletedAt = withdrawnAt
 	}
 

@@ -75,10 +75,23 @@ curl -k https://localhost/health
 
 `.env`의 인증 관련 값:
 
+`APP_AUTH_APPLE_PRIVATE_KEY`는 여러 줄인 `.p8` 파일 내용입니다. `.env`는 여러 줄 값을 그대로 다루기 어려우므로 base64 본문만 한 줄로 넣는 방식을 권장합니다. 서버는 PEM 헤더와 모든 공백을 제거하고 읽으므로 두 형태 모두 동작합니다.
+
+```bash
+# .p8에서 한 줄 값 만들기
+tr -d '\n' < AuthKey_XXXXXXXXXX.p8 | sed 's/-----[A-Z ]*-----//g'
+```
+
+
 ```env
 APP_AUTH_JWT_SECRET=<openssl rand -base64 48 결과값>
 APP_AUTH_ACCESS_TOKEN_EXPIRATION=P365D
 APP_AUTH_APPLE_CLIENT_ID=com.msdragon.ios
+APP_AUTH_APPLE_TEAM_ID=<Apple Developer 팀 ID>
+APP_AUTH_APPLE_KEY_ID=<Sign in with Apple 키의 Key ID>
+APP_AUTH_APPLE_PRIVATE_KEY=<.p8 파일 내용>
+APP_AUTH_KAKAO_ADMIN_KEY=<카카오 어드민 키>
+APP_AUTH_OAUTH_REQUEST_TIMEOUT=PT5S
 TOUR_API_SERVICE_KEY=<한국관광공사 TourAPI 서비스키>
 TOUR_API_MOBILE_APP=MSDragon
 TOUR_API_CONNECT_TIMEOUT=PT5S
@@ -174,6 +187,7 @@ docker compose up -d --build
 - 추천 코스와 홈 추천 콘텐츠를 사용할 경우 `.env`에 `TOUR_API_SERVICE_KEY` 설정 완료 및 무장애 여행 정보·국문 관광정보 서비스 활용신청 승인
 - 경로 최적화·공중화장실 적재·주변 병원·약국 API를 사용할 경우 `.env`에 `TMAP_APP_KEY` 설정 완료
 - 여행 모드 AI 챗봇을 사용할 경우 `.env`에 `OPENAI_API_KEY` 설정 완료
+- 탈퇴 시 소셜 연결 해제를 사용할 경우 `.env`에 `APP_AUTH_APPLE_TEAM_ID`, `APP_AUTH_APPLE_KEY_ID`, `APP_AUTH_APPLE_PRIVATE_KEY`, `APP_AUTH_KAKAO_ADMIN_KEY` 설정 완료. 없으면 연결 해제를 건너뛰고 탈퇴는 정상 동작합니다
 - `deploy/nginx/certs/origin.pem` 존재
 - `deploy/nginx/certs/origin.key` 존재
 

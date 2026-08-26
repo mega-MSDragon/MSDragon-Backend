@@ -56,9 +56,10 @@ access token이 없거나, 형식이 다르거나, 만료/변조된 경우 HTTP 
 
 ```json
 {
-  "provider": "kakao",
-  "token": "kakao-access-token",
-  "platform": "android"
+  "provider": "apple",
+  "token": "apple-identity-token",
+  "authorizationCode": "apple-authorization-code",
+  "platform": "ios"
 }
 ```
 
@@ -68,7 +69,14 @@ access token이 없거나, 형식이 다르거나, 만료/변조된 경우 HTTP 
 |-------|------|----------|---------|------|
 | `provider` | enum | true | `kakao`, `apple` | 소셜 로그인 종류 |
 | `token` | string | true | - | Kakao `accessToken` 또는 Apple `identityToken` |
+| `authorizationCode` | string | false | - | 애플 로그인 시 함께 받은 authorizationCode. 탈퇴 시 애플 연결 해제에 필요합니다. 카카오는 보내지 않습니다 |
 | `platform` | enum | false | `ios`, `android`, `web` | 요청 앱 플랫폼. 통계/디버깅용 선택 값 |
+
+`authorizationCode`는 일회용이고 발급 후 5분 안에만 유효하므로 서버가 로그인 시점에 provider refresh token으로 교환해 보관합니다. 탈퇴 시점에는 코드를 다시 받을 수 없습니다.
+
+- iOS는 `ASAuthorizationAppleIDCredential.authorizationCode`(Data)를 UTF-8 문자열로 변환해 전달합니다.
+- 교환에 실패해도 로그인은 정상 처리합니다. 다만 그 사용자는 탈퇴 시 애플 연결 해제를 할 수 없습니다.
+- 미가입 사용자는 `users` row가 없으므로 교환 결과를 `signupToken`에 담아 회원가입 완료 시 저장합니다. 클라이언트는 `signupToken`을 그대로 다음 단계에 전달하면 됩니다.
 
 ### Response: 미가입
 
