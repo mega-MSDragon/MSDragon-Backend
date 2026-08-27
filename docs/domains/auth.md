@@ -10,6 +10,9 @@ Auth 도메인은 소셜 로그인, 회원가입 완료, 서비스 토큰 발급
 - 애플 identity token을 Apple JWKS로 검증합니다.
 - `oauth_provider + oauth_subject` 기준으로 사용자를 식별합니다.
 - 탈퇴 시 기존 소셜 식별자를 익명화하므로 같은 소셜 계정은 새 사용자로 가입할 수 있습니다.
+- 애플 로그인 시 함께 받은 `authorizationCode`를 provider refresh token으로 교환해 `users.oauth_refresh_token`에 보관합니다. 탈퇴 시 애플 연결 해제(revoke)에 사용하며, 코드가 일회용이라 로그인 시점에만 확보할 수 있습니다.
+- 미가입 사용자는 `users` row가 없으므로 교환한 provider refresh token을 `signupToken` claim으로 전달해 회원가입 완료 시 저장합니다.
+- 탈퇴 시 provider 앱 연결을 해제합니다. 애플은 `client_secret` JWT(ES256)와 저장한 refresh token으로 revoke하고, 카카오는 어드민 키로 unlink합니다. 실패는 탈퇴를 막지 않습니다.
 - 미가입 사용자는 `signupToken`만 발급하고 DB에 임시 사용자를 만들지 않습니다.
 - 회원가입 완료 시 `users`를 생성하고 access/refresh token을 발급합니다.
 - 개인정보 수집 및 이용 필수 약관과 위치 기반 편의시설 안내 선택 약관의 결정을 버전별로 저장합니다.
@@ -44,6 +47,18 @@ auth
 - `users`
 - `user_consents`
 - `user_refresh_tokens`
+
+---
+
+## 외부 연동
+
+| 대상 | 용도 |
+|------|------|
+| `POST https://appleid.apple.com/auth/token` | `authorizationCode`를 refresh token으로 교환 |
+| `POST https://appleid.apple.com/auth/revoke` | 탈퇴 시 애플 앱 연결 해제 |
+| `POST https://kapi.kakao.com/v1/user/unlink` | 탈퇴 시 카카오 연결 끊기 |
+
+필수 설정이 비어 있으면 교환과 연결 해제를 조용히 건너뜁니다. 상세 정책은 `docs/policy/account-withdrawal.md`를 따릅니다.
 
 ---
 

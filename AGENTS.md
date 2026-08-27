@@ -78,15 +78,19 @@
 
 ## 아키텍처
 
-현재 프로젝트는 초기 Spring Boot 구조입니다.
+`docs/conventions/package.md`의 기능별 레이어드 패키지 구조를 따릅니다. 기능 패키지는 `controller`, `dto`, `service`, `entity`, `repository`로 나누고 공통 코드는 `common`에 둡니다.
 
 - 진입점: `src/main/kotlin/com/msdragon/backend/BackendApplication.kt`
-- 설정: `src/main/resources/application.yaml`
-- 테스트: `src/test/kotlin/com/msdragon/backend/BackendApplicationTests.kt`
-- 기본 DB 의존성: H2, PostgreSQL driver
-- 주요 스타터: Spring Web MVC, Spring Data JPA, Validation
+- 설정: `src/main/resources/application.yaml`, profile별 `application-local.yaml` / `application-prod.yaml`
+- 기능 패키지: `auth`, `chat`, `common`, `family`, `feedback`, `health`, `home`, `parentprofile`, `pledge`, `profile`, `report`, `supportfacility`, `trip`
+- 공통 응답/예외: `common/response/ApiResponse.kt`, `common/exception/ControllerExceptionAdvice.kt`
+- 인증: `auth/support/AuthInterceptor.kt`가 `/api/v1/**`를 검사하고 `/api/v1/auth/**`는 제외합니다
+- 정적 리소스: `src/main/resources/static/policies/`의 개인정보처리방침·이용약관 HTML은 인증 없이 웹뷰로 제공됩니다
+- PDF 템플릿: `src/main/resources/templates/pledge/`, 폰트: `src/main/resources/fonts/`
+- DB: 배포는 PostgreSQL, 테스트는 H2. Flyway 없이 `ddl-auto=update`를 사용합니다
+- 주요 스타터: Spring Web MVC, Spring Data JPA, Validation, springdoc
 
-기능이 추가되면 `docs/conventions/package.md`의 기능별 레이어드 패키지 구조를 따릅니다.
+패키지를 추가하거나 바꾸면 `docs/domains.md`와 해당 `docs/domains/{도메인}.md`를 함께 갱신합니다.
 
 ## Kotlin/JPA 특이사항
 

@@ -54,3 +54,6 @@
 | 2026-07-29 | supportfacility 도메인 추가 |
 | 2026-08-06 | chat 도메인 추가 |
 | 2026-08-11 | home 도메인 추가 |
+| 2026-08-24 | 개인정보처리방침·이용약관 정적 HTML 추가 (`resources/static/policies`, 도메인 패키지 아님) |
+| 2026-08-26 | auth 도메인에 소셜 연결 해제(애플 revoke·카카오 unlink) 외부 연동 추가 |
+| 2026-08-27 | 문서 최신화 — AGENTS.md 아키텍처, auth·profile 도메인 문서, 주변 시설 거리 응답 설명 |

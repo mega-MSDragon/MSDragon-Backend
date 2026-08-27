@@ -9,7 +9,7 @@
 - 여행 기간 중인 같은 가족 구성원에게 현재 위치 주변 공중화장실을 제공합니다.
 - Tmap POI 주변 카테고리 검색으로 현재 위치 주변 카페, 병원, 약국을 실시간 제공합니다.
 - 카페는 한국관광공사 위치 기반 음식점 데이터와 안전하게 일치하는 경우 썸네일을 보강합니다.
-- 현재 위치와 시설 좌표의 직선거리를 계산해 가까운 순으로 정렬합니다.
+- 현재 위치와 시설 좌표의 직선거리(Haversine)를 계산해 5km 이내를 가까운 순으로 정렬하고, 4개 API 모두 응답 항목마다 `distanceMeters`(미터 단위 정수)로 반환합니다. `km` 변환은 클라이언트가 표시 시점에 처리합니다.
 
 ## 패키지 구조
 
@@ -34,6 +34,8 @@ supportfacility
 - `GET /api/v1/trips/{tripId}/nearby-restrooms`
 - `GET /api/v1/trips/{tripId}/nearby-hospitals`
 - `GET /api/v1/trips/{tripId}/nearby-pharmacies`
+
+엔드포인트가 `/trips/{tripId}` 하위이므로 요청·응답 상세는 `docs/api/trip.md`의 `주변 시설 조회 공통` 절과 각 API 절에 있습니다. `docs/api/supportfacility.md`는 두지 않습니다.
 
 ## 구현 결정
 
