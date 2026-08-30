@@ -388,6 +388,60 @@ class TripFeedbackControllerTest {
 	}
 
 	@Test
+	fun `좋았던 점은 최대 3개까지 선택할 수 있다`() {
+		val fixture = createTripFixture(endDate = today())
+		val tripId = requireNotNull(fixture.trip.id)
+		val authorization = authorization(fixture.mother)
+
+		mockMvc.perform(
+			post("/api/v1/trips/$tripId/feedback/me")
+				.header("Authorization", authorization)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(
+					feedbackBody(
+						stopId = requireNotNull(fixture.stop.id),
+						goodTags = listOf("walking_comfortable", "rest_time_good", "scenery_good", "food_good"),
+					),
+				),
+		)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(400))
+			.andExpect(jsonPath("$.message").value("좋았던 점은 최대 3개까지 선택할 수 있습니다."))
+	}
+
+	@Test
+	fun `자유 의견은 30자를 넘을 수 없고 이모지는 한 글자로 센다`() {
+		val fixture = createTripFixture(endDate = today())
+		val tripId = requireNotNull(fixture.trip.id)
+		val authorization = authorization(fixture.mother)
+		val stopId = requireNotNull(fixture.stop.id)
+
+		mockMvc.perform(
+			post("/api/v1/trips/$tripId/feedback/me")
+				.header("Authorization", authorization)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(feedbackBody(stopId = stopId, freeComment = "가".repeat(31))),
+		)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(400))
+			.andExpect(jsonPath("$.message").value("자유 의견은 30자 이하로 입력해주세요."))
+
+		// 이모지 2개는 UTF-16 길이로 32지만 화면 카운터로는 30자다. 클라이언트 카운터와 어긋나면 안 된다.
+		val withEmoji = "가".repeat(28) + "🩷🩷"
+		check(withEmoji.length == 32 && withEmoji.codePointCount(0, withEmoji.length) == 30)
+
+		mockMvc.perform(
+			post("/api/v1/trips/$tripId/feedback/me")
+				.header("Authorization", authorization)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(feedbackBody(stopId = stopId, freeComment = withEmoji)),
+		)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(200))
+			.andExpect(jsonPath("$.data.freeComment").value(withEmoji))
+	}
+
+	@Test
 	fun `여행 참여 부모만 피드백을 제출하고 현황을 조회할 수 있다`() {
 		val fixture = createTripFixture(endDate = today())
 		val tripId = requireNotNull(fixture.trip.id)

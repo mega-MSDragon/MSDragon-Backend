@@ -26,7 +26,7 @@ data class SubmitTripFeedbackRequest(
 	val bodyCondition: FeedbackBodyCondition,
 
 	@field:Schema(
-		description = "좋았던 점. 여러 개 선택할 수 있습니다.",
+		description = "좋았던 점. 최대 3개까지 선택할 수 있습니다.",
 		example = "[\"walking_comfortable\",\"rest_time_good\"]",
 		allowableValues = [
 			"walking_comfortable",
@@ -37,7 +37,7 @@ data class SubmitTripFeedbackRequest(
 			"seating_sufficient",
 		],
 	)
-	@field:Size(max = 6, message = "좋았던 점은 최대 6개까지 선택할 수 있습니다.")
+	@field:Size(max = 3, message = "좋았던 점은 최대 3개까지 선택할 수 있습니다.")
 	val goodTags: List<FeedbackTag> = emptyList(),
 
 	@field:Schema(
@@ -57,7 +57,10 @@ data class SubmitTripFeedbackRequest(
 	@field:NotNull(message = "가장 좋았던 방문지를 선택해주세요.")
 	val bestTripStopId: Long,
 
-	@field:Schema(description = "자유 의견. 공백만 입력하면 저장하지 않습니다.", example = "다음에도 함께 여행하고 싶어요.", nullable = true)
-	@field:Size(max = 200, message = "자유 의견은 200자 이하로 입력해주세요.")
+	@field:Schema(
+		description = "자유 의견. 앞뒤 공백을 제거한 뒤 30자까지 저장하며, 공백만 입력하면 저장하지 않습니다. 이모지는 1자로 셉니다.",
+		example = "여행 계획 짜느라 고생 많았어, 우리 딸",
+		nullable = true,
+	)
 	val freeComment: String? = null,
 )

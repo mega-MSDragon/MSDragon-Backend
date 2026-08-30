@@ -109,6 +109,7 @@ class TripFeedbackService(
 		}
 		validateRating(request.overallRating)
 		validateTags(request.goodTags, request.improvementTags)
+		val freeComment = normalizeFreeComment(request.freeComment)
 
 		val bestStop = tripStopRepository.findById(request.bestTripStopId).orElse(null)
 			?.takeIf { it.tripDay.trip.id == tripId }
@@ -123,7 +124,7 @@ class TripFeedbackService(
 				bodyCondition = request.bodyCondition,
 				bestTripStopId = requireNotNull(bestStop.id),
 				bestPlaceNameSnapshot = bestStop.name,
-				freeComment = request.freeComment?.trim()?.takeIf(String::isNotEmpty),
+				freeComment = freeComment,
 				tags = tags,
 				submittedAt = currentDateTime(),
 			),
@@ -237,6 +238,19 @@ class TripFeedbackService(
 		}
 	}
 
+	/**
+	 * 자유 의견은 시안 카운터(`0/30`) 기준으로 30자까지 받는다.
+	 * iOS가 이모지를 한 글자로 세므로 UTF-16 길이가 아니라 코드포인트 수로 판단한다.
+	 * String.length를 쓰면 이모지 한 개가 2자로 계산되어 클라이언트 카운터와 어긋난다.
+	 */
+	private fun normalizeFreeComment(freeComment: String?): String? {
+		val trimmed = freeComment?.trim()?.takeIf(String::isNotEmpty) ?: return null
+		if (trimmed.codePointCount(0, trimmed.length) > FREE_COMMENT_MAX_LENGTH) {
+			throw BadRequestException("자유 의견은 ${FREE_COMMENT_MAX_LENGTH}자 이하로 입력해주세요.")
+		}
+		return trimmed
+	}
+
 	private fun validateTags(goodTags: List<FeedbackTag>, improvementTags: List<FeedbackTag>) {
 		val allTags = goodTags + improvementTags
 		if (allTags.distinct().size != allTags.size) {
@@ -301,5 +315,6 @@ class TripFeedbackService(
 	companion object {
 		private val SERVICE_ZONE_ID: ZoneId = ZoneId.of("Asia/Seoul")
 		private val RATING_STEP = BigDecimal("0.5")
+		private const val FREE_COMMENT_MAX_LENGTH = 30
 	}
 }

@@ -99,10 +99,10 @@
 |-------|------|----------|------|
 | `overallRating` | decimal | true | `0.0`~`5.0`, `0.5` 단위 |
 | `bodyCondition` | enum | true | `comfortable`, `slightly_tired`, `very_tired` |
-| `goodTags` | enum array | false | 좋았던 점 태그, 최대 6개 |
+| `goodTags` | enum array | false | 좋았던 점 태그, 최대 3개 |
 | `improvementTags` | enum array | false | 개선할 점 태그, 최대 4개 |
 | `bestTripStopId` | number | true | 해당 여행에 포함된 방문지 ID |
-| `freeComment` | string | false | 공백 제외 200자 이내. 공백만 보내면 `null`로 저장 |
+| `freeComment` | string | false | 앞뒤 공백 제외 30자 이내. 이모지는 1자로 계산합니다. 공백만 보내면 `null`로 저장 |
 
 `goodTags` 값:
 
