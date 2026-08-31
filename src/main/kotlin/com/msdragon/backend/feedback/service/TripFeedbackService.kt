@@ -196,6 +196,7 @@ class TripFeedbackService(
 					relationLabel = relationLabelOf(parent),
 					requestedAt = requestsByParentId[parentId]?.requestedAt,
 					submittedAt = feedbacksByParentId[parentId]?.submittedAt,
+					overallRating = feedbacksByParentId[parentId]?.overallRating,
 				)
 			},
 		)

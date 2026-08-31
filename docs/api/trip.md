@@ -243,10 +243,13 @@
         "dayNumber": 2,
         "travelDate": "2026-07-11"
       }
-    ]
+    ],
+    "coverImageUrl": "https://tong.visitkorea.or.kr/cms/resource/00/1234500_image2_1.jpg"
   }
 }
 ```
+
+`coverImageUrl`은 기록 상세 화면 상단 이미지에 사용합니다. 코스 방문 순서상 이미지가 있는 첫 장소를 쓰고, 이미지가 있는 방문지가 없으면 `null`입니다. 기록 목록(`GET /api/v1/records`)의 `coverImageUrl`과 같은 규칙이므로 목록에서 값을 들고 오지 않아도 됩니다.
 
 미래 여행은 생성 직후 `status=planning`입니다. 시작일이 오늘이면 생성 응답부터 `in_progress`이며, 추천 코스 생성이 완료된 미래 여행은 `ready`가 됩니다.
 서울 날짜 기준 시작일부터 `in_progress`, 종료일 다음 날부터 `completed`로 자동 전환합니다.

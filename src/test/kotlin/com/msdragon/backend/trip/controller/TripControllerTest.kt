@@ -845,6 +845,14 @@ class TripControllerTest {
 			.andExpect(jsonPath("$.data.days[0].stops.length()").value(2))
 			.andExpect(jsonPath("$.data.days[0].stops[0].externalPlaceId").value("988449"))
 			.andExpect(jsonPath("$.data.days[0].stops[0].arrivalTime").value("10:30:00"))
+
+		// 기록 상세 상단 이미지는 이미지가 있는 첫 방문지에서 가져온다.
+		mockMvc.perform(
+			get("/api/v1/trips/$tripId")
+				.header("Authorization", "Bearer ${tokenService.createAccessToken(mother)}"),
+		)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.data.coverImageUrl").value("https://example.com/park.jpg"))
 	}
 
 	@Test

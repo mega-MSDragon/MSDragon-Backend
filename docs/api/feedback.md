@@ -52,14 +52,16 @@
         "displayName": "길순님",
         "relationLabel": "엄마",
         "requestedAt": "2026-07-26T10:00:00",
-        "submittedAt": "2026-07-26T11:00:00"
+        "submittedAt": "2026-07-26T11:00:00",
+        "overallRating": 4.0
       },
       {
         "parentUserId": 3,
         "displayName": "길동님",
         "relationLabel": "아빠",
         "requestedAt": "2026-07-26T10:00:00",
-        "submittedAt": null
+        "submittedAt": null,
+        "overallRating": null
       }
     ]
   }
@@ -72,6 +74,9 @@
 | `canRequest` | 현재 사용자가 생성 자녀이고 미제출 부모가 있어 요청 API를 호출할 수 있는지 여부 |
 | `canSubmit` | 현재 사용자가 미제출 참여 부모이고 작성 가능 시점인지 여부 |
 | `reportReady` | 모든 참여 부모가 제출해 효도 리포트가 자동 생성되었는지 여부 |
+| `parents[].overallRating` | 해당 부모가 제출한 전체 만족도. 미제출이면 `null` |
+
+기록 상세 화면의 `별점을 남겨주세요 1/2`는 `submittedParentCount`/`totalParentCount`로 계산하고, `엄마 4.0 · 아빠 5.0`은 `parents[].overallRating`으로 표시합니다. 효도 리포트는 전원 제출 후에만 생성되므로 부분 제출 상태의 별점은 이 API에서 받습니다.
 
 ## POST /api/v1/trips/{tripId}/feedback/me
 

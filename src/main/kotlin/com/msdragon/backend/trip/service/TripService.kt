@@ -645,8 +645,17 @@ class TripService(
 			days = tripDayRepository.findAllByTripIdOrderByDayNumberAsc(tripId),
 			recommendationSnapshot = trip.recommendationSnapshot
 				?.let { objectMapper.readValue(it, TripRecommendationSnapshotResponse::class.java) },
+			coverImageUrl = coverImageUrl(tripId),
 		)
 	}
+
+	/**
+	 * 기록 상세 상단 이미지. 기록 목록(`GET /api/v1/records`)과 같은 규칙으로
+	 * 코스 방문 순서상 이미지가 있는 첫 장소를 사용한다.
+	 */
+	private fun coverImageUrl(tripId: Long): String? =
+		tripStopRepository.findAllByTripDayTripIdOrderByTripDayDayNumberAscSortOrderAsc(tripId)
+			.firstNotNullOfOrNull { it.imageUrl?.takeIf(String::isNotBlank) }
 
 	private fun tripCourse(
 		trip: Trip,

@@ -227,6 +227,13 @@ data class TripDetailResponse(
 
 	@field:Schema(description = "여행 일자")
 	val days: List<TripDayResponse>,
+
+	@field:Schema(
+		description = "여행 대표 이미지 URL. 코스 방문지 중 이미지가 있는 첫 장소를 사용하며 없으면 null입니다. 기록 상세 화면 상단 이미지에 사용합니다.",
+		example = "https://tong.visitkorea.or.kr/cms/resource/00/1234500_image2_1.jpg",
+		nullable = true,
+	)
+	val coverImageUrl: String?,
 ) {
 	companion object {
 		fun of(
@@ -234,6 +241,7 @@ data class TripDetailResponse(
 			participants: List<TripParticipant>,
 			days: List<TripDay>,
 			recommendationSnapshot: TripRecommendationSnapshotResponse?,
+			coverImageUrl: String?,
 		): TripDetailResponse =
 			TripDetailResponse(
 				id = requireNotNull(trip.id),
@@ -246,6 +254,7 @@ data class TripDetailResponse(
 				participants = participants.map(TripParticipantResponse::from),
 				recommendationSnapshot = recommendationSnapshot,
 				days = days.map(TripDayResponse::from),
+				coverImageUrl = coverImageUrl,
 			)
 	}
 }

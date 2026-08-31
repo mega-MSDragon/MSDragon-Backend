@@ -216,14 +216,6 @@ class FilialReportService(
 			totalPlaceCount = report.totalPlaceCount,
 			averageRating = report.averageRating,
 			totalDistanceKm = report.totalDistanceKm,
-			totalScore = report.totalScore,
-			satisfactionScore = report.satisfactionScore,
-			legComfortScore = report.legComfortScore,
-			naggingPreventionScore = report.naggingPreventionScore,
-			mealSatisfactionScore = report.mealSatisfactionScore,
-			restroomSafetyScore = report.restroomSafetyScore,
-			awardTitle = report.awardTitle,
-			summary = report.summary,
 			goodTags = tags.filter { it.category == FeedbackTagCategory.GOOD },
 			improvementTags = tags.filter { it.category == FeedbackTagCategory.IMPROVEMENT },
 			parentFeedbacks = source.feedbacks.map { feedback ->
@@ -252,7 +244,6 @@ class FilialReportService(
 					imageUrl = stop.imageUrl,
 				)
 			},
-			totalStepCount = report.totalStepCount,
 			shareImageUrl = report.shareImageUrl,
 			generatedAt = report.generatedAt,
 		)

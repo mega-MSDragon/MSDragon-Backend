@@ -36,6 +36,16 @@
 - 베스트 장소명은 피드백 제출 당시 스냅샷을 사용합니다.
 - 베스트 장소 이미지 URL은 해당 방문지가 현재 코스에 남아 있을 때만 반환합니다.
 
+### 몸 상태와 좋았던 점 칩
+
+확정 시안의 `부모님 피드백` 영역은 `좋았던 점` 칩에 태그와 함께 몸 상태 `편안했어요`를 섞어 보여줍니다. 서버는 둘을 합치지 않고 `goodTags`와 `parentFeedbacks[].bodyCondition`으로 분리해 반환하며, 클라이언트가 아래 규칙으로 표시합니다.
+
+- `comfortable`(편안했어요)인 부모가 한 명이라도 있으면 `좋았던 점`에 칩 하나를 추가합니다.
+- `slightly_tired`, `very_tired`는 **어디에도 표시하지 않습니다.** 확정 시안에 해당 표현이 없어 `아쉬웠던 점`으로 옮기지 않습니다.
+- 몸 상태를 `FeedbackTag` 목록에 넣지 않습니다. 태그가 아닌 값을 태그 타입에 섞으면 enum 계약이 깨집니다.
+
+몸 상태를 아쉬웠던 점에도 노출하기로 결정되면 이 규칙과 시안을 함께 갱신합니다.
+
 ## 대표 이미지
 
 1. 부모별 베스트 장소 중 이미지가 있는 첫 장소
@@ -44,17 +54,23 @@
 
 ## 미확정 값
 
-아래 필드는 기존 ERD를 유지하되 계산 근거가 확정되기 전까지 `null`로 둡니다.
+확정 시안(`[iOS] 기록`)의 효도 리포트 화면에 아래 값들의 UI가 없어 **API 응답에서 제거**했습니다. `filial_reports` **컬럼은 유지**합니다. 산식이 확정되면 컬럼을 다시 만들지 않고 응답 필드만 되살릴 수 있습니다.
 
-- 효도 지수
-- 만족도 점수
-- 다리 편안함 점수
-- 잔소리 방지 점수
-- 식사 만족 점수
-- 화장실 안심 점수
-- 수상 문구와 리포트 요약
-- 걸음 수
-- 공유 이미지 URL
+| 제거한 응답 필드 | 유지한 컬럼 |
+|------------------|-------------|
+| `totalScore` | `total_score` |
+| `satisfactionScore` | `satisfaction_score` |
+| `legComfortScore` | `leg_comfort_score` |
+| `naggingPreventionScore` | `nagging_prevention_score` |
+| `mealSatisfactionScore` | `meal_satisfaction_score` |
+| `restroomSafetyScore` | `restroom_safety_score` |
+| `awardTitle` | `award_title` |
+| `summary` | `summary` |
+| `totalStepCount` | `total_step_count` |
+
+`shareImageUrl`은 시안에 `공유하기` 버튼이 있어 **응답에 유지**하며 값은 계속 `null`입니다. 공유 화면을 클라이언트 캡처로 구현하면 이 필드도 정리 대상이 됩니다.
+
+`filial_report_stop_summaries` 테이블은 장소별 배지와 한 줄 요약을 위한 후속 설계였으나 확정 시안에 해당 UI가 없어 계속 미사용입니다.
 
 ## 코스 변경과 초기화
 

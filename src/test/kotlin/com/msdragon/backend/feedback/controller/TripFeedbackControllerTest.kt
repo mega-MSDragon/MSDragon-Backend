@@ -139,6 +139,8 @@ class TripFeedbackControllerTest {
 				.andExpect(jsonPath("$.data.canRequest").value(true))
 				.andExpect(jsonPath("$.data.reportReady").value(false))
 				.andExpect(jsonPath("$.data.parents[0].requestedAt").isString)
+				// 미제출 부모는 별점이 없다. 기록 상세가 부분 제출 상태를 구분할 수 있어야 한다.
+				.andExpect(jsonPath("$.data.parents[0].overallRating").doesNotExist())
 		}
 
 		check(tripFeedbackRequestRepository.count() == 2L)
@@ -219,6 +221,9 @@ class TripFeedbackControllerTest {
 			.andExpect(jsonPath("$.data.submittedParentCount").value(2))
 			.andExpect(jsonPath("$.data.canRequest").value(false))
 			.andExpect(jsonPath("$.data.reportReady").value(true))
+			// 효도 리포트 없이도 부모별 별점을 표시할 수 있어야 한다.
+			.andExpect(jsonPath("$.data.parents[0].overallRating").value(0.0))
+			.andExpect(jsonPath("$.data.parents[1].overallRating").value(5.0))
 
 		mockMvc.perform(
 			get("/api/v1/trips/$tripId/filial-report")

@@ -44,30 +44,6 @@ data class FilialReportResponse(
 	@field:Schema(description = "Tmap 일자별 경로를 합산한 대략적인 이동거리(km)", example = "7.50", nullable = true)
 	val totalDistanceKm: BigDecimal?,
 
-	@field:Schema(description = "효도 지수. 산식 확정 전에는 null입니다.", nullable = true)
-	val totalScore: Int?,
-
-	@field:Schema(description = "만족도 점수. 산식 확정 전에는 null입니다.", nullable = true)
-	val satisfactionScore: Int?,
-
-	@field:Schema(description = "다리 편안함 점수. 산식 확정 전에는 null입니다.", nullable = true)
-	val legComfortScore: Int?,
-
-	@field:Schema(description = "잔소리 방지 점수. 산식 확정 전에는 null입니다.", nullable = true)
-	val naggingPreventionScore: Int?,
-
-	@field:Schema(description = "식사 만족 점수. 산식 확정 전에는 null입니다.", nullable = true)
-	val mealSatisfactionScore: Int?,
-
-	@field:Schema(description = "화장실 안심 점수. 산식 확정 전에는 null입니다.", nullable = true)
-	val restroomSafetyScore: Int?,
-
-	@field:Schema(description = "리포트 수상 문구. 확정 전에는 null입니다.", nullable = true)
-	val awardTitle: String?,
-
-	@field:Schema(description = "리포트 요약. 확정 전에는 null입니다.", nullable = true)
-	val summary: String?,
-
 	@field:Schema(description = "좋았던 점 태그. 부모가 중복 선택해도 한 번만 반환합니다.")
 	val goodTags: List<FeedbackTag>,
 
@@ -79,9 +55,6 @@ data class FilialReportResponse(
 
 	@field:Schema(description = "일차와 순서대로 정렬한 방문지 목록")
 	val stops: List<FilialReportStopResponse>,
-
-	@field:Schema(description = "걸음 수. 측정 기준 확정 전에는 null입니다.", nullable = true)
-	val totalStepCount: Int?,
 
 	@field:Schema(description = "공유 이미지 URL. 공유 디자인 구현 전에는 null입니다.", nullable = true)
 	val shareImageUrl: String?,

@@ -52,6 +52,13 @@ data class TripParentFeedbackStatusResponse(
 
 	@field:Schema(description = "피드백 제출 시간", example = "2026-07-26T11:00:00", nullable = true)
 	val submittedAt: LocalDateTime?,
+
+	@field:Schema(
+		description = "이 부모가 제출한 전체 만족도. 아직 제출하지 않았으면 null입니다. 효도 리포트 생성 전에도 제출한 부모의 별점을 표시할 수 있습니다.",
+		example = "4.5",
+		nullable = true,
+	)
+	val overallRating: BigDecimal?,
 )
 
 @Schema(description = "부모 여행 피드백")

@@ -102,14 +102,6 @@
     "totalPlaceCount": 5,
     "averageRating": 4.8,
     "totalDistanceKm": 7.50,
-    "totalScore": null,
-    "satisfactionScore": null,
-    "legComfortScore": null,
-    "naggingPreventionScore": null,
-    "mealSatisfactionScore": null,
-    "restroomSafetyScore": null,
-    "awardTitle": null,
-    "summary": null,
     "goodTags": [
       "walking_comfortable",
       "food_good"
@@ -143,7 +135,6 @@
         "imageUrl": "https://example.com/place.jpg"
       }
     ],
-    "totalStepCount": null,
     "shareImageUrl": null,
     "generatedAt": "2026-07-28T12:00:00"
   }
