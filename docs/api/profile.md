@@ -32,10 +32,13 @@
     "role": "child",
     "displayName": "최혜린",
     "ageBand": "20s",
-    "gender": "female"
+    "gender": "female",
+    "profileImage": "flower"
   }
 }
 ```
+
+`profileImage`는 프리셋 아바타 식별자입니다. 선택 전이거나 지운 상태면 `null`이며 클라이언트가 기본 실루엣을 표시합니다.
 
 ---
 
@@ -49,7 +52,8 @@
 {
   "displayName": "최혜린",
   "ageBand": "30s",
-  "gender": "female"
+  "gender": "female",
+  "profileImage": "flower"
 }
 ```
 
@@ -58,6 +62,9 @@
 | `displayName` | string | false | 최대 50자 |
 | `ageBand` | enum | false | `10s`, `20s`, `30s`, `40s`, `50s`, `60s`, `60s_plus`, `70s`, `80s`, `90s_plus`, `undisclosed` |
 | `gender` | enum | false | `female`, `male`, `undisclosed` |
+| `profileImage` | enum | false | `basic`, `flower`, `sunglasses`, `straw_hat`, `none` |
+
+`profileImage`는 필드를 **생략하면 기존 아바타를 유지**하고 `none`을 보내면 **지웁니다**. 응답에는 `none`이 나가지 않고 지운 상태는 `null`입니다. 상세 정책은 `docs/policy/mypage.md`를 따릅니다.
 
 역할별 연령대 검증은 회원가입 완료 API와 같은 기준을 사용합니다.
 

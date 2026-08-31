@@ -1,5 +1,6 @@
 package com.msdragon.backend.profile.service
 
+import com.msdragon.backend.auth.entity.UserProfileImage
 import com.msdragon.backend.auth.entity.UserRole
 import com.msdragon.backend.auth.repository.UserRefreshTokenRepository
 import com.msdragon.backend.auth.repository.UserRepository
@@ -55,6 +56,11 @@ class ProfileService(
 
 		if (request.gender != null) {
 			user.gender = request.gender
+		}
+
+		// none은 지우기 요청이다. 필드를 생략하면 기존 아바타를 유지한다.
+		if (request.profileImage != null) {
+			user.profileImage = request.profileImage.takeIf { it != UserProfileImage.NONE }
 		}
 
 		return MyProfileResponse.from(user)

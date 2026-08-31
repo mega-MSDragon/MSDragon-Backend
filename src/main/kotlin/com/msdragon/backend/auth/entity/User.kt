@@ -36,6 +36,10 @@ class User(
 	@Column(name = "gender", nullable = false, length = 20)
 	var gender: GenderType = GenderType.UNDISCLOSED,
 
+	/** 프리셋 프로필 이미지 식별자. null이면 기본 실루엣을 표시한다. */
+	@Column(name = "profile_image", length = 30)
+	var profileImage: UserProfileImage? = null,
+
 	/**
 	 * 탈퇴 시 provider 연결 해제(revoke)에 사용하는 provider refresh token.
 	 * 자격증명이므로 로그에 남기지 않는다. 현재는 애플만 사용한다.
@@ -89,6 +93,7 @@ class User(
 		signupCompletedAt = null
 		lastLoginAt = null
 		oauthRefreshToken = null
+		profileImage = null
 		deletedAt = withdrawnAt
 	}
 

@@ -138,6 +138,47 @@ class ProfileControllerTest {
 			.andExpect(jsonPath("$.data.ageBand").value("30s"))
 			.andExpect(jsonPath("$.data.gender").value("female"))
 	}
+	@Test
+	fun `프리셋 프로필 이미지를 선택하고 지운다`() {
+		val child = saveUser(UserRole.CHILD, "child-1", "혜린")
+		val authorization = "Bearer ${tokenService.createAccessToken(child)}"
+
+		mockMvc.perform(
+			get("/api/v1/users/me").header("Authorization", authorization),
+		)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.data.profileImage").doesNotExist())
+
+		mockMvc.perform(
+			patch("/api/v1/users/me")
+				.header("Authorization", authorization)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""{"profileImage":"flower"}"""),
+		)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.data.profileImage").value("flower"))
+
+		// 다른 필드만 보내면 아바타를 유지한다.
+		mockMvc.perform(
+			patch("/api/v1/users/me")
+				.header("Authorization", authorization)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""{"displayName":"최혜린"}"""),
+		)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.data.profileImage").value("flower"))
+
+		// none은 지우기 요청이다.
+		mockMvc.perform(
+			patch("/api/v1/users/me")
+				.header("Authorization", authorization)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""{"profileImage":"none"}"""),
+		)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.data.profileImage").doesNotExist())
+	}
+
 
 	@Test
 	fun `역할에 맞지 않는 연령대로 프로필 수정을 거절한다`() {

@@ -111,6 +111,31 @@ enum class UserConsentType(
 	}
 }
 
+/**
+ * 마이페이지 프로필 이미지. 서버가 식별자를 정하고 클라이언트가 같은 값에 에셋을 맞춘다.
+ * 업로드가 아닌 프리셋 선택이므로 이미지 파일을 저장하지 않는다.
+ *
+ * `none`은 요청 전용 값으로 "아바타 지우기"를 뜻한다. 저장은 `null`이며 응답에도 `null`로 나간다.
+ * 프로필 수정은 필드를 생략하면 변경하지 않는 규칙이라 `null`로 지우기를 표현할 수 없어 별도 값을 둔다.
+ */
+enum class UserProfileImage(
+	@get:JsonValue
+	override val value: String,
+) : DbEnum {
+	BASIC("basic"),
+	FLOWER("flower"),
+	SUNGLASSES("sunglasses"),
+	STRAW_HAT("straw_hat"),
+	NONE("none"),
+	;
+
+	companion object {
+		@JvmStatic
+		@JsonCreator(mode = JsonCreator.Mode.DELEGATING)
+		fun from(value: String): UserProfileImage = enumValueOf(value, entries)
+	}
+}
+
 private fun <T> enumValueOf(value: String, entries: Iterable<T>): T where T : Enum<T>, T : DbEnum =
 	entries.firstOrNull { it.value == value.lowercase() || it.name.equals(value, ignoreCase = true) }
 		?: throw BadRequestException("지원하지 않는 값입니다: $value")
@@ -141,3 +166,6 @@ class DevicePlatformConverter : DbEnumConverter<DevicePlatform>(DevicePlatform.e
 
 @Converter(autoApply = true)
 class UserConsentTypeConverter : DbEnumConverter<UserConsentType>(UserConsentType.entries)
+
+@Converter(autoApply = true)
+class UserProfileImageConverter : DbEnumConverter<UserProfileImage>(UserProfileImage.entries)

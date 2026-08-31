@@ -33,6 +33,8 @@
 
 ## GET /api/v1/family
 
+마이페이지의 `부모님 프로필`·`자녀 프로필` 카드도 이 API를 사용합니다. `members[].profileCompleted`가 `false`면 `프로필 미입력`을 표시하고, `members[].personalityResult.name`을 여행 MBTI 배지에 씁니다. 자녀는 여행 MBTI가 없어 `profileCompleted`가 항상 `false`, `personalityResult`가 `null`입니다.
+
 ### Response: 매칭 전
 
 ```json
@@ -65,7 +67,10 @@
         "displayName": "혜린",
         "ageBand": "20s",
         "gender": "female",
-        "relationLabel": null
+        "relationLabel": null,
+        "profileImage": "basic",
+        "profileCompleted": false,
+        "personalityResult": null
       },
       {
         "userId": 1,
@@ -73,7 +78,15 @@
         "displayName": "엄마",
         "ageBand": "60s",
         "gender": "female",
-        "relationLabel": "엄마"
+        "relationLabel": "엄마",
+        "profileImage": "flower",
+        "profileCompleted": true,
+        "personalityResult": {
+          "code": "healing_traveler",
+          "name": "유유자적 힐링러형",
+          "catchphrase": "여행은 쉬러 가는 거지.",
+          "description": "천천히 걷고 오래 머무는 여행을 좋아합니다."
+        }
       }
     ]
   }
@@ -135,7 +148,10 @@
         "displayName": "혜린",
         "ageBand": "20s",
         "gender": "female",
-        "relationLabel": null
+        "relationLabel": null,
+        "profileImage": "basic",
+        "profileCompleted": false,
+        "personalityResult": null
       },
       {
         "userId": 1,
@@ -143,7 +159,15 @@
         "displayName": "엄마",
         "ageBand": "60s",
         "gender": "female",
-        "relationLabel": "엄마"
+        "relationLabel": "엄마",
+        "profileImage": "flower",
+        "profileCompleted": true,
+        "personalityResult": {
+          "code": "healing_traveler",
+          "name": "유유자적 힐링러형",
+          "catchphrase": "여행은 쉬러 가는 거지.",
+          "description": "천천히 걷고 오래 머무는 여행을 좋아합니다."
+        }
       }
     ]
   }

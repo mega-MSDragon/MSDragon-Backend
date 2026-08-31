@@ -18,7 +18,7 @@
 - 아직 폐기되지 않은 refresh token은 모두 `revoked_at`을 기록합니다.
 - 기존 access token은 인증 과정에서 활성 사용자 조회에 실패하므로 탈퇴 직후부터 사용할 수 없습니다.
 - 기존 소셜 식별자를 해제하므로 같은 소셜 계정으로 다시 가입하면 새로운 `users` row를 생성합니다. 이전 계정이나 가족 연결은 복구하지 않습니다.
-- `oauth_refresh_token`은 `null`로 지웁니다.
+- `oauth_refresh_token`과 `profile_image`는 `null`로 지웁니다.
 
 ## 소셜 연결 해제 (revoke / unlink)
 

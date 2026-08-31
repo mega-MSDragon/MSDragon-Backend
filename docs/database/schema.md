@@ -59,6 +59,7 @@ DB 스키마와 공통 엔티티 규칙을 기록합니다.
 - DB 저장 enum 값은 DBML과 맞춰 소문자 문자열을 사용합니다.
 - 회원가입 전 사용자는 저장하지 않습니다. 소셜 로그인 후 `signupToken`을 발급하고, 회원가입 완료 시 `users` row를 생성합니다.
 - 회원 탈퇴는 soft delete로 처리합니다. `deleted_at`을 기록하고 소셜 식별자와 기본 프로필을 익명화해 같은 소셜 계정의 새 가입을 허용합니다.
+- `profile_image`는 마이페이지 프리셋 아바타 식별자입니다. 이미지 파일을 저장하지 않으며 `basic`, `flower`, `sunglasses`, `straw_hat` 중 하나이거나 선택 전/지운 상태면 `null`입니다.
 - `oauth_refresh_token`은 탈퇴 시 provider 앱 연결 해제(애플 revoke)에 사용하는 자격증명입니다. 로그인 시 `authorizationCode`를 교환해 저장하고, 익명화 시 `null`로 지웁니다. 로그에 남기지 않습니다.
 
 ### user_consents

@@ -5,6 +5,9 @@ import com.msdragon.backend.auth.entity.User
 import com.msdragon.backend.auth.entity.UserRole
 import com.msdragon.backend.family.entity.Family
 import com.msdragon.backend.family.entity.FamilyMember
+import com.msdragon.backend.parentprofile.dto.TravelPersonalityResultResponse
+import com.msdragon.backend.parentprofile.entity.ParentProfile
+import com.msdragon.backend.parentprofile.entity.ParentProfileStatus
 import io.swagger.v3.oas.annotations.media.Schema
 
 @Schema(description = "가족 코드 응답")
@@ -29,11 +32,12 @@ data class FamilyMatchResponse(
 			family: Family,
 			matchedUser: User,
 			members: List<FamilyMember>,
+			profilesByUserId: Map<Long, ParentProfile> = emptyMap(),
 		): FamilyMatchResponse =
 			FamilyMatchResponse(
 				familyId = requireNotNull(family.id),
 				matchedUser = FamilyUserResponse.from(matchedUser),
-				members = members.map(FamilyMemberResponse::from),
+				members = members.map { FamilyMemberResponse.of(it, profilesByUserId[it.user.id]) },
 			)
 	}
 }
@@ -61,11 +65,12 @@ data class MyFamilyResponse(
 			family: Family,
 			myCode: String?,
 			members: List<FamilyMember>,
+			profilesByUserId: Map<Long, ParentProfile> = emptyMap(),
 		): MyFamilyResponse =
 			MyFamilyResponse(
 				familyId = requireNotNull(family.id),
 				myCode = myCode,
-				members = members.map(FamilyMemberResponse::from),
+				members = members.map { FamilyMemberResponse.of(it, profilesByUserId[it.user.id]) },
 			)
 	}
 }
@@ -110,17 +115,45 @@ data class FamilyMemberResponse(
 
 	@field:Schema(description = "부모 성별 기반 가족 관계 표시 이름. female이면 엄마, male이면 아빠, 그 외에는 null입니다.", example = "엄마", nullable = true)
 	val relationLabel: String?,
+
+	@field:Schema(
+		description = "프리셋 프로필 이미지 식별자. 선택하지 않았으면 null이며 클라이언트는 기본 실루엣을 표시합니다.",
+		example = "flower",
+		allowableValues = ["basic", "flower", "sunglasses", "straw_hat"],
+		nullable = true,
+	)
+	val profileImage: String?,
+
+	@field:Schema(
+		description = "부모님 프로필 작성 완료 여부. 자녀는 항상 false입니다. 마이페이지에서 `프로필 미입력` 표시에 사용합니다.",
+		example = "true",
+	)
+	val profileCompleted: Boolean,
+
+	@field:Schema(
+		description = "완료된 부모님 프로필의 여행 MBTI. 미완료이거나 자녀면 null입니다. 마이페이지 유형명 배지에 사용합니다.",
+		nullable = true,
+	)
+	val personalityResult: TravelPersonalityResultResponse?,
 ) {
 	companion object {
-		fun from(member: FamilyMember): FamilyMemberResponse =
-			FamilyMemberResponse(
+		fun of(member: FamilyMember, parentProfile: ParentProfile?): FamilyMemberResponse {
+			val completed = parentProfile?.status == ParentProfileStatus.COMPLETED
+			return FamilyMemberResponse(
 				userId = requireNotNull(member.user.id),
 				role = member.memberRole.value,
 				displayName = member.user.displayName,
 				ageBand = member.user.ageBand.value,
 				gender = member.user.gender.value,
 				relationLabel = relationLabelOf(member),
+				profileImage = member.user.profileImage?.value,
+				profileCompleted = completed,
+				personalityResult = parentProfile
+					?.takeIf { completed }
+					?.personalityType
+					?.let(TravelPersonalityResultResponse::from),
 			)
+		}
 
 		private fun relationLabelOf(member: FamilyMember): String? {
 			if (member.memberRole != UserRole.PARENT) {

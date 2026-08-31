@@ -17,6 +17,8 @@ import com.msdragon.backend.family.entity.FamilyCodeUsage
 import com.msdragon.backend.family.entity.FamilyMember
 import com.msdragon.backend.family.repository.FamilyCodeRepository
 import com.msdragon.backend.family.repository.FamilyCodeUsageRepository
+import com.msdragon.backend.parentprofile.entity.ParentProfile
+import com.msdragon.backend.parentprofile.repository.ParentProfileRepository
 import com.msdragon.backend.family.repository.FamilyMemberRepository
 import com.msdragon.backend.family.repository.FamilyRepository
 import org.springframework.stereotype.Service
@@ -30,6 +32,7 @@ class FamilyService(
 	private val familyMemberRepository: FamilyMemberRepository,
 	private val familyCodeRepository: FamilyCodeRepository,
 	private val familyCodeUsageRepository: FamilyCodeUsageRepository,
+	private val parentProfileRepository: ParentProfileRepository,
 ) {
 	private val random = SecureRandom()
 
@@ -48,10 +51,12 @@ class FamilyService(
 		val myCode = familyCodeRepository.findByUserId(userId)?.code
 		val myMember = familyMemberRepository.findByUserId(userId)
 			?: return MyFamilyResponse.empty(myCode)
+		val members = familyMembers(myMember.family)
 		return MyFamilyResponse.of(
 			family = myMember.family,
 			myCode = myCode,
-			members = familyMembers(myMember.family),
+			members = members,
+			profilesByUserId = parentProfilesOf(members),
 		)
 	}
 
@@ -87,7 +92,8 @@ class FamilyService(
 		val family = childMember?.family ?: createChildFamily(child)
 		if (parentMember != null) {
 			recordCodeUsageIfNeeded(targetCode, requester, family)
-			return FamilyMatchResponse.of(family, targetUser, familyMembers(family))
+			val matchedMembers = familyMembers(family)
+			return FamilyMatchResponse.of(family, targetUser, matchedMembers, parentProfilesOf(matchedMembers))
 		}
 
 		val familyId = requireNotNull(family.id)
@@ -104,7 +110,8 @@ class FamilyService(
 		)
 		recordCodeUsageIfNeeded(targetCode, requester, family)
 
-		return FamilyMatchResponse.of(family, targetUser, familyMembers(family))
+		val resultMembers = familyMembers(family)
+		return FamilyMatchResponse.of(family, targetUser, resultMembers, parentProfilesOf(resultMembers))
 	}
 
 	private fun getLoginUser(userId: Long): User =
@@ -141,6 +148,16 @@ class FamilyService(
 			)
 		}
 	}
+
+	/** 마이페이지 프로필 카드가 여행 MBTI와 미입력 여부를 함께 보여주므로 부모 프로필을 함께 읽는다. */
+	private fun parentProfilesOf(members: List<FamilyMember>): Map<Long, ParentProfile> =
+		members
+			.filter { it.memberRole == UserRole.PARENT }
+			.mapNotNull { member ->
+				parentProfileRepository.findByUserId(requireNotNull(member.user.id))
+					?.let { requireNotNull(member.user.id) to it }
+			}
+			.toMap()
 
 	private fun familyMembers(family: Family): List<FamilyMember> =
 		familyMemberRepository.findAllByFamilyIdOrderByJoinedAtAsc(requireNotNull(family.id))

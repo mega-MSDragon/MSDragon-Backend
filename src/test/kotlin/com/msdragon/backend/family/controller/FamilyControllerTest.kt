@@ -147,6 +147,10 @@ class FamilyControllerTest {
 			.andExpect(jsonPath("$.data.members[1].ageBand").value("60s"))
 			.andExpect(jsonPath("$.data.members[1].gender").value("female"))
 			.andExpect(jsonPath("$.data.members[1].relationLabel").value("엄마"))
+			// 마이페이지가 프로필 미입력 배지를 판단할 수 있어야 한다.
+			.andExpect(jsonPath("$.data.members[1].profileCompleted").value(false))
+			.andExpect(jsonPath("$.data.members[1].personalityResult").doesNotExist())
+			.andExpect(jsonPath("$.data.members[1].profileImage").doesNotExist())
 	}
 
 	@Test
