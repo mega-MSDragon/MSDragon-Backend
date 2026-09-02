@@ -21,3 +21,4 @@
 | [nearby-support-facilities.md](./nearby-support-facilities.md) | 여행 모드 주변 공중화장실 적재·조회 정책 |
 | [legal-documents.md](./legal-documents.md) | 개인정보처리방침·이용약관 정적 HTML 제공과 버전 관리 정책 |
 | [mypage.md](./mypage.md) | 마이페이지 화면 구성, 프리셋 프로필 이미지, 알림·MBTI 재작성 정책 |
+| [app-review-family-code.md](./app-review-family-code.md) | 앱 스토어 심사용 가족 코드와 데모 가족 자동 생성 정책 |

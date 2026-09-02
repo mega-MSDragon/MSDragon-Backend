@@ -115,6 +115,8 @@
 
 ## POST /api/v1/family/matches
 
+심사 기간에 `APP_REVIEW_FAMILY_CODE`가 설정되어 있으면 그 코드는 일반 코드 조회를 건너뛰고 심사용 데모 가족을 새로 만들어 연결합니다. 응답 형식은 일반 매칭과 같습니다. 자세한 동작과 운영 절차는 `docs/policy/app-review-family-code.md`를 따릅니다.
+
 ### Request
 
 ```json
