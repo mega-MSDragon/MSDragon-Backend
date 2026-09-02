@@ -18,6 +18,7 @@ import org.springframework.http.MediaType
 import org.springframework.test.context.TestPropertySource
 import org.springframework.test.web.servlet.MockMvc
 import com.jayway.jsonpath.JsonPath
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
@@ -143,6 +144,49 @@ class FamilyReviewCodeTest {
 			.andExpect(status().isOk)
 			.andExpect(jsonPath("$.data.feedbackAvailable").value(true))
 			.andExpect(jsonPath("$.data.canSubmit").value(true))
+	}
+
+	@Test
+	fun `연결했던 심사자가 탈퇴한 뒤 다시 연결할 수 있다`() {
+		// 자녀로 연결 후 탈퇴하면 가족이 해체되고 구성원 row가 모두 삭제된다.
+		val first = saveUser(UserRole.CHILD, "apple-reviewer-rejoin-1", "리뷰어")
+		mockMvc.perform(matchRequest(first, "MSH-0901")).andExpect(status().isOk)
+
+		mockMvc.perform(
+			delete("/api/v1/users/me")
+				.header("Authorization", "Bearer ${tokenService.createAccessToken(first)}"),
+		)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(200))
+
+		// 같은 애플 계정으로 다시 로그인하면 새 users row가 되므로 새 계정으로 재현한다.
+		val rejoined = saveUser(UserRole.CHILD, "apple-reviewer-rejoin-2", "리뷰어")
+		mockMvc.perform(matchRequest(rejoined, "MSH-0901"))
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(200))
+			.andExpect(jsonPath("$.data.members.length()").value(2))
+			.andExpect(jsonPath("$.data.matchedUser.role").value("parent"))
+			.andExpect(jsonPath("$.data.members[1].profileCompleted").value(true))
+	}
+
+	@Test
+	fun `부모로 연결했던 심사자가 탈퇴한 뒤 다시 연결할 수 있다`() {
+		// 부모 탈퇴는 본인 구성원 row만 삭제하고 데모 자녀와 가족은 남는다.
+		val first = saveUser(UserRole.PARENT, "apple-reviewer-prejoin-1", "리뷰어", GenderType.MALE)
+		mockMvc.perform(matchRequest(first, "MSH-0901")).andExpect(status().isOk)
+
+		mockMvc.perform(
+			delete("/api/v1/users/me")
+				.header("Authorization", "Bearer ${tokenService.createAccessToken(first)}"),
+		)
+			.andExpect(status().isOk)
+
+		val rejoined = saveUser(UserRole.PARENT, "apple-reviewer-prejoin-2", "리뷰어", GenderType.MALE)
+		mockMvc.perform(matchRequest(rejoined, "MSH-0901"))
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(200))
+			.andExpect(jsonPath("$.data.members.length()").value(2))
+			.andExpect(jsonPath("$.data.matchedUser.role").value("child"))
 	}
 
 	private fun matchRequest(user: User, code: String) =
