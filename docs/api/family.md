@@ -68,7 +68,7 @@
         "ageBand": "20s",
         "gender": "female",
         "relationLabel": null,
-        "profileImage": "basic",
+        "profileImage": "green",
         "profileCompleted": false,
         "personalityResult": null
       },
@@ -79,7 +79,7 @@
         "ageBand": "60s",
         "gender": "female",
         "relationLabel": "엄마",
-        "profileImage": "flower",
+        "profileImage": "coral",
         "profileCompleted": true,
         "personalityResult": {
           "code": "healing_traveler",
@@ -151,7 +151,7 @@
         "ageBand": "20s",
         "gender": "female",
         "relationLabel": null,
-        "profileImage": "basic",
+        "profileImage": "green",
         "profileCompleted": false,
         "personalityResult": null
       },
@@ -162,7 +162,7 @@
         "ageBand": "60s",
         "gender": "female",
         "relationLabel": "엄마",
-        "profileImage": "flower",
+        "profileImage": "coral",
         "profileCompleted": true,
         "personalityResult": {
           "code": "healing_traveler",

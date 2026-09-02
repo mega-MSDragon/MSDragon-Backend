@@ -33,7 +33,7 @@
     "displayName": "최혜린",
     "ageBand": "20s",
     "gender": "female",
-    "profileImage": "flower"
+    "profileImage": "coral"
   }
 }
 ```
@@ -53,7 +53,7 @@
   "displayName": "최혜린",
   "ageBand": "30s",
   "gender": "female",
-  "profileImage": "flower"
+  "profileImage": "coral"
 }
 ```
 
@@ -62,7 +62,7 @@
 | `displayName` | string | false | 최대 50자 |
 | `ageBand` | enum | false | `10s`, `20s`, `30s`, `40s`, `50s`, `60s`, `60s_plus`, `70s`, `80s`, `90s_plus`, `undisclosed` |
 | `gender` | enum | false | `female`, `male`, `undisclosed` |
-| `profileImage` | enum | false | `basic`, `flower`, `sunglasses`, `straw_hat`, `none` |
+| `profileImage` | enum | false | `green`, `coral`, `yellow`, `blue`, `none` |
 
 `profileImage`는 필드를 **생략하면 기존 아바타를 유지**하고 `none`을 보내면 **지웁니다**. 응답에는 `none`이 나가지 않고 지운 상태는 `null`입니다. 상세 정책은 `docs/policy/mypage.md`를 따릅니다.
 

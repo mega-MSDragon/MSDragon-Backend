@@ -153,10 +153,10 @@ class ProfileControllerTest {
 			patch("/api/v1/users/me")
 				.header("Authorization", authorization)
 				.contentType(MediaType.APPLICATION_JSON)
-				.content("""{"profileImage":"flower"}"""),
+				.content("""{"profileImage":"coral"}"""),
 		)
 			.andExpect(status().isOk)
-			.andExpect(jsonPath("$.data.profileImage").value("flower"))
+			.andExpect(jsonPath("$.data.profileImage").value("coral"))
 
 		// 다른 필드만 보내면 아바타를 유지한다.
 		mockMvc.perform(
@@ -166,7 +166,7 @@ class ProfileControllerTest {
 				.content("""{"displayName":"최혜린"}"""),
 		)
 			.andExpect(status().isOk)
-			.andExpect(jsonPath("$.data.profileImage").value("flower"))
+			.andExpect(jsonPath("$.data.profileImage").value("coral"))
 
 		// none은 지우기 요청이다.
 		mockMvc.perform(

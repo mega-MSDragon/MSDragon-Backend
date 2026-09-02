@@ -118,8 +118,8 @@ data class FamilyMemberResponse(
 
 	@field:Schema(
 		description = "프리셋 프로필 이미지 식별자. 선택하지 않았으면 null이며 클라이언트는 기본 실루엣을 표시합니다.",
-		example = "flower",
-		allowableValues = ["basic", "flower", "sunglasses", "straw_hat"],
+		example = "coral",
+		allowableValues = ["green", "coral", "yellow", "blue"],
 		nullable = true,
 	)
 	val profileImage: String?,

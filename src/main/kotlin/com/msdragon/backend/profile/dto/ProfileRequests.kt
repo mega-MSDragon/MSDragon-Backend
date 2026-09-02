@@ -20,8 +20,8 @@ data class UpdateMyProfileRequest(
 
 	@field:Schema(
 		description = "프리셋 프로필 이미지 식별자. 필드를 생략하면 변경하지 않고, `none`을 보내면 아바타를 지워 기본 실루엣으로 되돌립니다.",
-		example = "flower",
-		allowableValues = ["basic", "flower", "sunglasses", "straw_hat", "none"],
+		example = "coral",
+		allowableValues = ["green", "coral", "yellow", "blue", "none"],
 		nullable = true,
 	)
 	val profileImage: UserProfileImage? = null,

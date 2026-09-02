@@ -47,10 +47,10 @@ Enum device_platform {
 }
 
 Enum user_profile_image {
-  basic
-  flower
-  sunglasses
-  straw_hat
+  green
+  coral
+  yellow
+  blue
 }
 
 Enum user_consent_type {

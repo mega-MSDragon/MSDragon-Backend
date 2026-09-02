@@ -115,6 +115,9 @@ enum class UserConsentType(
  * 마이페이지 프로필 이미지. 서버가 식별자를 정하고 클라이언트가 같은 값에 에셋을 맞춘다.
  * 업로드가 아닌 프리셋 선택이므로 이미지 파일을 저장하지 않는다.
  *
+ * 시안의 배경색 기준으로 이름을 정했다. 어떤 아바타인지는 `docs/policy/mypage.md`의 매핑 표가 기준이며,
+ * 배경색이 리터치되어도 식별자는 그대로 두고 표만 갱신한다. 식별자를 바꾸면 클라이언트와 저장된 값이 함께 깨진다.
+ *
  * `none`은 요청 전용 값으로 "아바타 지우기"를 뜻한다. 저장은 `null`이며 응답에도 `null`로 나간다.
  * 프로필 수정은 필드를 생략하면 변경하지 않는 규칙이라 `null`로 지우기를 표현할 수 없어 별도 값을 둔다.
  */
@@ -122,10 +125,10 @@ enum class UserProfileImage(
 	@get:JsonValue
 	override val value: String,
 ) : DbEnum {
-	BASIC("basic"),
-	FLOWER("flower"),
-	SUNGLASSES("sunglasses"),
-	STRAW_HAT("straw_hat"),
+	GREEN("green"),
+	CORAL("coral"),
+	YELLOW("yellow"),
+	BLUE("blue"),
 	NONE("none"),
 	;
 
