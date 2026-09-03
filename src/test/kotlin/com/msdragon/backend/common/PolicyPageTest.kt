@@ -1,6 +1,7 @@
 package com.msdragon.backend.common
 
 import com.msdragon.backend.trip.entity.TripDestinationCode
+import org.hamcrest.Matchers.containsString
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
@@ -36,12 +37,17 @@ class PolicyPageTest {
 	}
 
 	@Test
-	fun getEnglishPoliciesWithoutAuthorization() {
-		// 앱 스토어 심사자가 영어로 내용을 확인할 수 있어야 한다.
-		listOf("/policies/privacy-en.html", "/policies/terms-en.html").forEach { path ->
+	fun policyPagesContainBothLanguages() {
+		// 앱이 URL 하나만 열어도 심사자가 영어로 확인할 수 있어야 한다.
+		// URL을 늘리면 앱을 고쳐야 하므로 한 페이지에 두 언어를 담는다.
+		listOf(
+			"/policies/privacy.html" to "Privacy Policy",
+			"/policies/terms.html" to "Terms of Service",
+		).forEach { (path, englishHeading) ->
 			mockMvc.perform(get(path))
 				.andExpect(status().isOk)
-				.andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_HTML))
+				.andExpect(content().string(containsString(englishHeading)))
+				.andExpect(content().string(containsString("data-lang=\"en\"")))
 		}
 	}
 

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>모셔용 개인정보처리방침</title>
+<title>모셔용 개인정보처리방침 / Privacy Policy</title>
 <style>
 :root { color-scheme: light dark; --fg: #1a1a1a; --bg: #ffffff; --muted: #666666; --line: #e5e5e5; --todo-bg: #fff3cd; --todo-fg: #7a4f01; }
 @media (prefers-color-scheme: dark) {
@@ -26,12 +26,28 @@ th, td { border: 1px solid var(--line); padding: 8px 6px; text-align: left; vert
 th { background: color-mix(in srgb, var(--fg) 6%, transparent); font-weight: 600; }
 .todo { background: var(--todo-bg); color: var(--todo-fg); padding: 1px 5px; border-radius: 3px; font-weight: 600; }
 .scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+.lang-switch { display: flex; gap: 6px; margin: 0 0 18px; }
+.lang-switch button {
+  flex: 0 0 auto; padding: 7px 14px; font: inherit; font-size: 13px; cursor: pointer;
+  color: var(--muted); background: transparent;
+  border: 1px solid var(--line); border-radius: 999px;
+}
+.lang-switch button[aria-pressed="true"] {
+  color: var(--bg); background: var(--fg); border-color: var(--fg); font-weight: 600;
+}
 </style>
 </head>
 <body>
 
+<div class="lang-switch">
+  <button type="button" data-lang="ko" aria-pressed="true">한국어</button>
+  <button type="button" data-lang="en" aria-pressed="false">English</button>
+</div>
+
+<section id="ko">
 <h1>개인정보처리방침</h1>
-<p class="meta">시행일: 2026-09-01 · 버전: v1 · <a href="./privacy-en.html">English</a></p>
+<p class="meta">시행일: 2026-09-01 · 버전: v1</p>
 
 <p><strong>메가족</strong>(이하 &ldquo;운영팀&rdquo;)은 <strong>모셔용</strong>(이하 &ldquo;서비스&rdquo;) 이용자의 개인정보를 중요하게 생각하며, 「개인정보 보호법」 등 관련 법령을 준수합니다. 본 방침은 운영팀이 이용자의 개인정보를 어떤 목적으로 수집·이용하고 어떻게 보호하는지를 알리기 위해 공개합니다.</p>
 
@@ -225,6 +241,227 @@ th { background: color-mix(in srgb, var(--fg) 6%, transparent); font-weight: 600
 
 <h2>12. 개인정보처리방침의 변경</h2>
 <p>법령이나 서비스 내용 변경에 따라 본 방침을 개정할 수 있습니다. 개정 시 시행일과 변경 내용을 서비스 화면에 공지하며, 이용자에게 불리한 중요한 변경은 최소 30일 전에 알리고 필요한 경우 다시 동의를 받습니다.</p>
+</section>
 
+<section id="en" hidden>
+<h1>Privacy Policy</h1>
+<p class="meta">Effective date: 2026-09-01 · Version: v1</p>
+
+<p><strong>Megajok</strong> (메가족, hereinafter "the Team") takes the privacy of users of <strong>Mosyeoyong</strong> (모셔용, hereinafter "the Service") seriously and complies with the Personal Information Protection Act of the Republic of Korea and other applicable laws. This policy explains why the Team collects and uses personal information and how it is protected.</p>
+
+<h2>1. Personal information we collect and how we collect it</h2>
+<p>The Team collects only the minimum information required to provide the Service.</p>
+
+<div class="scroll">
+<table>
+<thead><tr><th>Category</th><th>Items</th><th>When collected</th></tr></thead>
+<tbody>
+<tr>
+  <td>Social sign-in</td>
+  <td>Sign-in provider (Kakao or Apple), the member identifier issued by that provider, and the provider authentication token used to disconnect the app when the account is deleted</td>
+  <td>At social sign-in</td>
+</tr>
+<tr>
+  <td>Basic member information</td>
+  <td>Name (nickname), age range, gender, and role (adult child or parent)</td>
+  <td>At sign-up</td>
+</tr>
+<tr>
+  <td>Family connection</td>
+  <td>Family invite code and the connection between family members</td>
+  <td>When a family is connected</td>
+</tr>
+<tr>
+  <td>Parent travel profile</td>
+  <td>Walking pace, whether mobility assistance is needed, preferred travel themes, food preference, and the travel personality type derived from them</td>
+  <td>When a parent profile is created</td>
+</tr>
+<tr>
+  <td>Trip information</td>
+  <td>Trip title, dates and destination, places visited and their order, notes on places, and travel routes</td>
+  <td>When a trip is created or edited</td>
+</tr>
+<tr>
+  <td>Trip pledge signature</td>
+  <td>The signature image drawn by the user and the pledge text</td>
+  <td>When the pledge is signed</td>
+</tr>
+<tr>
+  <td>Trip feedback</td>
+  <td>Satisfaction rating, physical condition, selected review tags, best place, and free-text comment</td>
+  <td>When feedback is submitted after a trip</td>
+</tr>
+<tr>
+  <td>AI chat</td>
+  <td>Questions entered by the user and the AI responses</td>
+  <td>When the AI assistant is used</td>
+</tr>
+<tr>
+  <td>Location data <strong>(optional)</strong></td>
+  <td>Device latitude and longitude</td>
+  <td>When nearby facilities (cafes, restrooms, hospitals, pharmacies) are requested</td>
+</tr>
+<tr>
+  <td>Automatically collected</td>
+  <td>Access time, device platform (iOS, Android, Web), service usage records, and error logs</td>
+  <td>Generated automatically while the Service is used</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<p>Beyond the items above, the Team does not collect sensitive information or unique identifiers such as resident registration numbers, bank or card details, or medical examination records. Information is collected only when a user enters it directly in the Service or when it is provided by the social sign-in provider.</p>
+
+<h2>2. Purposes of collection and use</h2>
+<ul>
+  <li>Identifying members, signing in, and maintaining member accounts</li>
+  <li>Disconnecting the app from the social sign-in provider when an account is deleted</li>
+  <li>Connecting family members and sharing trip information within a family</li>
+  <li>Recommending destinations and courses suited to a parent's preferences and mobility</li>
+  <li>Optimizing travel routes and providing trip schedule guidance</li>
+  <li>Creating and signing the trip pledge and providing the signed document</li>
+  <li>Collecting post-trip feedback and generating the trip report</li>
+  <li>Providing travel guidance through the AI assistant</li>
+  <li>Providing nearby facility information at the user's request (only with optional consent)</li>
+  <li>Responding to errors, preventing misuse, and improving service quality</li>
+</ul>
+
+<h2>3. Consent items and the right to refuse</h2>
+<p>The Team separates required and optional consent and stores each decision together with the terms version.</p>
+<ul>
+  <li><strong>Required</strong> — Consent to the collection and use of personal information. You may refuse, but sign-up and use of the Service are not possible without it.</li>
+  <li><strong>Optional</strong> — Consent to location-based nearby facility guidance. You may refuse and still sign up and use most of the Service; only the nearby facility feature is unavailable.</li>
+</ul>
+
+<h2>4. Retention and use period</h2>
+<ul>
+  <li>As a rule the Team retains personal information while you remain a member and <strong>destroys or anonymizes it without delay when you delete your account</strong>. At that point the social sign-in identifier is replaced with a value that cannot be re-identified, and the name, age range and gender are anonymized.</li>
+  <li>If you sign in again with the same social account after deletion, it is treated as a new sign-up and the previous member's trip records are not restored.</li>
+  <li>Information combined with other users' records, such as trips created together by family members, may remain in anonymized form so that those users' records are preserved.</li>
+  <li>Where applicable law requires a separate retention period, the information is kept for that period.</li>
+  <li>AI chat history is stored per trip to maintain conversation context and is destroyed or anonymized together with the account when it is deleted.</li>
+  <li>The social sign-in provider authentication token is deleted immediately after it is used to disconnect the app during account deletion.</li>
+</ul>
+
+<h2>5. Provision to third parties</h2>
+<p>The Team does not sell personal information or provide it to third parties for marketing purposes. It is provided only where there is a legal basis or where the user has given separate consent.</p>
+<p>Because family connection is a core feature, <strong>the following information is shared among members connected as one family</strong>. This is inherent to the Service and takes place by consenting to the family connection.</p>
+<ul>
+  <li>Name (nickname), role and relationship label (such as Mom or Dad)</li>
+  <li>The parent travel profile and the derived travel personality type</li>
+  <li>The schedule, course, route and place notes of trips taken together</li>
+  <li>The trip pledge text and every participant's signature</li>
+  <li>Trip feedback results and the contents of the trip report</li>
+</ul>
+<p>AI chat history is stored separately for each user and is not disclosed to other family members.</p>
+
+<h2>6. Processing entrusted to others and overseas transfer</h2>
+<p>The Team entrusts the following processing in order to provide the Service. Some processors are located outside the Republic of Korea.</p>
+
+<div class="scroll">
+<table>
+<thead><tr><th>Processor</th><th>Entrusted work</th><th>Items transferred</th><th>Country</th></tr></thead>
+<tbody>
+<tr>
+  <td>Amazon Web Services, Inc.</td>
+  <td>Operating the service servers and database and storing data</td>
+  <td>All personal information stored to provide the Service</td>
+  <td>Republic of Korea (Seoul region)</td>
+</tr>
+<tr>
+  <td>OpenAI, L.L.C.</td>
+  <td>Generating AI assistant responses</td>
+  <td>Questions entered by the user and the schedule, places and route of the relevant trip</td>
+  <td>United States</td>
+</tr>
+<tr>
+  <td>SK Telecom Co., Ltd. (Tmap)</td>
+  <td>Optimizing travel routes and searching nearby facilities</td>
+  <td>Coordinates of places and the current-location coordinates requested by the user</td>
+  <td>Republic of Korea</td>
+</tr>
+<tr>
+  <td>Korea Tourism Organization</td>
+  <td>Retrieving information on attractions, festivals and barrier-free travel</td>
+  <td>Search region and keywords (no personally identifying information)</td>
+  <td>Republic of Korea</td>
+</tr>
+<tr>
+  <td>Kakao Corp. / Apple Inc.</td>
+  <td>Social sign-in authentication and disconnecting the app when an account is deleted</td>
+  <td>Sign-in authentication token and member identifier</td>
+  <td>Republic of Korea / United States</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<p>When the AI assistant is used, the Team sends requests with the setting that <strong>prevents the conversation from being stored or used to train AI models</strong>. You may refuse the overseas transfer, but the AI assistant cannot be used if you do.</p>
+
+<h2>7. Handling of location data</h2>
+<ul>
+  <li>Location data is collected only at the moment you request nearby facility guidance.</li>
+  <li>The collected coordinates are used solely to produce the results for that request and are <strong>not stored on the server</strong>.</li>
+  <li>Distances shown are straight-line distances on a map and may differ from actual walking or driving distance and travel time.</li>
+  <li>You may withdraw location permission at any time in your device settings.</li>
+</ul>
+
+<h2>8. Rights of users and legal representatives</h2>
+<ul>
+  <li>You may view and correct your personal information at any time, and you may withdraw consent to processing by deleting your account within the Service.</li>
+  <li>Requests to access, correct, delete or suspend the processing of personal information may be made through the contact below, and the Team will act without delay.</li>
+  <li>The Team does not accept sign-ups from children under the age of 14.</li>
+</ul>
+
+<h2>9. Destruction of personal information</h2>
+<ul>
+  <li>Personal information whose retention period has ended or whose purpose has been achieved is destroyed without delay.</li>
+  <li>Information held in electronic files is deleted by a method that prevents recovery or anonymized so that it cannot be re-identified; printed material is shredded or incinerated.</li>
+  <li>When an account is deleted, the Team asks the social sign-in provider to disconnect the app. This does not delete your Kakao account or Apple ID itself; it severs the link between that account and the Service so that the Team no longer has access.</li>
+</ul>
+
+<h2>10. Measures to secure personal information</h2>
+<ul>
+  <li>Passwords are never stored; social sign-in authentication is used instead.</li>
+  <li>Tokens used to keep you signed in are stored as hashes and rotated periodically.</li>
+  <li>HTTPS encryption is applied to all communication.</li>
+  <li>The social sign-in provider authentication token is used only to disconnect the app and is never written to logs.</li>
+  <li>Access to systems that process personal information is limited to the minimum number of people whose work requires it.</li>
+</ul>
+
+<h2>11. Privacy officer and contact</h2>
+<p>For questions, complaints or remedies regarding the processing of personal information, please contact us below.</p>
+<ul>
+  <li>Privacy officer: Megajok representative</li>
+  <li>Email: <a href="mailto:mosyeoyong@gmail.com">mosyeoyong@gmail.com</a></li>
+</ul>
+<p>For reports or consultation about privacy infringement you may also contact the Personal Information Dispute Mediation Committee (+82-1833-6972), the Privacy Infringement Report Center (118), the Supreme Prosecutors' Office Cybercrime Investigation Division (1301), or the National Police Agency National Office of Investigation (182).</p>
+
+<h2>12. Changes to this policy</h2>
+<p>This policy may be revised in line with changes in law or in the Service. When it is revised, the effective date and the changes will be announced in the Service. Material changes that are unfavourable to users will be announced at least 30 days in advance and, where necessary, consent will be obtained again.</p>
+
+<p class="meta">This English version is provided for convenience. If there is any discrepancy, the Korean version prevails.</p>
+</section>
+
+<script>
+(function () {
+  var buttons = document.querySelectorAll('.lang-switch button');
+  function show(lang) {
+    document.getElementById('ko').hidden = lang !== 'ko';
+    document.getElementById('en').hidden = lang !== 'en';
+    document.documentElement.lang = lang;
+    buttons.forEach(function (button) {
+      button.setAttribute('aria-pressed', String(button.dataset.lang === lang));
+    });
+  }
+  buttons.forEach(function (button) {
+    button.addEventListener('click', function () { show(button.dataset.lang); });
+  });
+  // ?lang=en으로 직접 열 수 있고, 기기 언어가 한국어가 아니면 영문을 먼저 보여준다.
+  var requested = new URLSearchParams(location.search).get('lang');
+  var deviceLang = (navigator.language || 'ko').toLowerCase();
+  show(requested === 'en' || requested === 'ko' ? requested : (deviceLang.indexOf('ko') === 0 ? 'ko' : 'en'));
+})();
+</script>
 </body>
 </html>
