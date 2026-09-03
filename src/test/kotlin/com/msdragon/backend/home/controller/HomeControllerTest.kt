@@ -14,6 +14,7 @@ import com.msdragon.backend.family.repository.FamilyRepository
 import com.msdragon.backend.feedback.entity.FeedbackBodyCondition
 import com.msdragon.backend.feedback.entity.TripFeedback
 import com.msdragon.backend.feedback.repository.TripFeedbackRepository
+import com.msdragon.backend.home.tourapi.HomeTourApiAttraction
 import com.msdragon.backend.home.tourapi.HomeTourApiClient
 import com.msdragon.backend.home.tourapi.HomeTourApiFestival
 import com.msdragon.backend.parentprofile.entity.FoodPreference
@@ -420,6 +421,21 @@ class HomeControllerTest {
 		fun fakeHomeTourApiClient(): HomeTourApiClient = object : HomeTourApiClient {
 			override fun findDestinationImage(destination: TripDestinationCode): String =
 				"https://example.com/${destination.value}.jpg"
+
+			override fun findAttractions(
+				destinations: List<TripDestinationCode>,
+				limitPerDestination: Int,
+			): List<HomeTourApiAttraction> =
+				destinations.take(limitPerDestination).map { destination ->
+					HomeTourApiAttraction(
+						contentId = "attraction-${destination.value}",
+						title = "${destination.displayName} 명소",
+						imageUrl = "https://example.com/${destination.value}-attraction.jpg",
+						address = "${destination.displayName}시 어딘가",
+						regionName = destination.displayName,
+						destination = destination,
+					)
+				}
 
 			override fun findFestivals(
 				startDate: LocalDate,
