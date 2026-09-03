@@ -1,5 +1,6 @@
 package com.msdragon.backend.common
 
+import com.msdragon.backend.trip.entity.TripDestinationCode
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
@@ -32,5 +33,15 @@ class PolicyPageTest {
 		mockMvc.perform(get("/policies/terms.html"))
 			.andExpect(status().isOk)
 			.andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_HTML))
+	}
+
+	@Test
+	fun getDestinationImagesWithoutAuthorization() {
+		// 홈 추천 도시 이미지는 로그인 없이 URL로 바로 노출된다.
+		TripDestinationCode.entries.forEach { destination ->
+			mockMvc.perform(get("/images/destinations/${destination.value}.png"))
+				.andExpect(status().isOk)
+				.andExpect(content().contentTypeCompatibleWith(MediaType.IMAGE_PNG))
+		}
 	}
 }

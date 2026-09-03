@@ -65,6 +65,7 @@ Compose로 실행하면 PostgreSQL도 host port로 publish됩니다. 기본 포�
 | `APP_AUTH_APPLE_PRIVATE_KEY` | 탈퇴 시 애플 연결 해제용 `.p8` 개인키. Git에 커밋하지 않음 |
 | `APP_AUTH_KAKAO_ADMIN_KEY` | 탈퇴 시 카카오 연결 끊기용 어드민 키. Git에 커밋하지 않음 |
 | `APP_AUTH_OAUTH_REQUEST_TIMEOUT` | 소셜 provider 호출 timeout. ISO-8601 Duration, 기본값 `PT5S` |
+| `APP_BASE_URL` | 홈 추천 도시 이미지 URL에 붙는 서버 주소. 기본값 `http://localhost:8080` |
 
 `APP_AUTH_APPLE_CLIENT_ID`가 비어 있으면 Apple 로그인 요청은 설정 오류로 실패합니다. 카카오 로그인은 앱에서 받은 access token으로 Kakao user info API를 호출합니다.
 

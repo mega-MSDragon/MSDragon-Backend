@@ -72,7 +72,15 @@
 | 11월 | `jeju`, `yeosu`, `tongyeong_geoje_namhae`, `busan`, `gyeongju` |
 | 12월 | `seoul`, `gangneung_sokcho`, `busan`, `jeju`, `incheon` |
 
-대표 이미지는 국문 관광정보 서비스 `KorService2/areaBasedList2`를 이미지 우선 정렬 `arrange=Q`로 조회합니다.
+대표 이미지는 **서버에 넣어둔 도시 이미지**를 사용합니다. `src/main/resources/static/images/destinations/{destinationCode}.png` 12장을 정적 리소스로 제공하고, `imageUrl`에 `{APP_BASE_URL}/images/destinations/{destinationCode}.png`를 담아 반환합니다.
+
+- 도시는 `TripDestinationCode` 12개로 고정되어 있어 외부 조회 없이 파일로 관리합니다. 홈 첫 화면에서 TourAPI 왕복 5회가 사라져 로딩이 빨라지고 외부 장애 영향도 받지 않습니다.
+- 이미지는 인증 없이 URL로 제공됩니다. 정적 리소스 경로는 인증 인터셉터(`/api/v1/**`) 대상이 아닙니다.
+- **파일이 없는 도시는 TourAPI 조회로 넘어갑니다.** 12장을 한 번에 채우지 않아도 기존 동작이 유지되므로 이미지를 점진적으로 추가할 수 있습니다.
+- 이미지를 교체하려면 같은 파일명으로 바꾸고 서버를 재배포합니다. 파일이 jar에 포함되므로 배포가 필요합니다.
+- `APP_BASE_URL`을 운영 도메인으로 설정해야 합니다. 응답이 일 단위로 캐시되므로 요청 호스트를 추론하지 않고 설정값을 사용합니다.
+
+TourAPI 폴백 경로는 국문 관광정보 서비스 `KorService2/areaBasedList2`를 이미지 우선 정렬 `arrange=Q`로 조회합니다.
 
 ## 추천 축제
 

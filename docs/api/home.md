@@ -99,7 +99,7 @@
       {
         "code": "gyeongju",
         "displayName": "경주",
-        "imageUrl": "https://example.com/gyeongju.jpg"
+        "imageUrl": "https://api.ms-dragon.com/images/destinations/gyeongju.png"
       }
     ]
   }
@@ -108,7 +108,8 @@
 
 - `recommendationMonth`: 추천 정책에 사용한 서울 기준 월입니다.
 - `recommendedCities`: 월별 고정 추천 도시 5개입니다.
-- `imageUrl=null`: TourAPI 이미지 조회에 실패한 경우이며 앱의 도시별 기본 이미지를 사용합니다.
+- `imageUrl`은 서버에 넣어둔 도시 이미지 URL입니다(`{BASE_URL}/images/destinations/{code}.png`). 인증 없이 접근할 수 있습니다.
+- `imageUrl=null`: 서버 이미지가 없고 TourAPI 폴백 조회까지 실패한 경우이며 앱의 도시별 기본 이미지를 사용합니다.
 
 ## GET /api/v1/home/festivals
 

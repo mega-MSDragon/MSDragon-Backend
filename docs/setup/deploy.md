@@ -93,6 +93,7 @@ APP_AUTH_APPLE_PRIVATE_KEY=<.p8 파일 내용>
 APP_AUTH_KAKAO_ADMIN_KEY=<카카오 어드민 키>
 APP_AUTH_OAUTH_REQUEST_TIMEOUT=PT5S
 APP_REVIEW_FAMILY_CODE=<앱 스토어 심사 기간에만 설정>
+APP_BASE_URL=https://api.ms-dragon.com
 TOUR_API_SERVICE_KEY=<한국관광공사 TourAPI 서비스키>
 TOUR_API_MOBILE_APP=MSDragon
 TOUR_API_CONNECT_TIMEOUT=PT5S
@@ -205,6 +206,7 @@ ALTER TABLE users DROP CONSTRAINT IF EXISTS users_profile_image_check;
 - 경로 최적화·공중화장실 적재·주변 병원·약국 API를 사용할 경우 `.env`에 `TMAP_APP_KEY` 설정 완료
 - 여행 모드 AI 챗봇을 사용할 경우 `.env`에 `OPENAI_API_KEY` 설정 완료
 - 탈퇴 시 소셜 연결 해제를 사용할 경우 `.env`에 `APP_AUTH_APPLE_TEAM_ID`, `APP_AUTH_APPLE_KEY_ID`, `APP_AUTH_APPLE_PRIVATE_KEY`, `APP_AUTH_KAKAO_ADMIN_KEY` 설정 완료. 없으면 연결 해제를 건너뛰고 탈퇴는 정상 동작합니다
+- `.env`에 `APP_BASE_URL` 설정 완료. 홈 추천 도시 이미지 URL에 사용하므로 운영 도메인이어야 합니다. 기본값은 `http://localhost:8080`이라 설정하지 않으면 앱에서 이미지가 보이지 않습니다
 - 앱 스토어 심사를 제출할 경우 `.env`에 `APP_REVIEW_FAMILY_CODE` 설정 완료. **심사가 끝나면 값을 비우고 컨테이너를 재생성합니다.** `docs/policy/app-review-family-code.md`를 따릅니다
 - `deploy/nginx/certs/origin.pem` 존재
 - `deploy/nginx/certs/origin.key` 존재
