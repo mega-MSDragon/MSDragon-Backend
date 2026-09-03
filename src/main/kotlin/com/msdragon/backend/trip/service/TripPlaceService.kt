@@ -96,6 +96,26 @@ class TripPlaceService(
 	): TripPlaceDetailResponse {
 		getLoginUser(currentUser.id)
 		getReadableTrip(currentUser.id, tripId)
+		return placeDetail(contentId, contentTypeId)
+	}
+
+	/**
+	 * 여행에 종속되지 않은 장소 상세. 홈 섹션 카드에서 진입하며 여행 코스 상세와 **같은 응답**을 쓴다.
+	 * 클라이언트가 상세 화면 하나를 두 진입점에서 재사용할 수 있어야 한다.
+	 *
+	 * 축제도 TourAPI 콘텐츠(`contentTypeId=15`)라 이 API로 조회한다. 별도 축제 상세 API를 두지 않는다.
+	 * 여행 권한 검사만 없고 조회·결합 로직은 [getPlaceDetail]과 동일하다.
+	 */
+	fun getPublicPlaceDetail(
+		currentUser: AuthenticatedUser,
+		contentId: String,
+		contentTypeId: String?,
+	): TripPlaceDetailResponse {
+		getLoginUser(currentUser.id)
+		return placeDetail(contentId, contentTypeId)
+	}
+
+	private fun placeDetail(contentId: String, contentTypeId: String?): TripPlaceDetailResponse {
 		val normalizedContentId = contentId.trim()
 		if (normalizedContentId.isBlank()) {
 			throw BadRequestException("장소 ID를 입력해주세요.")
@@ -118,6 +138,7 @@ class TripPlaceService(
 			requestedContentTypeId = requestedContentTypeId,
 		)
 	}
+
 
 	private fun normalizeContentTypeId(contentTypeId: String?): String? {
 		val normalized = contentTypeId?.trim()?.takeIf { it.isNotEmpty() } ?: return null

@@ -1753,6 +1753,103 @@ class TripControllerTest {
 	}
 
 	@Test
+	fun `홈에서 진입하는 장소 상세는 여행 없이도 같은 응답을 준다`() {
+		// 가족 연결도 여행도 없는 사용자다. 홈 섹션 카드에서 바로 들어오는 경로다.
+		val user = saveUser(UserRole.CHILD, "home-detail-child", "혜린")
+		fakeTourApiClient.detailsByContentId["nature-1"] = TourApiPlaceDetail(
+			contentId = "nature-1",
+			contentTypeId = "12",
+			title = "경주 산책 공원",
+			address = "경상북도 경주시",
+			latitude = "35.8562".toBigDecimal(),
+			longitude = "129.2247".toBigDecimal(),
+			tel = "054-000-0000",
+			firstImage = "https://example.com/nature-1.jpg",
+			lclsSystm1 = "NA",
+			homepage = "https://example.com/nature-1",
+			overview = "경주 산책 공원 소개",
+			raw = mapOf("contentid" to "nature-1"),
+		)
+		fakeTourApiClient.introsByContentId["nature-1"] = TourApiPlaceIntro(
+			operatingHours = "09:00~18:00",
+			closedDays = "매주 월요일",
+			admissionFee = "무료",
+			raw = mapOf("usetime" to "09:00~18:00"),
+		)
+		fakeTourApiClient.accessibilityByContentId["nature-1"] = TourApiAccessibility(
+			parking = "장애인 주차장 있음",
+			publicTransport = "",
+			route = "출입구까지 경사로 있음",
+			wheelchair = "",
+			exit = "",
+			elevator = "",
+			restroom = "장애인 화장실 있음",
+			raw = mapOf("contentid" to "nature-1"),
+		)
+
+		mockMvc.perform(
+			get("/api/v1/places/nature-1")
+				.header("Authorization", "Bearer ${tokenService.createAccessToken(user)}")
+				.param("contentTypeId", "12"),
+		)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(200))
+			// 여행 코스 상세와 같은 형태여서 클라이언트가 화면을 재사용할 수 있다.
+			.andExpect(jsonPath("$.data.externalPlaceId").value("nature-1"))
+			.andExpect(jsonPath("$.data.contentTypeName").value("관광지"))
+			.andExpect(jsonPath("$.data.operatingHours").value("09:00~18:00"))
+			.andExpect(jsonPath("$.data.closedDays").value("매주 월요일"))
+			.andExpect(jsonPath("$.data.admissionFee").value("무료"))
+			.andExpect(jsonPath("$.data.accessibility.route").value("출입구까지 경사로 있음"))
+			// 무장애 원문에 값이 없는 항목은 '이용 불가'가 아니라 정보 미제공이므로 빈 값을 그대로 전달한다.
+			.andExpect(jsonPath("$.data.accessibility.wheelchair").value(""))
+	}
+
+	@Test
+	fun `축제도 같은 장소 상세 API로 조회한다`() {
+		val user = saveUser(UserRole.CHILD, "home-detail-festival", "혜린")
+		fakeTourApiClient.detailsByContentId["festival-1"] = TourApiPlaceDetail(
+			contentId = "festival-1",
+			contentTypeId = "15",
+			title = "안동 선유줄불놀이",
+			address = "경상북도 안동시",
+			latitude = "36.5684".toBigDecimal(),
+			longitude = "128.7294".toBigDecimal(),
+			firstImage = "https://example.com/festival-1.jpg",
+			homepage = null,
+			overview = "안동의 전통 불놀이",
+			raw = mapOf("contentid" to "festival-1"),
+		)
+
+		mockMvc.perform(
+			get("/api/v1/places/festival-1")
+				.header("Authorization", "Bearer ${tokenService.createAccessToken(user)}")
+				.param("contentTypeId", "15"),
+		)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.data.externalPlaceId").value("festival-1"))
+			.andExpect(jsonPath("$.data.contentTypeName").value("행사/공연/축제"))
+	}
+
+	@Test
+	fun `장소 상세는 인증이 필요하고 지원하지 않는 콘텐츠 타입을 거절한다`() {
+		val user = saveUser(UserRole.CHILD, "home-detail-invalid", "혜린")
+
+		mockMvc.perform(get("/api/v1/places/nature-1"))
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(401))
+
+		mockMvc.perform(
+			get("/api/v1/places/nature-1")
+				.header("Authorization", "Bearer ${tokenService.createAccessToken(user)}")
+				.param("contentTypeId", "32"),
+		)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(400))
+			.andExpect(jsonPath("$.message").value("지원하지 않는 콘텐츠 타입입니다."))
+	}
+
+	@Test
 	fun `부모는 여행을 생성할 수 없다`() {
 		val parent = saveUser(UserRole.PARENT, "parent-1", "엄마", GenderType.FEMALE)
 

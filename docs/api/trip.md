@@ -847,6 +847,8 @@ TourAPI 서비스키가 서버에 설정되어 있지 않거나 TourAPI 호출�
 
 ## GET /api/v1/trips/{tripId}/places/{contentId}
 
+홈 섹션에서 진입하는 상세는 여행 권한 검사가 없는 `GET /api/v1/places/{contentId}`를 사용합니다. 응답 형태가 같으므로 클라이언트는 상세 화면을 재사용합니다. `docs/api/place.md`를 확인합니다.
+
 코스 편집 화면에서 TourAPI 방문지 상세와 무장애 주요 정보를 조회합니다.
 장소 상세 화면 표시와, 선택 장소를 코스 저장 API에 넣기 전 스냅샷 데이터를 구성하는 데 사용합니다.
 
