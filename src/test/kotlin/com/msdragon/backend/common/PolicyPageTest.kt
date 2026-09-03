@@ -36,6 +36,16 @@ class PolicyPageTest {
 	}
 
 	@Test
+	fun getEnglishPoliciesWithoutAuthorization() {
+		// 앱 스토어 심사자가 영어로 내용을 확인할 수 있어야 한다.
+		listOf("/policies/privacy-en.html", "/policies/terms-en.html").forEach { path ->
+			mockMvc.perform(get(path))
+				.andExpect(status().isOk)
+				.andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_HTML))
+		}
+	}
+
+	@Test
 	fun getDestinationImagesWithoutAuthorization() {
 		// 홈 추천 도시 이미지는 로그인 없이 URL로 바로 노출된다.
 		TripDestinationCode.entries.forEach { destination ->

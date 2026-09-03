@@ -10,13 +10,25 @@
 
 | 문서 | 파일 | URL |
 |------|------|-----|
-| 개인정보처리방침 | `src/main/resources/static/policies/privacy.html` | `{BASE_URL}/policies/privacy.html` |
-| 이용약관 | `src/main/resources/static/policies/terms.html` | `{BASE_URL}/policies/terms.html` |
+| 개인정보처리방침 (한국어) | `static/policies/privacy.html` | `{BASE_URL}/policies/privacy.html` |
+| 이용약관 (한국어) | `static/policies/terms.html` | `{BASE_URL}/policies/terms.html` |
+| Privacy Policy (English) | `static/policies/privacy-en.html` | `{BASE_URL}/policies/privacy-en.html` |
+| Terms of Service (English) | `static/policies/terms-en.html` | `{BASE_URL}/policies/terms-en.html` |
 
 - Spring Boot 정적 리소스 서빙 기능을 그대로 사용합니다.
 - 인증 인터셉터는 `/api/v1/**`만 적용되므로(`AuthWebMvcConfig`) 두 URL은 **로그인 없이 접근 가능**합니다. 약관은 회원가입 전에 노출되어야 하므로 이 동작이 요구사항입니다.
 - 클라이언트는 URL을 상수로 두고 웹뷰(iOS `WKWebView`, Android `WebView`)로 로드합니다. 응답 파싱이 없으므로 공통 응답 규약(`success`/`status`)이 적용되지 않습니다.
 - Swagger에는 노출되지 않습니다. 컨트롤러가 없기 때문이며, 클라이언트에는 이 문서의 URL 표로 전달합니다.
+
+### 영문 버전
+
+앱 스토어 심사자는 영어로 심사하므로 한국어만 제공하면 내용을 검증할 수 없어 문의나 리젝으로 이어질 수 있습니다. 한국어와 영어를 함께 제공합니다.
+
+- 두 언어는 **같은 내용**이어야 합니다. 한쪽만 고치면 계약이 어긋나므로 **한국어를 고칠 때 영문도 함께 고칩니다.**
+- 각 문서 상단에 다른 언어로 가는 링크를 둡니다. 심사자와 이용자가 한 화면에서 전환할 수 있습니다.
+- 영문 문서 끝에 **한국어판이 우선한다는 문장**을 둡니다. 번역 차이로 해석이 갈릴 때의 기준입니다.
+- 클라이언트는 기기 언어에 따라 URL을 고르거나 한국어 URL만 열고 사용자가 링크로 전환하게 할 수 있습니다. 어느 쪽이든 서버는 두 URL을 모두 제공합니다.
+- 팀명은 영문에서 `Megajok`, 서비스명은 `Mosyeoyong`으로 표기하고 괄호에 한글을 함께 적습니다.
 
 ### 문서 작성 규칙
 
@@ -88,4 +100,4 @@
 
 ## 검증
 
-`PolicyPageTest`가 두 URL이 인증 없이 `200 text/html`로 응답하는지 확인합니다. 인증 인터셉터 경로를 넓히거나 Spring Security를 도입하면 이 테스트가 먼저 실패하므로, 실패 시 정적 경로를 예외로 허용해야 합니다.
+`PolicyPageTest`가 한국어·영문 네 URL이 모두 인증 없이 `200 text/html`로 응답하는지 확인합니다. 인증 인터셉터 경로를 넓히거나 Spring Security를 도입하면 이 테스트가 먼저 실패하므로, 실패 시 정적 경로를 예외로 허용해야 합니다.
