@@ -179,6 +179,22 @@ git reset --hard origin/main
 docker compose up -d --build
 ```
 
+enum 문자열 값을 **바꾸거나 제거한** 커밋을 배포할 때는 운영 DB의 check constraint를 함께 확인합니다. `ddl-auto=update`는 기존 제약의 값 목록을 갱신하지 않아 새 값 저장이 전부 실패합니다. 조회는 정상이고 저장만 `500`이 나면 이 문제입니다.
+
+```bash
+docker compose exec postgres sh -lc 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT conrelid::regclass AS tbl, conname, pg_get_constraintdef(oid) FROM pg_constraint WHERE contype = '"'"'c'"'"' ORDER BY 1;"'
+```
+
+어긋난 제약은 제거합니다. JPA 컨버터가 값을 보증하므로 DB 제약 없이도 안전합니다.
+
+```sql
+ALTER TABLE users DROP CONSTRAINT IF EXISTS users_profile_image_check;
+```
+
+자세한 배경은 `docs/harness/mistakes.md`의 check constraint 항목을 확인합니다.
+
+---
+
 자동 배포 전에 EC2에 아래가 먼저 준비되어 있어야 합니다.
 
 - `DEPLOY_PATH` 디렉터리 존재

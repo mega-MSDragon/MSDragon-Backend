@@ -238,6 +238,31 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse as SwaggerApiResponse
 - 운영 DB 변경이 필수인 기능은 재실행 가능한 SQL과 실행 시점을 배포 체크리스트에 포함합니다.
 - 새 상태를 저장하는 통합 테스트와 실제 PostgreSQL constraint 목록을 함께 점검합니다.
 
+**재발 (2026-09-03): 프로필 이미지 식별자 변경**
+
+- `users.profile_image` 식별자를 액세서리 기준(`basic`/`flower`/`sunglasses`/`straw_hat`)에서 배경색 기준(`green`/`coral`/`yellow`/`blue`)으로 바꿨으나 운영 DB의 `users_profile_image_check`가 구 값을 그대로 유지했습니다.
+- 조회와 다른 필드 수정은 정상이고 **프로필 이미지 저장만** `500`으로 실패했습니다. SELECT는 제약을 검사하지 않고 UPDATE만 막히기 때문입니다. 이 증상 조합이 check constraint 불일치의 특징입니다.
+- 같은 유형이 세 번째입니다(`parent_profiles_food_preference_check`, `trips.status`, `users.profile_image`).
+
+**보강 규칙**
+
+- 문자열 enum 값을 **바꾸거나 제거**하는 변경은 값 추가보다 위험합니다. 값 추가는 기존 데이터가 살아 있지만, 값 변경은 **기존 제약이 새 값을 전부 거부**해 기능이 완전히 죽습니다.
+- `@Converter`를 붙여도 Hibernate가 check constraint를 생성합니다. 컨버터가 있으니 DB 제약이 없어도 잘못된 값이 저장되지 않으므로, **enum 값이 바뀔 수 있는 컬럼은 제약을 두지 않는 편이 안전합니다.**
+
+```sql
+-- 재실행 가능. 값이 바뀐 enum 컬럼의 제약을 제거한다.
+ALTER TABLE users DROP CONSTRAINT IF EXISTS users_profile_image_check;
+```
+
+- enum 값을 바꾼 커밋은 **배포 전에** 운영 DB의 제약 목록을 확인합니다.
+
+```sql
+SELECT conrelid::regclass AS tbl, conname, pg_get_constraintdef(oid)
+FROM pg_constraint WHERE contype = 'c' ORDER BY 1;
+```
+
+- H2 테스트는 이 문제를 잡지 못합니다. 테스트 DB는 매번 새로 만들어져 제약이 항상 현재 enum 값과 일치하기 때문입니다. **운영 PostgreSQL에서만 재현되는 부류**임을 전제로 배포 절차에 넣습니다.
+
 ### 2026-08-06: Swagger 예시와 기본 미디어 타입 분리
 
 **상황**
