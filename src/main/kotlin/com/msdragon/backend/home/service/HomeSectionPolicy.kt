@@ -1,9 +1,11 @@
 package com.msdragon.backend.home.service
 
-import com.msdragon.backend.home.dto.HomeSectionType
-
 /**
  * 홈 축제 영역부터 아래까지의 섹션 구성과 순서. **순서를 바꾸려면 이 목록의 순서를 바꾼다.**
+ *
+ * 모든 섹션은 클라이언트에서 같은 카드로 그려진다. 그래서 섹션을 추가·삭제·재정렬하거나
+ * 제목과 항목 내용을 바꾸는 일이 **서버에서만** 끝난다. 응답에는 섹션 종류를 내리지 않는다.
+ * [HomeSectionSource]는 항목을 어디서 채우는지 고르기 위한 서버 내부 값이다.
  *
  * 지금은 코드로 고정한다. 월별 추천 도시([HomeRecommendationPolicy])와 같은 방식이며,
  * 어드민 도구가 없는 상태에서 DB로 관리하면 SQL을 직접 쳐야 하므로 실익이 없다.
@@ -14,13 +16,13 @@ object HomeSectionPolicy {
 	val sections: List<HomeSectionDefinition> = listOf(
 		HomeSectionDefinition(
 			key = "festivals",
-			type = HomeSectionType.FESTIVAL_COLLECTION,
+			source = HomeSectionSource.FESTIVAL,
 			title = "지금 열리는 축제",
 			subtitle = "오늘부터 30일 안에 만나요",
 		),
 		HomeSectionDefinition(
 			key = "monthly_attractions",
-			type = HomeSectionType.ATTRACTION_COLLECTION,
+			source = HomeSectionSource.MONTHLY_ATTRACTION,
 			title = "이번 달 가볼 만한 곳",
 			subtitle = null,
 		),
@@ -34,7 +36,13 @@ object HomeSectionPolicy {
 
 data class HomeSectionDefinition(
 	val key: String,
-	val type: HomeSectionType,
+	val source: HomeSectionSource,
 	val title: String,
 	val subtitle: String?,
 )
+
+/** 섹션 항목을 채우는 데이터 출처. 서버 내부 값이며 응답에 나가지 않는다. */
+enum class HomeSectionSource {
+	FESTIVAL,
+	MONTHLY_ATTRACTION,
+}

@@ -1,12 +1,11 @@
 package com.msdragon.backend.home.dto
 
-import com.fasterxml.jackson.annotation.JsonValue
 import io.swagger.v3.oas.annotations.media.Schema
-import java.time.LocalDate
 
 @Schema(
 	description = "홈 동적 섹션 목록. 배열 순서가 화면 노출 순서이며 서버가 결정합니다. " +
-		"클라이언트는 순서를 그대로 유지하고, 모르는 type의 섹션은 건너뜁니다.",
+		"모든 섹션은 같은 카드 형태로 그려지므로 클라이언트는 순서대로 렌더링만 하면 됩니다. " +
+		"섹션을 추가·삭제·재정렬하거나 항목 내용을 바꾸는 일은 모두 서버에서 끝납니다.",
 )
 data class HomeSectionsResponse(
 	@field:Schema(description = "노출 순서대로 정렬된 섹션 목록")
@@ -15,15 +14,8 @@ data class HomeSectionsResponse(
 
 @Schema(description = "홈 섹션")
 data class HomeSectionResponse(
-	@field:Schema(description = "섹션 식별자. 같은 type을 여러 섹션에서 쓸 수 있으므로 화면 상태 관리에 사용합니다.", example = "monthly_attractions")
+	@field:Schema(description = "섹션 식별자. 화면 상태 관리와 로깅에 사용합니다.", example = "monthly_attractions")
 	val key: String,
-
-	@field:Schema(
-		description = "섹션 종류. 클라이언트는 이 값으로 렌더러를 고르고, 모르는 값이면 섹션을 건너뜁니다.",
-		example = "attraction_collection",
-		allowableValues = ["festival_collection", "attraction_collection"],
-	)
-	val type: HomeSectionType,
 
 	@field:Schema(description = "섹션 제목", example = "이번 달 가볼 만한 곳")
 	val title: String,
@@ -36,14 +28,29 @@ data class HomeSectionResponse(
 )
 
 @Schema(
-	description = "홈 섹션 항목. 모든 섹션이 같은 형태를 사용하며 섹션 종류에 따라 일부 필드가 null입니다.",
+	description = "홈 섹션 항목. 모든 섹션이 같은 카드로 그려지므로 항목 형태도 하나입니다. " +
+		"섹션마다 다른 부가 정보는 caption에 서버가 문장으로 만들어 담습니다.",
 )
 data class HomeSectionItemResponse(
-	@field:Schema(description = "TourAPI 콘텐츠 ID", example = "126508")
+	@field:Schema(description = "TourAPI 콘텐츠 ID. 상세 조회에 사용합니다.", example = "126508")
 	val contentId: String,
+
+	@field:Schema(
+		description = "TourAPI 콘텐츠 타입 ID. `GET /api/v1/places/{contentId}` 호출에 그대로 넘깁니다. " +
+			"클라이언트가 섹션 종류를 몰라도 상세로 이동할 수 있습니다.",
+		example = "12",
+	)
+	val contentTypeId: String,
 
 	@field:Schema(description = "항목명", example = "불국사")
 	val title: String,
+
+	@field:Schema(
+		description = "카드에 표시할 부가 문장. 축제는 기간, 그 밖에는 지역처럼 섹션에 맞는 값을 서버가 만듭니다. 없으면 null입니다.",
+		example = "2026.08.01 - 08.31",
+		nullable = true,
+	)
+	val caption: String?,
 
 	@field:Schema(description = "소개 요약. 상세 정보가 없으면 null입니다.", example = "신라 불교 예술의 정수", nullable = true)
 	val summary: String?,
@@ -59,18 +66,4 @@ data class HomeSectionItemResponse(
 
 	@field:Schema(description = "화면 표시용 태그", example = "[\"경주\",\"관광지\"]")
 	val tags: List<String>,
-
-	@field:Schema(description = "행사 시작일. `festival_collection`만 값이 있고 나머지는 null입니다.", example = "2026-08-01", nullable = true)
-	val eventStartDate: LocalDate?,
-
-	@field:Schema(description = "행사 종료일. `festival_collection`만 값이 있고 나머지는 null입니다.", example = "2026-08-31", nullable = true)
-	val eventEndDate: LocalDate?,
 )
-
-enum class HomeSectionType(
-	@get:JsonValue
-	val value: String,
-) {
-	FESTIVAL_COLLECTION("festival_collection"),
-	ATTRACTION_COLLECTION("attraction_collection"),
-}

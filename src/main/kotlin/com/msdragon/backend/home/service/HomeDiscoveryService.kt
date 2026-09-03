@@ -8,7 +8,6 @@ import com.msdragon.backend.home.dto.HomeRecommendedCityResponse
 import com.msdragon.backend.home.config.HomeProperties
 import com.msdragon.backend.home.dto.HomeSectionItemResponse
 import com.msdragon.backend.home.dto.HomeSectionResponse
-import com.msdragon.backend.home.dto.HomeSectionType
 import com.msdragon.backend.home.dto.HomeSectionsResponse
 import com.msdragon.backend.home.tourapi.HomeTourApiAttraction
 import com.msdragon.backend.home.tourapi.HomeTourApiClient
@@ -17,6 +16,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.core.io.ClassPathResource
 import org.springframework.stereotype.Service
 import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import java.util.concurrent.CompletableFuture
 
 @Service
@@ -91,9 +91,9 @@ class HomeDiscoveryService(
 		val attractions = loadAttractions(today)
 		return HomeSectionsResponse(
 			sections = HomeSectionPolicy.sections.map { definition ->
-				when (definition.type) {
-					HomeSectionType.FESTIVAL_COLLECTION -> section(definition, festivalItems(today), null)
-					HomeSectionType.ATTRACTION_COLLECTION -> section(
+				when (definition.source) {
+					HomeSectionSource.FESTIVAL -> section(definition, festivalItems(today), null)
+					HomeSectionSource.MONTHLY_ATTRACTION -> section(
 						definition,
 						attractions.map(HomeTourApiAttraction::toSectionItem),
 						attractionSubtitle(today),
@@ -110,7 +110,6 @@ class HomeDiscoveryService(
 	): HomeSectionResponse =
 		HomeSectionResponse(
 			key = definition.key,
-			type = definition.type,
 			title = definition.title,
 			subtitle = subtitleOverride ?: definition.subtitle,
 			items = items,
@@ -121,14 +120,14 @@ class HomeDiscoveryService(
 		getFestivals(today).festivals.map { festival ->
 			HomeSectionItemResponse(
 				contentId = festival.contentId,
+				contentTypeId = FESTIVAL_CONTENT_TYPE_ID,
 				title = festival.title,
+				caption = festivalPeriodCaption(festival.eventStartDate, festival.eventEndDate),
 				summary = festival.summary,
 				imageUrl = festival.imageUrl,
 				address = festival.address,
 				regionName = festival.regionName,
 				tags = festival.tags,
-				eventStartDate = festival.eventStartDate,
-				eventEndDate = festival.eventEndDate,
 			)
 		}
 
@@ -142,6 +141,14 @@ class HomeDiscoveryService(
 			logger.warn("홈 추천 관광지 조회 실패: reason={}", exception.message)
 			// 직전 캐시의 관광지 섹션을 유지한다. 없으면 빈 섹션으로 축소한다.
 			emptyList()
+		}
+
+	/** 카드가 하나뿐이라 축제 기간도 카드에 들어갈 문장으로 서버가 만든다. */
+	private fun festivalPeriodCaption(startDate: LocalDate, endDate: LocalDate): String =
+		if (startDate == endDate) {
+			startDate.format(FESTIVAL_CAPTION_FULL)
+		} else {
+			"${startDate.format(FESTIVAL_CAPTION_FULL)} - ${endDate.format(FESTIVAL_CAPTION_SHORT)}"
 		}
 
 	/** 관광지 섹션 부제는 이번 달 추천 도시 이름을 이어 붙인다. */
@@ -221,6 +228,9 @@ class HomeDiscoveryService(
 		private const val FESTIVAL_LOOKAHEAD_DAYS = 30L
 		private const val FESTIVAL_LIMIT = 10
 		private const val FESTIVAL_TAG = "축제"
+		private const val FESTIVAL_CONTENT_TYPE_ID = "15"
+		private val FESTIVAL_CAPTION_FULL: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy.MM.dd")
+		private val FESTIVAL_CAPTION_SHORT: DateTimeFormatter = DateTimeFormatter.ofPattern("MM.dd")
 	}
 }
 
@@ -238,15 +248,18 @@ private data class HomeFestivalsCache(
 private fun HomeTourApiAttraction.toSectionItem(): HomeSectionItemResponse =
 	HomeSectionItemResponse(
 		contentId = contentId,
+		contentTypeId = ATTRACTION_CONTENT_TYPE_ID,
 		title = title,
+		// 축제는 기간이 들어가는 자리에 관광지는 지역을 넣는다. 카드 형태가 같아야 한다.
+		caption = regionName,
 		summary = null,
 		imageUrl = imageUrl,
 		address = address,
 		regionName = regionName,
 		tags = listOfNotNull(regionName, HomeSectionPolicy.ATTRACTION_TAG),
-		eventStartDate = null,
-		eventEndDate = null,
 	)
+
+private const val ATTRACTION_CONTENT_TYPE_ID = "12"
 
 private data class HomeSectionsCache(
 	val cachedDate: LocalDate,
