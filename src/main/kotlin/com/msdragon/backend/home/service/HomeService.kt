@@ -25,6 +25,7 @@ import com.msdragon.backend.trip.dto.TripRecommendationSnapshotResponse
 import com.msdragon.backend.trip.dto.relationLabelOf
 import com.msdragon.backend.trip.entity.Trip
 import com.msdragon.backend.trip.entity.TripStatus
+import com.msdragon.backend.trip.repository.TripParticipantRepository
 import com.msdragon.backend.trip.repository.TripRepository
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
@@ -62,6 +63,7 @@ class HomeDataService(
 	private val parentProfileRepository: ParentProfileRepository,
 	private val tripRepository: TripRepository,
 	private val tripFeedbackRepository: TripFeedbackRepository,
+	private val tripParticipantRepository: TripParticipantRepository,
 	private val objectMapper: ObjectMapper,
 ) {
 	private val logger = LoggerFactory.getLogger(javaClass)
@@ -71,7 +73,7 @@ class HomeDataService(
 		val user = getLoginUser(currentUser.id)
 		val myMember = familyMemberRepository.findByUserId(currentUser.id)
 		val familyId = myMember?.family?.id
-		val trips = familyId?.let { getHomeTrips(it, today) }.orEmpty()
+		val trips = familyId?.let { getHomeTrips(user, it, today) }.orEmpty()
 
 		return HomeMyTripsResponse(
 			familyId = familyId,
@@ -81,19 +83,57 @@ class HomeDataService(
 		)
 	}
 
-	private fun getHomeTrips(familyId: Long, today: LocalDate): List<HomeTripSummaryResponse> {
-		val trips = tripRepository.findAllByFamilyIdAndDeletedAtIsNullOrderByStartDateAscIdAsc(familyId)
+	private fun getHomeTrips(
+		user: User,
+		familyId: Long,
+		today: LocalDate,
+	): List<HomeTripSummaryResponse> {
+		val candidates = tripRepository.findAllByFamilyIdAndDeletedAtIsNullOrderByStartDateAscIdAsc(familyId)
 			.onEach { it.synchronizeStatus(today) }
 			.filter { it.status in HOME_TRIP_STATUSES }
+		val feedbacksByTripId = tripFeedbackRepository.findAllByTripIdIn(candidates.map { requireNotNull(it.id) })
+			.sortedBy { it.parentUser.id }
+			.groupBy { requireNotNull(it.trip.id) }
+		val myParticipatingTripIds = if (user.role == UserRole.PARENT) {
+			tripParticipantRepository.findAllByUserId(requireNotNull(user.id))
+				.mapTo(mutableSetOf()) { requireNotNull(it.trip.id) }
+		} else {
+			emptySet()
+		}
+
+		val trips = candidates
+			.filter { trip ->
+				isVisibleOnHome(trip, user, feedbacksByTripId[trip.id].orEmpty(), myParticipatingTripIds)
+			}
 			.sortedWith(
 				compareBy<Trip> { if (it.status == TripStatus.IN_PROGRESS) 0 else 1 }
 					.thenBy { it.startDate }
 					.thenBy { it.id },
 			)
-		val feedbacksByTripId = tripFeedbackRepository.findAllByTripIdIn(trips.map { requireNotNull(it.id) })
-			.sortedBy { it.parentUser.id }
-			.groupBy { requireNotNull(it.trip.id) }
 		return trips.map { trip -> toHomeTrip(trip, today, feedbacksByTripId[trip.id].orEmpty()) }
+	}
+
+	/**
+	 * 완료된 여행을 홈에 남길지 판단한다. 완료 전 여행은 역할과 무관하게 모두 보인다.
+	 *
+	 * - 자녀: 완료 여행을 홈에서 내린다. 기록 탭에서 확인한다.
+	 * - 부모: **아직 평가하지 않은 완료 여행만** 남겨 평가를 유도한다. 제출하면 홈에서 사라진다.
+	 * - 부모가 참여자가 아니면 평가할 수 없으므로 남기지 않는다. 남기면 사라지지 않는 카드가 된다.
+	 */
+	private fun isVisibleOnHome(
+		trip: Trip,
+		user: User,
+		feedbacks: List<TripFeedback>,
+		myParticipatingTripIds: Set<Long>,
+	): Boolean {
+		if (trip.status != TripStatus.COMPLETED) {
+			return true
+		}
+		if (user.role != UserRole.PARENT) {
+			return false
+		}
+		val tripId = requireNotNull(trip.id)
+		return tripId in myParticipatingTripIds && feedbacks.none { it.parentUser.id == user.id }
 	}
 
 	private fun toHomeTrip(

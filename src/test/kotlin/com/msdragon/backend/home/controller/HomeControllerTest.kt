@@ -28,6 +28,8 @@ import com.msdragon.backend.trip.dto.TripRecommendationSnapshotResponse
 import com.msdragon.backend.trip.entity.Trip
 import com.msdragon.backend.trip.entity.TripDestinationCode
 import com.msdragon.backend.trip.entity.TripStatus
+import com.msdragon.backend.trip.entity.TripParticipant
+import com.msdragon.backend.trip.repository.TripParticipantRepository
 import com.msdragon.backend.trip.repository.TripRepository
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -78,6 +80,9 @@ class HomeControllerTest {
 
 	@Autowired
 	private lateinit var tripFeedbackRepository: TripFeedbackRepository
+
+	@Autowired
+	private lateinit var tripParticipantRepository: TripParticipantRepository
 
 	@Test
 	fun `자녀 홈은 섹션별로 여행과 추천 콘텐츠를 반환한다`() {
@@ -150,24 +155,18 @@ class HomeControllerTest {
 			.andExpect(jsonPath("$.data.parentProfiles[1].displayName").value("김철수"))
 			.andExpect(jsonPath("$.data.parentProfiles[1].relationLabel").value("아빠"))
 			.andExpect(jsonPath("$.data.parentProfiles[1].profileCompleted").value(false))
-			.andExpect(jsonPath("$.data.trips.length()").value(3))
+			// 완료된 여행은 자녀 홈에서 내린다. 기록 탭에서 확인한다.
+			.andExpect(jsonPath("$.data.trips.length()").value(2))
+			.andExpect(jsonPath("$.data.trips[*].title").value(org.hamcrest.Matchers.not(org.hamcrest.Matchers.hasItem("지난 여행"))))
 			.andExpect(jsonPath("$.data.trips[0].title").value("경주 가족 여행"))
 			.andExpect(jsonPath("$.data.trips[0].status").value("in_progress"))
 			.andExpect(jsonPath("$.data.trips[0].primaryTheme").value("history_culture"))
 			.andExpect(jsonPath("$.data.trips[0].intensity").value("low"))
 			.andExpect(jsonPath("$.data.trips[0].ratings").isEmpty)
-			.andExpect(jsonPath("$.data.trips[1].title").value("지난 여행"))
-			.andExpect(jsonPath("$.data.trips[1].status").value("completed"))
-			.andExpect(jsonPath("$.data.trips[1].dayTrip").value(true))
-			.andExpect(jsonPath("$.data.trips[1].ratings.length()").value(1))
-			.andExpect(jsonPath("$.data.trips[1].ratings[0].parentUserId").value(mother.id))
-			.andExpect(jsonPath("$.data.trips[1].ratings[0].displayName").value("김영희"))
-			.andExpect(jsonPath("$.data.trips[1].ratings[0].relationLabel").value("엄마"))
-			.andExpect(jsonPath("$.data.trips[1].ratings[0].overallRating").value(4.5))
-			.andExpect(jsonPath("$.data.trips[2].title").value("우리 가족 힐링 여행"))
-			.andExpect(jsonPath("$.data.trips[2].dDay").value(48))
-			.andExpect(jsonPath("$.data.trips[2].primaryTheme").value("nature_scenery"))
-			.andExpect(jsonPath("$.data.trips[2].intensity").value("high"))
+			.andExpect(jsonPath("$.data.trips[1].title").value("우리 가족 힐링 여행"))
+			.andExpect(jsonPath("$.data.trips[1].dDay").value(48))
+			.andExpect(jsonPath("$.data.trips[1].primaryTheme").value("nature_scenery"))
+			.andExpect(jsonPath("$.data.trips[1].intensity").value("high"))
 
 		mockMvc.perform(
 			get("/api/v1/home/monthly-recommendations")
@@ -254,6 +253,110 @@ class HomeControllerTest {
 				completedAt = LocalDateTime.now(),
 			),
 		)
+
+	@Test
+	fun `완료된 여행은 평가하지 않은 부모에게만 홈에 보인다`() {
+		val today = LocalDate.now(ZoneId.of("Asia/Seoul"))
+		val child = saveUser(UserRole.CHILD, "child-visible", "혜린", GenderType.FEMALE)
+		val mother = saveUser(UserRole.PARENT, "mother-visible", "김영희", GenderType.FEMALE)
+		val father = saveUser(UserRole.PARENT, "father-visible", "김철수", GenderType.MALE)
+		val family = familyRepository.save(Family(ownerUser = child))
+		familyMemberRepository.saveAll(
+			listOf(
+				FamilyMember(family = family, user = child, memberRole = UserRole.CHILD),
+				FamilyMember(family = family, user = mother, memberRole = UserRole.PARENT),
+				FamilyMember(family = family, user = father, memberRole = UserRole.PARENT),
+			),
+		)
+		val completedTrip = saveTrip(
+			family = family,
+			child = child,
+			title = "지난 여행",
+			startDate = today.minusDays(5),
+			endDate = today.minusDays(5),
+			snapshot = null,
+			status = TripStatus.COMPLETED,
+		)
+		tripParticipantRepository.saveAll(
+			listOf(
+				TripParticipant(trip = completedTrip, user = mother),
+				TripParticipant(trip = completedTrip, user = father),
+			),
+		)
+		// 엄마만 평가를 제출했다.
+		tripFeedbackRepository.save(
+			TripFeedback(
+				trip = completedTrip,
+				parentUser = mother,
+				overallRating = "4.5".toBigDecimal(),
+				bodyCondition = FeedbackBodyCondition.COMFORTABLE,
+				bestTripStopId = 1,
+				bestPlaceNameSnapshot = "첨성대",
+				freeComment = null,
+				submittedAt = LocalDateTime.now(),
+			),
+		)
+
+		// 자녀: 완료 여행을 홈에서 내린다.
+		mockMvc.perform(
+			get("/api/v1/home/my-trips")
+				.header("Authorization", "Bearer ${tokenService.createAccessToken(child)}"),
+		)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.data.trips").isEmpty)
+
+		// 평가를 제출한 엄마: 홈에서 사라진다.
+		mockMvc.perform(
+			get("/api/v1/home/my-trips")
+				.header("Authorization", "Bearer ${tokenService.createAccessToken(mother)}"),
+		)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.data.trips").isEmpty)
+
+		// 아직 평가하지 않은 아빠: 평가를 유도하기 위해 남는다.
+		mockMvc.perform(
+			get("/api/v1/home/my-trips")
+				.header("Authorization", "Bearer ${tokenService.createAccessToken(father)}"),
+		)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.data.trips.length()").value(1))
+			.andExpect(jsonPath("$.data.trips[0].title").value("지난 여행"))
+			.andExpect(jsonPath("$.data.trips[0].status").value("completed"))
+			.andExpect(jsonPath("$.data.trips[0].ratings.length()").value(1))
+			.andExpect(jsonPath("$.data.trips[0].ratings[0].displayName").value("김영희"))
+			.andExpect(jsonPath("$.data.trips[0].ratings[0].overallRating").value(4.5))
+	}
+
+	@Test
+	fun `참여하지 않은 완료 여행은 부모 홈에 남지 않는다`() {
+		val today = LocalDate.now(ZoneId.of("Asia/Seoul"))
+		val child = saveUser(UserRole.CHILD, "child-nonparticipant", "혜린", GenderType.FEMALE)
+		val mother = saveUser(UserRole.PARENT, "mother-nonparticipant", "김영희", GenderType.FEMALE)
+		val family = familyRepository.save(Family(ownerUser = child))
+		familyMemberRepository.saveAll(
+			listOf(
+				FamilyMember(family = family, user = child, memberRole = UserRole.CHILD),
+				FamilyMember(family = family, user = mother, memberRole = UserRole.PARENT),
+			),
+		)
+		// 엄마는 참여자가 아니라 평가할 수 없다. 남기면 사라지지 않는 카드가 된다.
+		saveTrip(
+			family = family,
+			child = child,
+			title = "엄마가 빠진 여행",
+			startDate = today.minusDays(5),
+			endDate = today.minusDays(5),
+			snapshot = null,
+			status = TripStatus.COMPLETED,
+		)
+
+		mockMvc.perform(
+			get("/api/v1/home/my-trips")
+				.header("Authorization", "Bearer ${tokenService.createAccessToken(mother)}"),
+		)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.data.trips").isEmpty)
+	}
 
 	private fun saveTrip(
 		family: Family,

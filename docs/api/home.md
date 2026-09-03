@@ -75,12 +75,14 @@
 | `userRole` | enum | false | `child`, `parent` |
 | `parentProfiles` | array | false | 자녀는 연결된 부모 전체, 부모는 본인 한 건 |
 | `parentProfiles[].profileCompleted` | boolean | false | 해당 부모의 상세 프로필 완성 여부 |
-| `trips` | array | false | `in_progress`, `completed`, `planning`, `ready` 여행 포함 |
+| `trips` | array | false | `in_progress`, `planning`, `ready` 여행 포함. `completed`는 **자녀에게 노출하지 않고**, 부모에게는 **아직 평가하지 않은 여행만** 노출합니다 |
 | `trips[].dayTrip` | boolean | false | 시작일과 종료일이 같은 당일치기 여부. `true`이면 날짜를 한 번만 표시 |
 | `trips[].dDay` | number | true | 시작일까지 남은 일수. 진행 중이면 `null` |
 | `trips[].primaryTheme` | enum | true | 여행 생성 당시 부모 프로필 스냅샷에서 계산한 대표 테마 |
 | `trips[].intensity` | enum | true | `low`, `normal`, `high`. 스냅샷이 없으면 `null` |
 | `trips[].ratings` | array | false | 제출된 부모별 이름, 관계명, 별점. 아직 제출된 피드백이 없으면 빈 배열 |
+
+자녀는 완료된 여행을 기록 탭(`GET /api/v1/records`)에서 확인합니다. 부모 홈에 남은 완료 여행은 평가 유도용이며 본인 피드백을 제출하면 사라집니다. 자세한 기준은 `docs/policy/home.md`를 따릅니다.
 
 클라이언트는 `userRole=child`일 때만 새 여행 생성 기능을 노출합니다. `parentProfiles[].profileCompleted=false`인 부모가 있으면 해당 부모의 프로필 작성 또는 요청 UI를 표시합니다.
 
