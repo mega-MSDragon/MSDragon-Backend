@@ -6,6 +6,11 @@ import com.msdragon.backend.home.dto.HomeFestivalsResponse
 import com.msdragon.backend.home.dto.HomeMonthlyRecommendationsResponse
 import com.msdragon.backend.home.dto.HomeRecommendedCityResponse
 import com.msdragon.backend.home.config.HomeProperties
+import com.msdragon.backend.home.dto.HomeSectionItemResponse
+import com.msdragon.backend.home.dto.HomeSectionResponse
+import com.msdragon.backend.home.dto.HomeSectionType
+import com.msdragon.backend.home.dto.HomeSectionsResponse
+import com.msdragon.backend.home.tourapi.HomeTourApiAttraction
 import com.msdragon.backend.home.tourapi.HomeTourApiClient
 import com.msdragon.backend.trip.entity.TripDestinationCode
 import org.slf4j.LoggerFactory
@@ -22,12 +27,16 @@ class HomeDiscoveryService(
 	private val logger = LoggerFactory.getLogger(javaClass)
 	private val monthlyRecommendationsCacheLock = Any()
 	private val festivalsCacheLock = Any()
+	private val sectionsCacheLock = Any()
 
 	@Volatile
 	private var monthlyRecommendationsCache: HomeMonthlyRecommendationsCache? = null
 
 	@Volatile
 	private var festivalsCache: HomeFestivalsCache? = null
+
+	@Volatile
+	private var sectionsCache: HomeSectionsCache? = null
 
 	fun getMonthlyRecommendations(today: LocalDate): HomeMonthlyRecommendationsResponse {
 		monthlyRecommendationsCache?.takeIf { it.cachedDate == today }?.let { return it.response }
@@ -63,6 +72,82 @@ class HomeDiscoveryService(
 				?.let { destination to "${homeProperties.baseUrl.trimEnd('/')}/$DESTINATION_IMAGE_URL_PATH/${destination.value}.png" }
 		}.toMap()
 	}
+
+	/**
+	 * 홈 축제 영역부터 아래까지의 동적 섹션. 구성과 순서는 [HomeSectionPolicy]가 정한다.
+	 * 축제는 기존 축제 캐시를 그대로 재사용해 TourAPI를 두 번 호출하지 않는다.
+	 */
+	fun getSections(today: LocalDate): HomeSectionsResponse {
+		sectionsCache?.takeIf { it.cachedDate == today }?.let { return it.response }
+		return synchronized(sectionsCacheLock) {
+			sectionsCache?.takeIf { it.cachedDate == today }?.response
+				?: refreshSections(today).also {
+					sectionsCache = HomeSectionsCache(today, it)
+				}
+		}
+	}
+
+	private fun refreshSections(today: LocalDate): HomeSectionsResponse {
+		val attractions = loadAttractions(today)
+		return HomeSectionsResponse(
+			sections = HomeSectionPolicy.sections.map { definition ->
+				when (definition.type) {
+					HomeSectionType.FESTIVAL_COLLECTION -> section(definition, festivalItems(today), null)
+					HomeSectionType.ATTRACTION_COLLECTION -> section(
+						definition,
+						attractions.map(HomeTourApiAttraction::toSectionItem),
+						attractionSubtitle(today),
+					)
+				}
+			},
+		)
+	}
+
+	private fun section(
+		definition: HomeSectionDefinition,
+		items: List<HomeSectionItemResponse>,
+		subtitleOverride: String?,
+	): HomeSectionResponse =
+		HomeSectionResponse(
+			key = definition.key,
+			type = definition.type,
+			title = definition.title,
+			subtitle = subtitleOverride ?: definition.subtitle,
+			items = items,
+		)
+
+	/** 축제 섹션은 `/festivals`와 같은 데이터를 쓴다. 같은 날짜면 캐시를 공유한다. */
+	private fun festivalItems(today: LocalDate): List<HomeSectionItemResponse> =
+		getFestivals(today).festivals.map { festival ->
+			HomeSectionItemResponse(
+				contentId = festival.contentId,
+				title = festival.title,
+				summary = festival.summary,
+				imageUrl = festival.imageUrl,
+				address = festival.address,
+				regionName = festival.regionName,
+				tags = festival.tags,
+				eventStartDate = festival.eventStartDate,
+				eventEndDate = festival.eventEndDate,
+			)
+		}
+
+	private fun loadAttractions(today: LocalDate): List<HomeTourApiAttraction> =
+		try {
+			homeTourApiClient.findAttractions(
+				destinations = HomeRecommendationPolicy.destinationsFor(today.month),
+				limitPerDestination = HomeSectionPolicy.ATTRACTIONS_PER_DESTINATION,
+			)
+		} catch (exception: InternalServerException) {
+			logger.warn("홈 추천 관광지 조회 실패: reason={}", exception.message)
+			// 직전 캐시의 관광지 섹션을 유지한다. 없으면 빈 섹션으로 축소한다.
+			emptyList()
+		}
+
+	/** 관광지 섹션 부제는 이번 달 추천 도시 이름을 이어 붙인다. */
+	private fun attractionSubtitle(today: LocalDate): String =
+		HomeRecommendationPolicy.destinationsFor(today.month)
+			.joinToString(" · ") { it.displayName }
 
 	private fun refreshMonthlyRecommendations(today: LocalDate): HomeMonthlyRecommendationsResponse {
 		val previousImages = monthlyRecommendationsCache?.response?.recommendedCities.orEmpty()
@@ -147,4 +232,23 @@ private data class HomeMonthlyRecommendationsCache(
 private data class HomeFestivalsCache(
 	val cachedDate: LocalDate,
 	val response: HomeFestivalsResponse,
+)
+
+/** 관광지는 행사 날짜가 없으므로 날짜 필드를 null로 둔다. */
+private fun HomeTourApiAttraction.toSectionItem(): HomeSectionItemResponse =
+	HomeSectionItemResponse(
+		contentId = contentId,
+		title = title,
+		summary = null,
+		imageUrl = imageUrl,
+		address = address,
+		regionName = regionName,
+		tags = listOfNotNull(regionName, HomeSectionPolicy.ATTRACTION_TAG),
+		eventStartDate = null,
+		eventEndDate = null,
+	)
+
+private data class HomeSectionsCache(
+	val cachedDate: LocalDate,
+	val response: HomeSectionsResponse,
 )

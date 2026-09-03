@@ -12,6 +12,7 @@ import com.msdragon.backend.feedback.repository.TripFeedbackRepository
 import com.msdragon.backend.home.dto.HomeFestivalsResponse
 import com.msdragon.backend.home.dto.HomeMonthlyRecommendationsResponse
 import com.msdragon.backend.home.dto.HomeMyTripsResponse
+import com.msdragon.backend.home.dto.HomeSectionsResponse
 import com.msdragon.backend.home.dto.HomeParentProfileResponse
 import com.msdragon.backend.home.dto.HomeTripIntensity
 import com.msdragon.backend.home.dto.HomeTripRatingResponse
@@ -50,6 +51,9 @@ class HomeService(
 
 	fun getFestivals(): HomeFestivalsResponse =
 		homeDiscoveryService.getFestivals(LocalDate.now(SERVICE_ZONE_ID))
+
+	fun getSections(): HomeSectionsResponse =
+		homeDiscoveryService.getSections(LocalDate.now(SERVICE_ZONE_ID))
 
 	companion object {
 		private val SERVICE_ZONE_ID: ZoneId = ZoneId.of("Asia/Seoul")

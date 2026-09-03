@@ -10,7 +10,8 @@
 |--------|------|------|
 | `GET` | `/api/v1/home/my-trips` | 나의 여행과 부모별 프로필 상태 조회 |
 | `GET` | `/api/v1/home/monthly-recommendations` | 월별 추천 도시 조회 |
-| `GET` | `/api/v1/home/festivals` | 진행·예정 축제 조회 |
+| `GET` | `/api/v1/home/sections` | 홈 축제 영역부터 아래까지의 동적 섹션 조회 |
+| `GET` | `/api/v1/home/festivals` | 진행·예정 축제 조회. **deprecated** — `sections`의 `festival_collection`으로 대체 |
 
 ## GET /api/v1/home/my-trips
 
@@ -113,7 +114,101 @@
 - `imageUrl`은 서버에 넣어둔 도시 이미지 URL입니다(`{BASE_URL}/images/destinations/{code}.png`). 인증 없이 접근할 수 있습니다.
 - `imageUrl=null`: 서버 이미지가 없고 TourAPI 폴백 조회까지 실패한 경우이며 앱의 도시별 기본 이미지를 사용합니다.
 
+## GET /api/v1/home/sections
+
+홈 축제 영역부터 아래까지를 섹션 목록으로 조회합니다. 섹션을 추가하거나 순서를 바꿀 때 클라이언트를 고치지 않도록 서버가 구성과 순서를 결정합니다.
+
+### Response
+
+```json
+{
+  "status": 200,
+  "success": true,
+  "message": "홈 섹션 조회 성공",
+  "data": {
+    "sections": [
+      {
+        "key": "festivals",
+        "type": "festival_collection",
+        "title": "지금 열리는 축제",
+        "subtitle": "오늘부터 30일 안에 만나요",
+        "items": [
+          {
+            "contentId": "250119",
+            "title": "안동 선유줄불놀이",
+            "summary": "낙동강 위로 불꽃이 이어지는 전통 축제입니다.",
+            "imageUrl": "https://example.com/festival.jpg",
+            "address": "경상북도 안동시 풍천면",
+            "regionName": "안동",
+            "tags": ["안동", "축제"],
+            "eventStartDate": "2026-08-01",
+            "eventEndDate": "2026-08-31"
+          }
+        ]
+      },
+      {
+        "key": "monthly_attractions",
+        "type": "attraction_collection",
+        "title": "이번 달 가볼 만한 곳",
+        "subtitle": "강릉·속초 · 경주 · 대구 · 서울 · 제주",
+        "items": [
+          {
+            "contentId": "126508",
+            "title": "불국사",
+            "summary": null,
+            "imageUrl": "https://example.com/bulguksa.jpg",
+            "address": "경상북도 경주시 진현동",
+            "regionName": "경주",
+            "tags": ["경주", "관광지"],
+            "eventStartDate": null,
+            "eventEndDate": null
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+### 클라이언트 구현 규칙
+
+두 규칙을 지켜야 서버가 섹션을 바꿀 때 앱을 고치지 않아도 됩니다.
+
+1. **`sections` 배열 순서대로 렌더링합니다.** 노출 순서는 서버가 결정하므로 클라이언트가 재정렬하지 않습니다.
+2. **모르는 `type`의 섹션은 건너뜁니다.** 이 규칙이 없으면 서버가 섹션을 추가할 때마다 앱 강제 업데이트가 필요해집니다.
+
+`items`가 빈 배열인 섹션은 외부 API 장애로 항목을 채우지 못한 경우입니다. 섹션 전체를 숨기거나 빈 상태로 표시하는 것은 클라이언트가 결정합니다.
+
+### 필드
+
+| Field | Type | Nullable | 설명 |
+|-------|------|----------|------|
+| `sections[].key` | string | false | 섹션 식별자. 같은 `type`을 여러 섹션에서 쓸 수 있어 화면 상태 관리에 사용합니다 |
+| `sections[].type` | enum | false | `festival_collection`, `attraction_collection`. 렌더러 선택에 사용합니다 |
+| `sections[].title` | string | false | 섹션 제목 |
+| `sections[].subtitle` | string | true | 섹션 부제 |
+| `sections[].items[]` | array | false | 섹션 항목. 모든 섹션이 같은 형태를 사용합니다 |
+| `items[].eventStartDate` | date | true | `festival_collection`만 값이 있습니다 |
+| `items[].eventEndDate` | date | true | `festival_collection`만 값이 있습니다 |
+
+`items`는 섹션 종류와 무관하게 같은 형태입니다. 타입별로 다른 JSON을 주면 클라이언트 디코딩이 복잡해지므로, 해당 섹션에 없는 필드는 `null`로 내립니다.
+
+### 섹션 종류
+
+| `type` | 내용 | 출처 |
+|--------|------|------|
+| `festival_collection` | 오늘부터 30일 이내 축제 최대 10개 | TourAPI `searchFestival2` |
+| `attraction_collection` | 이번 달 추천 도시 5곳의 관광지, 도시당 2개 | TourAPI `areaBasedList2` (`contentTypeId=12`) |
+
+구성과 순서는 `HomeSectionPolicy`가 정하며 정책은 `docs/policy/home.md`를 따릅니다.
+
+---
+
 ## GET /api/v1/home/festivals
+
+> **Deprecated.** `GET /api/v1/home/sections`의 `festival_collection` 섹션으로 대체되었습니다.
+> 심사 중이거나 이미 배포된 앱 버전이 이 API를 호출하고 있어 **제거하지 않고 유지**합니다.
+> 해당 버전이 사용되지 않게 되면 제거합니다. 내부적으로 `sections`와 같은 축제 데이터·캐시를 공유합니다.
 
 요청 본문과 쿼리 파라미터가 없습니다.
 

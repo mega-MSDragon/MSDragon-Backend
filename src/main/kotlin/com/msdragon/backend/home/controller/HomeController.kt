@@ -5,6 +5,7 @@ import com.msdragon.backend.auth.support.CurrentUser
 import com.msdragon.backend.common.config.BEARER_AUTH_SCHEME
 import com.msdragon.backend.common.response.ApiResponse
 import com.msdragon.backend.home.dto.HomeFestivalsResponse
+import com.msdragon.backend.home.dto.HomeSectionsResponse
 import com.msdragon.backend.home.dto.HomeMonthlyRecommendationsResponse
 import com.msdragon.backend.home.dto.HomeMyTripsResponse
 import com.msdragon.backend.home.service.HomeService
@@ -52,16 +53,42 @@ class HomeController(
 			data = homeService.getMonthlyRecommendations(),
 		)
 
-	@Operation(summary = "홈 축제 조회", description = "현재 진행 중이거나 30일 이내 시작하는 축제를 조회합니다.")
+	@Operation(
+		summary = "홈 축제 조회 (deprecated)",
+		description = "현재 진행 중이거나 30일 이내 시작하는 축제를 조회합니다. " +
+			"`GET /api/v1/home/sections`의 `festival_collection` 섹션으로 대체되었습니다. " +
+			"기존 앱 버전 호환을 위해 유지하며, 해당 버전이 사용되지 않게 되면 제거합니다.",
+		deprecated = true,
+	)
 	@ApiResponses(
 		value = [
 			SwaggerApiResponse(responseCode = "200", description = "처리 완료: 조회 성공(status=200) 또는 인증 오류(status=401)"),
 		],
 	)
+	@Deprecated("GET /api/v1/home/sections의 festival_collection 섹션을 사용한다.")
 	@GetMapping("/festivals")
 	fun getFestivals(): ApiResponse<HomeFestivalsResponse> =
 		ApiResponse.success(
 			message = "축제 조회 성공",
 			data = homeService.getFestivals(),
+		)
+
+	@Operation(
+		summary = "홈 동적 섹션 조회",
+		description = "홈 축제 영역부터 아래까지를 섹션 목록으로 조회합니다. " +
+			"배열 순서가 화면 노출 순서이며 서버가 결정합니다. " +
+			"클라이언트는 순서를 그대로 유지하고, 모르는 `type`의 섹션은 건너뜁니다. " +
+			"이 규칙 덕분에 서버가 섹션을 추가해도 구버전 앱이 깨지지 않습니다.",
+	)
+	@ApiResponses(
+		value = [
+			SwaggerApiResponse(responseCode = "200", description = "처리 완료: 조회 성공(status=200) 또는 인증 오류(status=401)"),
+		],
+	)
+	@GetMapping("/sections")
+	fun getSections(): ApiResponse<HomeSectionsResponse> =
+		ApiResponse.success(
+			message = "홈 섹션 조회 성공",
+			data = homeService.getSections(),
 		)
 }

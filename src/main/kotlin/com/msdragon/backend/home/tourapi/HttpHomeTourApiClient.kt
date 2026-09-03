@@ -6,6 +6,7 @@ import com.msdragon.backend.trip.entity.TripDestinationCode
 import com.msdragon.backend.trip.tourapi.DestinationTourApiPolicy
 import com.nimbusds.jose.util.JSONObjectUtils
 import org.jsoup.Jsoup
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import java.net.URI
 import java.net.URLEncoder
@@ -21,6 +22,7 @@ import java.util.concurrent.CompletableFuture
 class HttpHomeTourApiClient(
 	private val tourApiProperties: TourApiProperties,
 ) : HomeTourApiClient {
+	private val logger = LoggerFactory.getLogger(javaClass)
 	private val httpClient: HttpClient = HttpClient.newBuilder()
 		.connectTimeout(tourApiProperties.connectTimeout)
 		.build()
@@ -82,6 +84,67 @@ class HttpHomeTourApiClient(
 				eventEndDate = festival.eventEndDate,
 			)
 		}
+	}
+
+	override fun findAttractions(
+		destinations: List<TripDestinationCode>,
+		limitPerDestination: Int,
+	): List<HomeTourApiAttraction> {
+		val futures = destinations.associateWith { destination ->
+			CompletableFuture.supplyAsync { findAttractionsOf(destination, limitPerDestination) }
+		}
+		return destinations.flatMap { futures.getValue(it).join() }
+	}
+
+	/**
+	 * 도시 하나의 관광지. 한 도시 조회가 실패해도 섹션 전체를 비우지 않도록 빈 목록을 반환한다.
+	 */
+	private fun findAttractionsOf(
+		destination: TripDestinationCode,
+		limit: Int,
+	): List<HomeTourApiAttraction> =
+		try {
+			DestinationTourApiPolicy.of(destination).regions
+				.asSequence()
+				.flatMap { region ->
+					requestItems(
+						operation = "areaBasedList2",
+						params = mapOf(
+							"numOfRows" to (limit * 3).coerceAtLeast(1).toString(),
+							"pageNo" to "1",
+							"arrange" to "Q",
+							"contentTypeId" to ATTRACTION_CONTENT_TYPE_ID,
+							"lDongRegnCd" to region.lDongRegnCd,
+						) + region.lDongSignguCd?.let { mapOf("lDongSignguCd" to it) }.orEmpty(),
+					).asSequence()
+				}
+				.mapNotNull { item -> item.toAttraction(destination) }
+				.distinctBy(HomeTourApiAttraction::contentId)
+				.take(limit)
+				.toList()
+		} catch (exception: InternalServerException) {
+			logger.warn(
+				"홈 추천 관광지 조회 실패: destination={}, reason={}",
+				destination.value,
+				exception.message,
+			)
+			emptyList()
+		}
+
+	private fun Map<String, Any?>.toAttraction(destination: TripDestinationCode): HomeTourApiAttraction? {
+		val contentId = string("contentid")?.trimToNull() ?: return null
+		val title = string("title")?.trimToNull() ?: return null
+		// 이미지가 없는 관광지는 카드가 비어 보이므로 제외한다.
+		val imageUrl = (string("firstimage") ?: string("firstimage2"))?.trimToNull() ?: return null
+		val address = (string("addr1") ?: string("addr2"))?.trimToNull()
+		return HomeTourApiAttraction(
+			contentId = contentId,
+			title = title,
+			imageUrl = imageUrl,
+			address = address,
+			regionName = regionNameOf(address),
+			destination = destination,
+		)
 	}
 
 	private fun findFestivalSummary(contentId: String): String? =
@@ -218,3 +281,6 @@ private fun Map<String, Any?>.date(key: String): LocalDate? =
 private fun String?.trimToNull(): String? = this?.trim()?.takeIf(String::isNotEmpty)
 
 private const val MAX_SUMMARY_LENGTH = 180
+
+/** TourAPI 관광지 콘텐츠 타입. 숙박·행사 등을 섞지 않기 위해 고정한다. */
+private const val ATTRACTION_CONTENT_TYPE_ID = "12"
