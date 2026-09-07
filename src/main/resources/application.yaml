@@ -29,6 +29,8 @@ app:
     review-code: ${APP_REVIEW_FAMILY_CODE:}
   home:
     base-url: ${APP_BASE_URL:http://localhost:8080}
+  notification:
+    firebase-credentials: ${FIREBASE_CREDENTIALS:}
   tour-api:
     base-uri: https://apis.data.go.kr/B551011/KorWithService2
     general-base-uri: https://apis.data.go.kr/B551011/KorService2

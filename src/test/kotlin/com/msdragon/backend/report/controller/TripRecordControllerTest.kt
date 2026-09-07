@@ -6,6 +6,7 @@ import com.msdragon.backend.auth.entity.OAuthProvider
 import com.msdragon.backend.auth.entity.User
 import com.msdragon.backend.auth.entity.UserRole
 import com.msdragon.backend.auth.repository.UserRepository
+import com.msdragon.backend.notification.repository.UserDeviceTokenRepository
 import com.msdragon.backend.auth.service.TokenService
 import com.msdragon.backend.family.entity.Family
 import com.msdragon.backend.family.entity.FamilyMember
@@ -54,6 +55,9 @@ class TripRecordControllerTest {
 
 	@Autowired
 	private lateinit var userRepository: UserRepository
+
+	@Autowired
+	private lateinit var userDeviceTokenRepository: UserDeviceTokenRepository
 
 	@Autowired
 	private lateinit var familyRepository: FamilyRepository
@@ -329,6 +333,7 @@ class TripRecordControllerTest {
 		tripRepository.deleteAll()
 		familyMemberRepository.deleteAll()
 		familyRepository.deleteAll()
+		userDeviceTokenRepository.deleteAll()
 		userRepository.deleteAll()
 	}
 

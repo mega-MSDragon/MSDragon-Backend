@@ -11,6 +11,7 @@ import com.msdragon.backend.common.exception.BadRequestException
 import com.msdragon.backend.common.exception.UnAuthorizedException
 import com.msdragon.backend.family.repository.FamilyCodeRepository
 import com.msdragon.backend.family.repository.FamilyMemberRepository
+import com.msdragon.backend.notification.repository.UserDeviceTokenRepository
 import com.msdragon.backend.profile.dto.MyProfileResponse
 import com.msdragon.backend.profile.dto.UpdateMyProfileRequest
 import com.msdragon.backend.trip.entity.TripStatus
@@ -33,6 +34,7 @@ class ProfileService(
 	private val familyCodeRepository: FamilyCodeRepository,
 	private val tripRepository: TripRepository,
 	private val oAuthClientResolver: OAuthClientResolver,
+	private val userDeviceTokenRepository: UserDeviceTokenRepository,
 ) {
 	@Transactional(readOnly = true)
 	fun getMyProfile(userId: Long): MyProfileResponse =
@@ -63,6 +65,10 @@ class ProfileService(
 			user.profileImage = request.profileImage.takeIf { it != UserProfileImage.NONE }
 		}
 
+		if (request.notificationEnabled != null) {
+			user.notificationEnabled = request.notificationEnabled
+		}
+
 		return MyProfileResponse.from(user)
 	}
 
@@ -79,6 +85,8 @@ class ProfileService(
 		familyCodeRepository.findByUserId(userId)?.deactivate()
 		userRefreshTokenRepository.findAllByUserIdAndRevokedAtIsNull(userId)
 			.forEach { it.revoke() }
+		// 기기 토큰을 남기면 탈퇴 후에도 그 기기로 알림이 갈 수 있다.
+		userDeviceTokenRepository.deleteAllByUserId(userId)
 
 		val member = familyMemberRepository.findByUserId(userId)
 		if (member != null && member.memberRole == UserRole.CHILD) {

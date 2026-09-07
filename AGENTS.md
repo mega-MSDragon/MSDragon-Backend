@@ -82,7 +82,7 @@
 
 - 진입점: `src/main/kotlin/com/msdragon/backend/BackendApplication.kt`
 - 설정: `src/main/resources/application.yaml`, profile별 `application-local.yaml` / `application-prod.yaml`
-- 기능 패키지: `auth`, `chat`, `common`, `family`, `feedback`, `health`, `home`, `parentprofile`, `pledge`, `profile`, `report`, `supportfacility`, `trip`
+- 기능 패키지: `auth`, `chat`, `common`, `family`, `feedback`, `health`, `home`, `notification`, `parentprofile`, `pledge`, `profile`, `report`, `supportfacility`, `trip`
 - 공통 응답/예외: `common/response/ApiResponse.kt`, `common/exception/ControllerExceptionAdvice.kt`
 - 인증: `auth/support/AuthInterceptor.kt`가 `/api/v1/**`를 검사하고 `/api/v1/auth/**`는 제외합니다
 - 정적 리소스: `src/main/resources/static/`는 인증 없이 제공됩니다. `policies/`의 개인정보처리방침·이용약관 HTML, `images/destinations/`의 홈 추천 도시 이미지가 있습니다

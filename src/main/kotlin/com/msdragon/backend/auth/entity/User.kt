@@ -40,6 +40,10 @@ class User(
 	@Column(name = "profile_image", length = 30)
 	var profileImage: UserProfileImage? = null,
 
+	/** 마이페이지 알림 설정. false면 푸시를 보내지 않는다. */
+	@Column(name = "notification_enabled", nullable = false)
+	var notificationEnabled: Boolean = true,
+
 	/**
 	 * 탈퇴 시 provider 연결 해제(revoke)에 사용하는 provider refresh token.
 	 * 자격증명이므로 로그에 남기지 않는다. 현재는 애플만 사용한다.

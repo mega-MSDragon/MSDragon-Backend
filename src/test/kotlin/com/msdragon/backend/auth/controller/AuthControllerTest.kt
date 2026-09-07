@@ -6,6 +6,7 @@ import com.msdragon.backend.auth.entity.UserConsentType
 import com.msdragon.backend.auth.repository.UserConsentRepository
 import com.msdragon.backend.auth.repository.UserRefreshTokenRepository
 import com.msdragon.backend.auth.repository.UserRepository
+import com.msdragon.backend.notification.repository.UserDeviceTokenRepository
 import com.msdragon.backend.auth.service.KakaoOAuthClient
 import com.msdragon.backend.auth.service.OAuthUserInfo
 import com.msdragon.backend.common.exception.InternalServerException
@@ -41,6 +42,9 @@ class AuthControllerTest {
 
 	@Autowired
 	private lateinit var userRepository: UserRepository
+
+	@Autowired
+	private lateinit var userDeviceTokenRepository: UserDeviceTokenRepository
 
 	@Autowired
 	private lateinit var userRefreshTokenRepository: UserRefreshTokenRepository
@@ -87,6 +91,7 @@ class AuthControllerTest {
 		familyRepository.deleteAll()
 		userRefreshTokenRepository.deleteAll()
 		userConsentRepository.deleteAll()
+		userDeviceTokenRepository.deleteAll()
 		userRepository.deleteAll()
 	}
 

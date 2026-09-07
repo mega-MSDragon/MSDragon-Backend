@@ -16,6 +16,7 @@ import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
+import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
@@ -65,6 +66,30 @@ class ParentProfileController(
 			message = "부모님 프로필 조회 성공",
 			data = parentProfileService.getParentProfile(currentUser, parentUserId),
 		)
+
+	@Operation(
+		summary = "부모님께 프로필 작성 요청",
+		description = "자녀가 같은 가족 부모에게 프로필 작성을 요청하는 푸시 알림을 보냅니다. " +
+			"요청 이력을 저장하지 않으므로 호출할 때마다 알림을 보냅니다. `나중에 하기` 같은 화면 상태는 앱이 관리합니다. " +
+			"부모가 알림을 껐거나 기기 토큰이 없으면 알림이 발송되지 않지만 요청 자체는 성공으로 처리합니다.",
+	)
+	@ApiResponses(
+		value = [
+			SwaggerApiResponse(
+				responseCode = "200",
+				description = "처리 완료: 요청 성공(status=200), 이미 작성 완료(status=400), 인증 오류(status=401), 권한 오류(status=403), 부모 없음(status=404)",
+			),
+		],
+	)
+	@PostMapping("/{parentUserId}/requests")
+	fun requestParentProfile(
+		@CurrentUser currentUser: AuthenticatedUser,
+		@Parameter(description = "요청 대상 부모 사용자 ID", example = "2")
+		@PathVariable parentUserId: Long,
+	): ApiResponse<Unit> {
+		parentProfileService.requestParentProfile(currentUser, parentUserId)
+		return ApiResponse.success(message = "부모님 프로필 작성 요청 성공", data = Unit)
+	}
 
 	@Operation(
 		summary = "내 부모님 프로필 저장",

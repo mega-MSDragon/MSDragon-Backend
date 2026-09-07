@@ -22,6 +22,7 @@
 | `pledge` | `com.msdragon.backend.pledge` | 여행 10계명 후보 제공과 여행별 확정 문구 저장 |
 | `report` | `com.msdragon.backend.report` | 부모 피드백 기반 효도 리포트와 완료 여행 기록·통계 조회 |
 | `supportfacility` | `com.msdragon.backend.supportfacility` | 공중화장실 CSV 적재와 여행 모드 주변 화장실·병원·약국 조회 |
+| `notification` | `com.msdragon.backend.notification` | FCM 푸시 기기 토큰 등록·해제와 이벤트 발생 시 알림 발송 |
 | `trip` | `com.msdragon.backend.trip` | 여행 생성·조회, 날짜 기반 여행 모드, TourAPI 추천 코스, Tmap 경로 최적화 |
 
 ---
@@ -57,3 +58,4 @@
 | 2026-08-24 | 개인정보처리방침·이용약관 정적 HTML 추가 (`resources/static/policies`, 도메인 패키지 아님) |
 | 2026-08-26 | auth 도메인에 소셜 연결 해제(애플 revoke·카카오 unlink) 외부 연동 추가 |
 | 2026-08-27 | 문서 최신화 — AGENTS.md 아키텍처, auth·profile 도메인 문서, 주변 시설 거리 응답 설명 |
+| 2026-09-07 | notification 도메인 추가 (FCM 푸시 기기 토큰과 알림 발송) |

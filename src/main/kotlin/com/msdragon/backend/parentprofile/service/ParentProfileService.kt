@@ -15,6 +15,7 @@ import com.msdragon.backend.parentprofile.entity.ParentProfile
 import com.msdragon.backend.parentprofile.entity.ParentProfileStatus
 import com.msdragon.backend.parentprofile.entity.TravelThemeCode
 import com.msdragon.backend.parentprofile.repository.ParentProfileRepository
+import com.msdragon.backend.notification.service.NotificationService
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
@@ -24,6 +25,7 @@ class ParentProfileService(
 	private val userRepository: UserRepository,
 	private val familyMemberRepository: FamilyMemberRepository,
 	private val parentProfileRepository: ParentProfileRepository,
+	private val notificationService: NotificationService,
 ) {
 	@Transactional(readOnly = true)
 	fun getMyParentProfile(currentUser: AuthenticatedUser): ParentProfileResponse {
@@ -44,6 +46,30 @@ class ParentProfileService(
 		return parentProfileRepository.findByUserId(parentUserId)
 			?.let(ParentProfileResponse::from)
 			?: ParentProfileResponse.empty(parent)
+	}
+
+	/**
+	 * 자녀가 같은 가족 부모에게 프로필 작성을 요청한다. 요청 이력을 저장하지 않고 알림만 보낸다.
+	 * `나중에 하기`처럼 요청 상태는 앱이 로컬로 관리하며, 서버는 매 호출마다 알림을 보낸다.
+	 */
+	@Transactional
+	fun requestParentProfile(currentUser: AuthenticatedUser, parentUserId: Long) {
+		val requester = getLoginUser(currentUser.id)
+		val parent = getParentUser(parentUserId)
+		validateParentProfileReadable(requester, parent)
+		if (requester.role != UserRole.CHILD) {
+			throw ForbiddenException("자녀만 부모님께 프로필 작성을 요청할 수 있습니다.")
+		}
+		if (parentProfileRepository.findByUserId(parentUserId)?.status == ParentProfileStatus.COMPLETED) {
+			throw BadRequestException("이미 프로필 작성을 완료한 부모님입니다.")
+		}
+
+		notificationService.notifyUsers(
+			userIds = listOf(parentUserId),
+			title = "여행 취향을 알려주세요",
+			body = "${requester.displayName}님이 프로필 작성을 부탁했어요.",
+			data = mapOf("type" to "parent_profile_request"),
+		)
 	}
 
 	@Transactional

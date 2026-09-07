@@ -25,4 +25,11 @@ data class UpdateMyProfileRequest(
 		nullable = true,
 	)
 	val profileImage: UserProfileImage? = null,
+
+	@field:Schema(
+		description = "알림 설정. 생략하면 변경하지 않습니다. false로 바꾸면 이후 푸시를 보내지 않습니다.",
+		example = "true",
+		nullable = true,
+	)
+	val notificationEnabled: Boolean? = null,
 )

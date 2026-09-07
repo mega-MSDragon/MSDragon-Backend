@@ -7,6 +7,7 @@ import com.msdragon.backend.auth.entity.User
 import com.msdragon.backend.auth.entity.UserRole
 import com.msdragon.backend.auth.repository.UserRefreshTokenRepository
 import com.msdragon.backend.auth.repository.UserRepository
+import com.msdragon.backend.notification.repository.UserDeviceTokenRepository
 import com.msdragon.backend.auth.service.TokenService
 import com.msdragon.backend.auth.support.AuthenticatedUser
 import com.msdragon.backend.auth.support.CurrentUser
@@ -49,6 +50,9 @@ class AuthAuthenticationTest {
 	private lateinit var userRepository: UserRepository
 
 	@Autowired
+	private lateinit var userDeviceTokenRepository: UserDeviceTokenRepository
+
+	@Autowired
 	private lateinit var userRefreshTokenRepository: UserRefreshTokenRepository
 
 	@Autowired
@@ -86,6 +90,7 @@ class AuthAuthenticationTest {
 		familyCodeRepository.deleteAll()
 		familyRepository.deleteAll()
 		userRefreshTokenRepository.deleteAll()
+		userDeviceTokenRepository.deleteAll()
 		userRepository.deleteAll()
 	}
 

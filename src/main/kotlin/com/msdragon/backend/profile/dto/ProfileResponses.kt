@@ -27,6 +27,9 @@ data class MyProfileResponse(
 		nullable = true,
 	)
 	val profileImage: String?,
+
+	@field:Schema(description = "알림 설정. false면 푸시를 보내지 않습니다.", example = "true")
+	val notificationEnabled: Boolean,
 ) {
 	companion object {
 		fun from(user: User): MyProfileResponse =
@@ -37,6 +40,7 @@ data class MyProfileResponse(
 				ageBand = user.ageBand.value,
 				gender = user.gender.value,
 				profileImage = user.profileImage?.value,
+				notificationEnabled = user.notificationEnabled,
 			)
 	}
 }

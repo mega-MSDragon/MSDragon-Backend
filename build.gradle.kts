@@ -25,6 +25,7 @@ dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-validation")
 	implementation("org.springframework.boot:spring-boot-starter-webmvc")
 	implementation("com.nimbusds:nimbus-jose-jwt:10.9.1")
+	implementation("com.google.firebase:firebase-admin:9.4.3")
 	implementation("io.github.openhtmltopdf:openhtmltopdf-pdfbox:1.1.40")
 	implementation("org.apache.commons:commons-csv:1.14.1")
 	implementation("org.jetbrains.kotlin:kotlin-reflect")

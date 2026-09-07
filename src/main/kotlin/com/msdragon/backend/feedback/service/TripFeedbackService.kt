@@ -18,6 +18,7 @@ import com.msdragon.backend.feedback.entity.FeedbackTagCategory
 import com.msdragon.backend.feedback.entity.TripFeedback
 import com.msdragon.backend.feedback.entity.TripFeedbackRequest
 import com.msdragon.backend.feedback.repository.TripFeedbackRepository
+import com.msdragon.backend.notification.service.NotificationService
 import com.msdragon.backend.feedback.repository.TripFeedbackRequestRepository
 import com.msdragon.backend.report.service.FilialReportService
 import com.msdragon.backend.trip.dto.relationLabelOf
@@ -43,6 +44,7 @@ class TripFeedbackService(
 	private val tripFeedbackRequestRepository: TripFeedbackRequestRepository,
 	private val tripFeedbackRepository: TripFeedbackRepository,
 	private val filialReportService: FilialReportService,
+	private val notificationService: NotificationService,
 ) {
 	@Transactional
 	fun requestFeedback(currentUser: AuthenticatedUser, tripId: Long): TripFeedbackStatusResponse {
@@ -74,6 +76,13 @@ class TripFeedbackService(
 			}
 		if (newRequests.isNotEmpty()) {
 			tripFeedbackRequestRepository.saveAll(newRequests)
+			// 이미 요청받은 부모에게 다시 보내지 않는다. 요청은 멱등이고 알림도 새 요청에만 보낸다.
+			notificationService.notifyUsers(
+				userIds = newRequests.map { requireNotNull(it.parentUser.id) },
+				title = "여행은 어떠셨어요?",
+				body = "${trip.title} 여행 후기를 남겨주세요.",
+				data = mapOf("type" to "trip_feedback_request", "tripId" to tripId.toString()),
+			)
 		}
 
 		return feedbackStatus(child, trip, today)

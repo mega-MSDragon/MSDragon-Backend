@@ -136,3 +136,30 @@
 | `heritage_walker` | 역사 산책가형 |
 | `active_adventurer` | 액티비티 열정가형 |
 | `local_challenger` | 로컬 도전가형 |
+
+---
+
+## POST /api/v1/parent-profiles/{parentUserId}/requests
+
+자녀가 같은 가족 부모에게 프로필 작성을 요청하는 푸시 알림을 보냅니다. Request Body는 없습니다.
+
+```json
+{
+  "status": 200,
+  "success": true,
+  "message": "부모님 프로필 작성 요청 성공",
+  "data": null
+}
+```
+
+- **요청 이력을 저장하지 않습니다.** 호출할 때마다 알림을 보내며 `나중에 하기` 같은 화면 상태는 앱이 관리합니다.
+- 부모가 알림을 껐거나 기기 토큰이 없으면 알림이 발송되지 않지만 **요청 자체는 성공으로 응답**합니다.
+
+| 본문 status | 조건 |
+|-------------|------|
+| `400` | 이미 프로필 작성을 완료한 부모 |
+| `401` | access token이 없거나 유효하지 않음 |
+| `403` | 자녀가 아니거나 같은 가족이 아님 |
+| `404` | 해당 부모를 찾을 수 없음 |
+
+발송 정책은 `docs/policy/push-notification.md`를 따릅니다.

@@ -17,6 +17,8 @@
 
 ## POST /api/v1/trips/{tripId}/feedback/requests
 
+새로 요청된 부모에게 푸시 알림을 보냅니다. 이미 요청받았거나 제출을 마친 부모에게는 다시 보내지 않습니다. 알림 발송 실패는 이 API의 응답에 영향을 주지 않습니다. `docs/policy/push-notification.md`를 따릅니다.
+
 여행을 생성한 자녀가 종료일 00:00부터 또는 여행을 수동 종료한 직후, 아직 피드백을 제출하지 않은 참여 부모 모두에게 평가를 요청합니다.
 
 - Request Body는 없습니다.
