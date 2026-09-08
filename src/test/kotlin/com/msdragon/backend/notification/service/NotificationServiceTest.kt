@@ -103,6 +103,55 @@ class NotificationServiceTest {
 		assertThat(pushSender.callCount).isZero()
 	}
 
+	@Test
+	fun `테스트 알림은 내 기기로만 보내고 원인 판단 정보를 돌려준다`() {
+		pushSender.reset()
+		val user = saveUser("notify-test", notificationEnabled = true)
+		val userId = requireNotNull(user.id)
+
+		// 기기 토큰이 없으면 발송을 시도하지 않고 원인을 알려준다.
+		val withoutToken = notificationService.sendTestNotification(userId, null, null)
+		assertThat(withoutToken.deviceCount).isZero()
+		assertThat(withoutToken.attempted).isFalse()
+		assertThat(pushSender.callCount).isZero()
+
+		registerToken(user, "token-test")
+		val sent = notificationService.sendTestNotification(userId, "trip_feedback_request", "12")
+		assertThat(sent.deviceCount).isEqualTo(1)
+		assertThat(sent.pushConfigured).isTrue()
+		assertThat(sent.notificationEnabled).isTrue()
+		assertThat(sent.attempted).isTrue()
+		assertThat(pushSender.sentTokens).containsExactly("token-test")
+		assertThat(pushSender.lastData).containsEntry("type", "trip_feedback_request")
+		assertThat(pushSender.lastData).containsEntry("tripId", "12")
+	}
+
+	@Test
+	fun `테스트 알림에서 type을 생략하면 앱의 홈 폴백을 확인할 수 있다`() {
+		pushSender.reset()
+		val user = saveUser("notify-test-default", notificationEnabled = true)
+		registerToken(user, "token-test-default")
+
+		notificationService.sendTestNotification(requireNotNull(user.id), null, null)
+
+		assertThat(pushSender.lastData).containsEntry("type", "test")
+		assertThat(pushSender.lastData).doesNotContainKey("tripId")
+	}
+
+	@Test
+	fun `Firebase 키가 없으면 테스트 알림을 시도하지 않는다`() {
+		pushSender.reset()
+		pushSender.configured = false
+		val user = saveUser("notify-test-unconfigured", notificationEnabled = true)
+		registerToken(user, "token-test-unconfigured")
+
+		val result = notificationService.sendTestNotification(requireNotNull(user.id), null, null)
+
+		assertThat(result.pushConfigured).isFalse()
+		assertThat(result.attempted).isFalse()
+		assertThat(pushSender.callCount).isZero()
+	}
+
 	private fun registerToken(user: User, token: String) {
 		notificationService.registerDeviceToken(requireNotNull(user.id), token, DevicePlatform.IOS)
 	}
@@ -130,11 +179,16 @@ class NotificationServiceTest {
 
 	class RecordingPushSender : PushSender {
 		val sentTokens: MutableList<String> = mutableListOf()
+		var lastData: Map<String, String> = emptyMap()
 		var callCount: Int = 0
 		var invalidTokens: List<String> = emptyList()
 		var failWith: Exception? = null
+		var configured: Boolean = true
+
+		override fun isConfigured(): Boolean = configured
 
 		fun reset() {
+			configured = true
 			sentTokens.clear()
 			callCount = 0
 			invalidTokens = emptyList()
@@ -150,6 +204,7 @@ class NotificationServiceTest {
 			callCount++
 			failWith?.let { throw it }
 			sentTokens.addAll(tokens)
+			lastData = data
 			return PushSendResult(invalidTokens = invalidTokens)
 		}
 	}

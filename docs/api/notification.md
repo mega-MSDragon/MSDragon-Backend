@@ -84,6 +84,106 @@ FCM 푸시 알림 기기 토큰을 등록·해제합니다.
 
 ---
 
+## POST /api/v1/users/me/device-tokens/test
+
+**내 기기로만** 테스트 알림을 보냅니다. 다른 사용자를 대상으로 지정할 수 없어 남용 여지가 없습니다. 실제 알림과 같은 형태의 페이로드를 보내므로 클라이언트가 수신과 화면 이동을 확인할 수 있습니다.
+
+### Request
+
+Body는 생략할 수 있습니다.
+
+```json
+{
+  "type": "trip_feedback_request",
+  "tripId": "12"
+}
+```
+
+| Field | Type | Required | 설명 |
+|-------|------|----------|------|
+| `type` | string | false | `data.type`에 넣을 값. 생략하면 `test`를 보내 앱의 '모르는 type은 홈으로' 처리를 확인할 수 있습니다 |
+| `tripId` | string | false | `data.tripId`에 넣을 값. 생략하면 넣지 않습니다 |
+
+### Response
+
+```json
+{
+  "status": 200,
+  "success": true,
+  "message": "테스트 알림 발송 처리 완료",
+  "data": {
+    "deviceCount": 1,
+    "pushConfigured": true,
+    "notificationEnabled": true,
+    "attempted": true
+  }
+}
+```
+
+**알림이 오지 않을 때 이 응답으로 원인을 좁힙니다.**
+
+| 값 | 의미 |
+|----|------|
+| `deviceCount: 0` | 기기 토큰이 등록되지 않았습니다. 등록 API를 먼저 호출합니다 |
+| `pushConfigured: false` | 서버에 Firebase 키가 설정되지 않았습니다 |
+| `notificationEnabled: false` | 내 알림 설정이 꺼져 있습니다 |
+| `attempted: true`인데 알림이 오지 않음 | FCM 발송 단계 문제입니다. 서버 로그의 `errorCode`를 확인합니다 |
+
+---
+
+## 클라이언트가 받는 페이로드
+
+서버는 `notification`(title, body)과 `data`만 보내고 플랫폼별 설정은 지정하지 않습니다.
+
+### iOS (`userInfo`)
+
+```json
+{
+  "aps": {
+    "alert": {
+      "title": "여행은 어떠셨어요?",
+      "body": "경주 여행 후기를 남겨주세요."
+    }
+  },
+  "type": "trip_feedback_request",
+  "tripId": "12"
+}
+```
+
+`data` 키가 `aps`와 같은 레벨에 붙습니다.
+
+### Android (`RemoteMessage`)
+
+```kotlin
+remoteMessage.notification?.title
+remoteMessage.notification?.body
+remoteMessage.data["type"]
+remoteMessage.data["tripId"]
+```
+
+`data` 값은 **모두 문자열**입니다. `tripId`도 `"12"` 형태입니다.
+
+### 화면 이동
+
+서버는 무슨 일이 일어났는지만 보내고 **어느 화면으로 갈지는 클라이언트가 결정**합니다. 딥링크를 쓰지 않습니다.
+
+| `data.type` | 화면 |
+|-------------|------|
+| `trip_feedback_request` (+ `tripId`) | 피드백 작성 |
+| `parent_profile_request` | 부모님 프로필 작성 |
+| 그 외 · 모르는 값 | **홈** |
+
+**모르는 `type`은 홈으로 보냅니다.** 서버가 알림 종류를 추가했을 때 구버전 앱이 멈추지 않게 하기 위함입니다.
+
+### 클라이언트 주의사항
+
+- **Android 백그라운드·종료 상태에서는 `onMessageReceived`가 호출되지 않습니다.** 시스템이 트레이에 자동 표시하고, 탭하면 `data`가 런처 Intent의 extras로 전달됩니다. 탭 처리는 Intent extras에서 읽습니다. 포그라운드일 때만 `onMessageReceived`가 호출됩니다.
+- **iOS는 소리가 없습니다.** 서버가 `sound`를 지정하지 않습니다. 필요하면 서버에 `ApnsConfig` 추가를 요청합니다. 포그라운드 배너는 `willPresent`에서 presentation option을 반환해야 표시됩니다.
+- **Android 매니페스트에 기본 알림 채널과 아이콘을 선언해야 합니다.** `com.google.firebase.messaging.default_notification_channel_id`와 `default_notification_icon`이 없으면 Android 8 이상에서 알림이 표시되지 않거나 아이콘이 흰 사각형으로 보입니다.
+- **콜드 스타트를 고려합니다.** 알림 탭으로 앱이 처음 실행되면 로그인 세션이 준비되지 않은 상태입니다. 알림 데이터를 보관해두고 인증과 초기 로딩이 끝난 뒤 화면을 엽니다.
+
+---
+
 ## 발송되는 알림
 
 | 알림 | 트리거 | 대상 | `data.type` |

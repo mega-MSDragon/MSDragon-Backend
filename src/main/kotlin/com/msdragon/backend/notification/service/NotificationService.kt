@@ -5,6 +5,7 @@ import com.msdragon.backend.auth.entity.User
 import com.msdragon.backend.auth.repository.UserRepository
 import com.msdragon.backend.common.exception.BadRequestException
 import com.msdragon.backend.common.exception.UnAuthorizedException
+import com.msdragon.backend.notification.dto.TestNotificationResponse
 import com.msdragon.backend.notification.entity.UserDeviceToken
 import com.msdragon.backend.notification.repository.UserDeviceTokenRepository
 import org.slf4j.LoggerFactory
@@ -52,6 +53,44 @@ class NotificationService(
 	}
 
 	/**
+	 * 내 기기로만 테스트 알림을 보낸다. **다른 사용자를 대상으로 지정할 수 없으므로** 남용 여지가 없다.
+	 *
+	 * 알림이 오지 않을 때 원인을 좁힐 수 있도록 결과를 응답에 담는다.
+	 * 실제 발송 경로와 같은 형태의 페이로드를 보내 클라이언트가 라우팅을 확인할 수 있다.
+	 */
+	@Transactional
+	fun sendTestNotification(userId: Long, type: String?, tripId: String?): TestNotificationResponse {
+		val user = getLoginUser(userId)
+		val deviceTokens = userDeviceTokenRepository.findAllByUserId(userId)
+		val attempted = pushSender.isConfigured() && user.notificationEnabled && deviceTokens.isNotEmpty()
+
+		if (attempted) {
+			val data = buildMap {
+				put("type", type?.trim()?.takeIf { it.isNotEmpty() } ?: TEST_NOTIFICATION_TYPE)
+				tripId?.trim()?.takeIf { it.isNotEmpty() }?.let { put("tripId", it) }
+			}
+			val result = pushSender.send(
+				tokens = deviceTokens.map(UserDeviceToken::token),
+				title = "모셔용 테스트 알림",
+				body = "이 알림이 보이면 푸시 연결이 정상이에요.",
+				data = data,
+			)
+			if (result.invalidTokens.isNotEmpty()) {
+				userDeviceTokenRepository.deleteAll(
+					deviceTokens.filter { it.token in result.invalidTokens },
+				)
+			}
+		}
+
+		return TestNotificationResponse(
+			deviceCount = deviceTokens.size,
+			pushConfigured = pushSender.isConfigured(),
+			notificationEnabled = user.notificationEnabled,
+			attempted = attempted,
+		)
+	}
+
+	/**
 	 * 알림을 유발한 API를 실패시키지 않는다. 발송 실패는 로그로만 남긴다.
 	 * 알림을 끈 사용자는 대상에서 제외하며, 더 이상 쓸 수 없는 토큰은 정리한다.
 	 */
@@ -93,5 +132,8 @@ class NotificationService(
 	companion object {
 		private val log = LoggerFactory.getLogger(NotificationService::class.java)
 		private const val MAX_TOKEN_LENGTH = 512
+
+		/** 앱의 '모르는 type은 홈으로' 처리를 확인할 수 있는 기본 테스트 타입. */
+		private const val TEST_NOTIFICATION_TYPE = "test"
 	}
 }

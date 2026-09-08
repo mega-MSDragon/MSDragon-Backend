@@ -22,3 +22,20 @@ data class UnregisterDeviceTokenRequest(
 	@field:NotBlank(message = "기기 토큰을 입력해주세요.")
 	val token: String,
 )
+
+@Schema(description = "테스트 알림 발송 요청. 모든 필드가 선택이며 클라이언트 라우팅 확인에 사용합니다.")
+data class SendTestNotificationRequest(
+	@field:Schema(
+		description = "`data.type`에 넣을 값. 생략하면 `test`를 보내 앱의 '모르는 type은 홈' 처리를 확인할 수 있습니다.",
+		example = "trip_feedback_request",
+		nullable = true,
+	)
+	val type: String? = null,
+
+	@field:Schema(
+		description = "`data.tripId`에 넣을 값. 생략하면 넣지 않습니다.",
+		example = "12",
+		nullable = true,
+	)
+	val tripId: String? = null,
+)

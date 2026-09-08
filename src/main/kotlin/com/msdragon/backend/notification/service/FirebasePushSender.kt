@@ -42,6 +42,8 @@ class FirebasePushSender(
 		}
 	}
 
+	override fun isConfigured(): Boolean = notificationProperties.isConfigured()
+
 	override fun send(
 		tokens: List<String>,
 		title: String,

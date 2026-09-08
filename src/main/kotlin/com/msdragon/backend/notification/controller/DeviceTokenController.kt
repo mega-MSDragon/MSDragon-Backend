@@ -5,6 +5,8 @@ import com.msdragon.backend.auth.support.CurrentUser
 import com.msdragon.backend.common.config.BEARER_AUTH_SCHEME
 import com.msdragon.backend.common.response.ApiResponse
 import com.msdragon.backend.notification.dto.RegisterDeviceTokenRequest
+import com.msdragon.backend.notification.dto.SendTestNotificationRequest
+import com.msdragon.backend.notification.dto.TestNotificationResponse
 import com.msdragon.backend.notification.dto.UnregisterDeviceTokenRequest
 import com.msdragon.backend.notification.service.NotificationService
 import io.swagger.v3.oas.annotations.Operation
@@ -47,6 +49,35 @@ class DeviceTokenController(
 		notificationService.registerDeviceToken(currentUser.id, request.token, request.platform)
 		return ApiResponse.success(message = "기기 토큰 등록 성공", data = Unit)
 	}
+
+	@Operation(
+		summary = "테스트 알림 발송",
+		description = "**내 기기로만** 테스트 알림을 보냅니다. 다른 사용자를 대상으로 지정할 수 없습니다. " +
+			"실제 알림과 같은 형태의 페이로드를 보내므로 클라이언트가 수신과 화면 이동을 확인할 수 있습니다. " +
+			"`type`을 생략하면 `test`를 보내 앱의 '모르는 type은 홈으로' 처리를 확인할 수 있습니다. " +
+			"알림이 오지 않을 때 응답의 `deviceCount`, `pushConfigured`, `notificationEnabled`로 원인을 좁힙니다.",
+	)
+	@ApiResponses(
+		value = [
+			SwaggerApiResponse(
+				responseCode = "200",
+				description = "처리 완료: 발송 시도 결과 반환(status=200), 인증 오류(status=401)",
+			),
+		],
+	)
+	@PostMapping("/test")
+	fun sendTestNotification(
+		@CurrentUser currentUser: AuthenticatedUser,
+		@RequestBody(required = false) request: SendTestNotificationRequest?,
+	): ApiResponse<TestNotificationResponse> =
+		ApiResponse.success(
+			message = "테스트 알림 발송 처리 완료",
+			data = notificationService.sendTestNotification(
+				userId = currentUser.id,
+				type = request?.type,
+				tripId = request?.tripId,
+			),
+		)
 
 	@Operation(
 		summary = "기기 토큰 해제",
