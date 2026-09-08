@@ -92,22 +92,21 @@ class HomeDataService(
 		familyId: Long,
 		today: LocalDate,
 	): List<HomeTripSummaryResponse> {
+		// 가족 여행이 아니라 내가 참여한 여행만 보여준다. 나중에 참여자로 추가된 부모에게
+		// 자기가 빠진 과거 여행이 보이던 문제 때문이다. 작성 자녀도 참여자로 저장된다.
+		val myParticipatingTripIds = tripParticipantRepository.findAllByUserId(requireNotNull(user.id))
+			.mapTo(mutableSetOf()) { requireNotNull(it.trip.id) }
 		val candidates = tripRepository.findAllByFamilyIdAndDeletedAtIsNullOrderByStartDateAscIdAsc(familyId)
+			.filter { requireNotNull(it.id) in myParticipatingTripIds }
 			.onEach { it.synchronizeStatus(today) }
 			.filter { it.status in HOME_TRIP_STATUSES }
 		val feedbacksByTripId = tripFeedbackRepository.findAllByTripIdIn(candidates.map { requireNotNull(it.id) })
 			.sortedBy { it.parentUser.id }
 			.groupBy { requireNotNull(it.trip.id) }
-		val myParticipatingTripIds = if (user.role == UserRole.PARENT) {
-			tripParticipantRepository.findAllByUserId(requireNotNull(user.id))
-				.mapTo(mutableSetOf()) { requireNotNull(it.trip.id) }
-		} else {
-			emptySet()
-		}
 
 		val trips = candidates
 			.filter { trip ->
-				isVisibleOnHome(trip, user, feedbacksByTripId[trip.id].orEmpty(), myParticipatingTripIds)
+				isVisibleOnHome(trip, user, feedbacksByTripId[trip.id].orEmpty())
 			}
 			.sortedWith(
 				compareBy<Trip> { if (it.status == TripStatus.IN_PROGRESS) 0 else 1 }
@@ -118,17 +117,15 @@ class HomeDataService(
 	}
 
 	/**
-	 * 완료된 여행을 홈에 남길지 판단한다. 완료 전 여행은 역할과 무관하게 모두 보인다.
+	 * 내가 참여한 여행 중 완료된 것을 홈에 남길지 판단한다. 완료 전 여행은 역할과 무관하게 모두 보인다.
 	 *
 	 * - 자녀: 완료 여행을 홈에서 내린다. 기록 탭에서 확인한다.
 	 * - 부모: **아직 평가하지 않은 완료 여행만** 남겨 평가를 유도한다. 제출하면 홈에서 사라진다.
-	 * - 부모가 참여자가 아니면 평가할 수 없으므로 남기지 않는다. 남기면 사라지지 않는 카드가 된다.
 	 */
 	private fun isVisibleOnHome(
 		trip: Trip,
 		user: User,
 		feedbacks: List<TripFeedback>,
-		myParticipatingTripIds: Set<Long>,
 	): Boolean {
 		if (trip.status != TripStatus.COMPLETED) {
 			return true
@@ -136,8 +133,7 @@ class HomeDataService(
 		if (user.role != UserRole.PARENT) {
 			return false
 		}
-		val tripId = requireNotNull(trip.id)
-		return tripId in myParticipatingTripIds && feedbacks.none { it.parentUser.id == user.id }
+		return feedbacks.none { it.parentUser.id == user.id }
 	}
 
 	private fun toHomeTrip(

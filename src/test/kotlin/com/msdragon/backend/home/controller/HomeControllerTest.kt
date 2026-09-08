@@ -359,6 +359,51 @@ class HomeControllerTest {
 			.andExpect(jsonPath("$.data.trips").isEmpty)
 	}
 
+	@Test
+	fun `나중에 참여자로 추가된 부모에게 본인이 빠진 여행은 보이지 않는다`() {
+		val today = LocalDate.now(SERVICE_ZONE_ID)
+		val child = saveUser(UserRole.CHILD, "child-late-join", "혜린", GenderType.FEMALE)
+		val mother = saveUser(UserRole.PARENT, "mother-late-join", "김영희", GenderType.FEMALE)
+		val father = saveUser(UserRole.PARENT, "father-late-join", "김철수", GenderType.MALE)
+		val family = connectFamily(child, mother, father)
+
+		// 엄마와만 만든 기존 여행. 아빠는 가족 구성원이지만 참여자가 아니다.
+		val motherOnlyTrip = saveTrip(
+			family = family,
+			child = child,
+			title = "엄마와 둘이 가는 여행",
+			startDate = today,
+			endDate = today.plusDays(1),
+			snapshot = null,
+		)
+		tripParticipantRepository.save(TripParticipant(trip = motherOnlyTrip, user = mother))
+		val fatherTrip = saveTrip(
+			family = family,
+			child = child,
+			title = "아빠와 가는 여행",
+			startDate = today.plusDays(10),
+			endDate = today.plusDays(11),
+			snapshot = null,
+		)
+		tripParticipantRepository.save(TripParticipant(trip = fatherTrip, user = father))
+
+		mockMvc.perform(
+			get("/api/v1/home/my-trips")
+				.header("Authorization", "Bearer ${tokenService.createAccessToken(father)}"),
+		)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.data.trips.length()").value(1))
+			.andExpect(jsonPath("$.data.trips[0].title").value("아빠와 가는 여행"))
+
+		// 작성 자녀는 두 여행 모두 본인 여행이다.
+		mockMvc.perform(
+			get("/api/v1/home/my-trips")
+				.header("Authorization", "Bearer ${tokenService.createAccessToken(child)}"),
+		)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.data.trips.length()").value(2))
+	}
+
 	private fun saveTrip(
 		family: Family,
 		child: User,
@@ -367,8 +412,8 @@ class HomeControllerTest {
 		endDate: LocalDate,
 		snapshot: TripRecommendationSnapshotResponse?,
 		status: TripStatus = TripStatus.PLANNING,
-	): Trip =
-		tripRepository.save(
+	): Trip {
+		val trip = tripRepository.save(
 			Trip(
 				family = family,
 				createdByUser = child,
@@ -380,6 +425,10 @@ class HomeControllerTest {
 				recommendationSnapshot = snapshot?.let(objectMapper::writeValueAsString),
 			),
 		)
+		// 실제 여행 생성과 같게 작성 자녀를 참여자로 넣는다. 참여 부모는 호출부가 추가한다.
+		tripParticipantRepository.save(TripParticipant(trip = trip, user = child))
+		return trip
+	}
 
 	private fun snapshot(
 		parent: User,
