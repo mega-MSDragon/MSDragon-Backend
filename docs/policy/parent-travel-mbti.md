@@ -24,12 +24,14 @@
 | 값 | 화면 문구 | 예시 |
 |----|-----------|------|
 | `nature_scenery` | 자연·풍경 | 산, 바다, 공원 |
-| `history_culture` | 역사·문화 | 유적지, 절, 문화재 |
-| `shopping` | 쇼핑 | 백화점, 시장 |
-| `activity` | 액티비티 | 레저, 물놀이, 체험 |
-| `culture_life` | 문화생활 | 축제, 공연, 전시 |
-| `landmark` | 랜드마크 | 건물, 공원, 명소 |
-| `experience` | 체험 | 공예, 농장, 웰니스 |
+| `history_culture` | 역사·전통 | 유적지, 절, 문화재 |
+| `shopping` | 쇼핑·시장 | 백화점, 시장 |
+| `activity` | 레저·활동 | 레저, 물놀이, 체험 |
+| `culture_life` | 공연·전시 | 축제, 공연, 전시 |
+| `landmark` | 유명 명소 | 건물, 공원, 명소 |
+| `experience` | 현지 체험 | 공예, 농장, 웰니스 |
+
+화면 문구는 확정 시안(`여행 MBTI 6유형 네이밍 보드`)을 따릅니다. **코드 값은 바꾸지 않습니다.** 저장된 값과 클라이언트 매핑이 함께 깨지고, DB CHECK 제약도 다시 만들어야 합니다.
 
 ### 3단계: 음식 취향
 
@@ -43,83 +45,97 @@
 
 ## 여행 MBTI 타입
 
-| 타입 코드 | 타입명 | 한 줄 문구 | 설명 |
-|-----------|--------|------------|------|
-| `urban_explorer` | 도시 취향 탐험가형 | 유명한 곳은 알차게 둘러봐야지. | 쇼핑, 문화생활, 랜드마크를 좋아하며 도시의 볼거리를 알차게 즐기는 타입이시네요. 적당히 움직이고 익숙한 음식을 편안하게 즐기시는 편이에요. |
-| `culture_stroller` | 감성 문화 산책가형 | 좋은 곳에서는 천천히 쉬어가도 괜찮아. | 문화생활과 랜드마크를 좋아하며 여유 있게 도시를 둘러보는 타입이시네요. 중간중간 카페나 맛집에서 쉬어가는 일정을 선호하시는 편이에요. |
-| `healing_traveler` | 유유자적 힐링러형 | 여행은 쉬러 가는 거지. | 자연풍경, 역사, 산책을 좋아하며 천천히 둘러보는 타입이시네요. 음식도 한식처럼 편안한 선택을 선호하시는 편이에요. |
-| `heritage_walker` | 역사 산책가형 | 이야기가 있는 길을 걷는 게 좋아. | 역사적인 장소와 자연풍경을 좋아하며 적당히 걸으면서 여유를 챙기는 타입이시네요. 익숙한 음식 안에서 지역의 특색도 함께 즐기시는 편이에요. |
-| `active_adventurer` | 액티비티 열정가형 | 가만히 있기엔 여행 시간이 아까워. | 액티비티와 체험, 이동이 많은 일정을 좋아하는 타입이시네요. 여러 장소를 둘러보고 새로운 음식에도 적극적으로 도전하시는 편이에요. |
-| `local_challenger` | 로컬 도전가형 | 여행은 직접 해보고 먹어봐야지. | 체험형 여행과 새로운 음식, 현지 분위기를 좋아하는 타입이시네요. 유명 관광지만 보기보다 직접 경험하고 맛보는 데서 여행의 재미를 찾으시는 편이에요. |
+확정 시안의 6유형입니다. 별명(`catchphrase`)과 보조명(`name`)을 이어 붙여 `쉬엄쉬엄이 최고! 풍경 수집가`처럼 표시합니다.
+
+| 타입 코드 | 별명 | 보조명 | 대표 테마 | 보조 테마 | 설명 |
+|-----------|------|--------|-----------|-----------|------|
+| `urban_explorer` | 볼 건 다 봐야지! | 도시 탐험가 | 쇼핑·시장 | 유명 명소, 공연·전시 | 대표 명소와 쇼핑을 놓치지 않고, 도시의 볼거리를 알차게 즐기는 여행이 잘 맞아요. |
+| `culture_stroller` | 분위기가 반이지! | 문화 산책가 | 공연·전시 | 유명 명소, 역사·전통 | 공연과 전시, 분위기 좋은 장소를 천천히 감상하며 여행하는 걸 좋아해요. |
+| `healing_traveler` | 쉬엄쉬엄이 최고! | 풍경 수집가 | 자연·풍경 | 역사·전통, 유명 명소 | 아름다운 풍경 속에서 여유롭게 쉬며 편안하게 둘러보는 여행이 잘 맞아요. |
+| `heritage_walker` | 아는 만큼 보인다! | 시간 여행자 | 역사·전통 | 자연·풍경, 유명 명소 | 유적지와 박물관을 산책하듯 둘러보며 지역의 이야기를 알아가는 걸 좋아해요. |
+| `active_adventurer` | 해봐야 제맛이지! | 체험 대장 | 레저·활동 | 현지 체험, 자연·풍경 | 직접 움직이고 참여하는 활동을 즐기며 하루를 활기차게 보내는 편이에요. |
+| `local_challenger` | 현지인처럼 즐기자! | 골목 탐험가 | 현지 체험 | 쇼핑·시장, 공연·전시 | 시장과 골목, 음식과 생활문화를 통해 그 지역만의 매력을 발견하는 걸 좋아해요. |
+
+**대표 테마는 시안 유형 카드에 나열된 테마 3개 중 첫 번째, 보조 테마는 나머지 둘입니다.** 시안이 대표와 보조를 따로 표기하지 않아 나열 순서를 기준으로 삼았습니다.
 
 프로필 완료 응답은 기존 `personalityType` 코드와 함께 위 내용을 `personalityResult`로 반환합니다. 결과 화면 제목에 사용할 부모 이름은 `parentDisplayName`으로 반환합니다.
 
 ## 가중치 계산
 
-각 입력값이 타입별 점수에 가중치를 더합니다. 최종 점수가 가장 높은 타입을 부모님의 현재 여행 MBTI로 저장합니다.
+시안의 점수 산정 방식을 그대로 씁니다.
 
-### 이동 성향
+```
+테마 점수 + 일정 점수 + 음식 점수 = 최종 유형
+```
+
+- 대표 테마와 일치하면 **+2점**
+- 보조 테마와 일치하면 **+1점**
+- 일정 속도는 유형별 **+1~2점**
+- 음식 취향은 유형별 **+1~2점**
+
+**이동 도움 여부(`needsMobilityAssistance`)는 성향 점수에 넣지 않습니다.** 시안 명시대로 여행 동선 필터로만 사용합니다. 프로필 완료 시 필수 입력이라는 점은 그대로입니다.
+
+### 일정 속도
 
 | 입력 | 가중치 |
 |------|--------|
-| `walkingPace = slow` | `healing_traveler +4`, `culture_stroller +1`, `heritage_walker +1` |
-| `walkingPace = normal` | `culture_stroller +2`, `heritage_walker +2`, `urban_explorer +1` |
-| `walkingPace = fast` | `active_adventurer +5`, `local_challenger +3`, `urban_explorer +2` |
-| `needsMobilityAssistance = true` | `healing_traveler +2`, `heritage_walker +1`, `culture_stroller +1` |
-| `needsMobilityAssistance = false` | `active_adventurer +1`, `local_challenger +1`, `urban_explorer +1` |
-
-### 여행 취향
-
-여행 취향은 선택한 모든 카테고리의 가중치를 합산합니다.
-
-| 입력 | 가중치 |
-|------|--------|
-| `nature_scenery` | `healing_traveler +4`, `heritage_walker +3` |
-| `history_culture` | `heritage_walker +4`, `healing_traveler +1`, `culture_stroller +1` |
-| `shopping` | `urban_explorer +4`, `culture_stroller +3` |
-| `activity` | `active_adventurer +4`, `local_challenger +2` |
-| `culture_life` | `culture_stroller +4`, `urban_explorer +2` |
-| `landmark` | `urban_explorer +5`, `culture_stroller +3`, `heritage_walker +2` |
-| `experience` | `local_challenger +5`, `active_adventurer +3` |
+| `walkingPace = slow` | `healing_traveler +2`, `heritage_walker +2`, `culture_stroller +1` |
+| `walkingPace = normal` | `culture_stroller +1`, `heritage_walker +1`, `urban_explorer +1` |
+| `walkingPace = fast` | `urban_explorer +2`, `active_adventurer +2`, `local_challenger +2` |
 
 ### 음식 취향
 
 | 입력 | 가중치 |
 |------|--------|
-| `korean` | `healing_traveler +4`, `heritage_walker +3` |
-| `familiar` | `urban_explorer +2`, `culture_stroller +2`, `heritage_walker +2` |
-| `adventurous` | `local_challenger +5`, `active_adventurer +4` |
+| `korean` | `healing_traveler +2`, `heritage_walker +1` |
+| `familiar` | `culture_stroller +2`, `urban_explorer +1` |
+| `adventurous` | `local_challenger +2`, `active_adventurer +2` |
+
+**시안은 `유형별 +1~2점`이라고만 정하고 유형별 표를 주지 않았습니다.** 위 두 표는 시안의 동점 처리 방향(천천히→풍경 수집가, 적당히→시간 여행자)을 지키면서 여섯 유형 결과 비율이 고르게 나오도록 정한 값입니다. 시안에서 표를 확정해 주면 이 표만 교체하면 됩니다.
 
 ## 동점 처리
 
-동점이 발생하면 아래 순서로 결정합니다.
+시안은 `점수가 비슷하면 일정 속도로 최종 결과를 나눕니다`로 정했습니다. 이에 맞춰 아래 순서로 결정합니다.
 
-1. 여행 취향에서 얻은 점수가 더 높은 타입
-2. 이동 성향에서 얻은 점수가 더 높은 타입
+1. **일정 속도에서 얻은 점수**가 더 높은 타입
+2. 여행 취향에서 얻은 점수가 더 높은 타입
 3. 음식 취향에서 얻은 점수가 더 높은 타입
 4. 고정 우선순위: `culture_stroller`, `urban_explorer`, `heritage_walker`, `local_challenger`, `healing_traveler`, `active_adventurer`
 
-고정 우선순위는 완전히 같은 점수일 때만 사용하는 안정적인 tie-breaker입니다. 일반적인 결과 분포는 입력 가중치에서 결정되도록 합니다.
+고정 우선순위는 모든 축이 완전히 같을 때만 쓰는 안정적인 tie-breaker입니다.
+
+### 시안 동점 예시와의 차이
+
+시안은 `자연·풍경 + 역사·전통 + 유명 명소`를 고른 경우를 예로 들며 세 가지 결과를 제시했습니다.
+
+| 일정 속도 | 시안 | 현재 구현 |
+|-----------|------|-----------|
+| 천천히 다니기 | 풍경 수집가 | 풍경 수집가 |
+| 적당히 다니기 | 시간 여행자 | 시간 여행자 |
+| 여러 곳 다니기 | 도시 탐방형 | 풍경 수집가 |
+
+**세 번째 줄은 시안의 점수 규칙으로는 나올 수 없습니다.** 이 테마 조합에서 도시 탐험가는 유명 명소(보조) +1점뿐이고, 풍경 수집가와 시간 여행자는 각각 4점입니다. 일정 점수 상한이 +2점이므로 3점 대 4점 이상으로 뒤집히지 않습니다. 뒤집으려면 일정 점수를 +5점 이상 주거나 대표·보조 테마 구성을 바꿔야 합니다. 시안의 세 번째 줄은 방향 설명으로 보고 구현에 반영하지 않았습니다.
 
 ## 결과 분포 검증
 
-걷기 속도 3종, 이동 도움 여부 2종, 음식 취향 3종, 여행 테마 1~3개 조합을 동일한 빈도로 가정한 전체 1,134개 유효 입력 조합의 결과입니다.
+걷기 속도 3종, 음식 취향 3종, 여행 테마 1~3개 조합을 동일한 빈도로 가정한 전체 567개 유효 입력 조합의 결과입니다. 이동 도움 여부가 점수에서 빠지면서 조합 수가 1,134개에서 567개로 줄었습니다.
 
 | 타입 코드 | 조합 수 | 비율 |
 |-----------|---------|------|
-| `urban_explorer` | 187 | 16.5% |
-| `culture_stroller` | 190 | 16.8% |
-| `healing_traveler` | 191 | 16.8% |
-| `heritage_walker` | 189 | 16.7% |
-| `active_adventurer` | 189 | 16.7% |
-| `local_challenger` | 188 | 16.6% |
+| `urban_explorer` | 94 | 16.6% |
+| `culture_stroller` | 104 | 18.3% |
+| `healing_traveler` | 92 | 16.2% |
+| `heritage_walker` | 92 | 16.2% |
+| `active_adventurer` | 85 | 15.0% |
+| `local_challenger` | 100 | 17.6% |
 
-자동 테스트는 모든 타입이 나오고 각 결과 비율이 15% 이상 18% 이하인지 검증합니다. 실제 사용자 분포를 예측하는 수치는 아니며, 정책 자체가 특정 유형으로 치우치지 않는지 확인하는 기준입니다.
+자동 테스트는 모든 타입이 나오고 각 결과 비율이 14% 이상 19% 이하인지 검증합니다. 실제 사용자 분포를 예측하는 수치는 아니며, 정책 자체가 특정 유형으로 치우치지 않는지 확인하는 기준입니다.
 
 ## 구현 규칙
 
 - 프로필 완료 시 `walkingPace`, `needsMobilityAssistance`, `travelThemes`, `foodPreference`가 모두 있어야 합니다.
 - draft 저장 중에는 일부 값이 비어 있을 수 있습니다.
 - 부모가 프로필을 다시 작성하거나 MBTI를 새로 뽑으면 같은 정책으로 재계산하고 현재 결과를 덮어씁니다.
+- **정책 버전을 바꾸면 이전 정책으로 저장된 `personality_type`은 그대로 남습니다.** 부모가 프로필을 다시 완료할 때 새 정책으로 재계산됩니다.
 - 여행 생성 시점에는 현재 프로필 입력과 MBTI 결과를 해당 여행의 추천 스냅샷으로 보관합니다.
 - 정책 버전이 바뀌면 이 문서를 먼저 갱신하고, 필요하면 기존 결과 재계산 여부를 별도 결정합니다.

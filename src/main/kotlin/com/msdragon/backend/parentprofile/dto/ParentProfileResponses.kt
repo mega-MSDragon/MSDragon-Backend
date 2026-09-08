@@ -98,15 +98,15 @@ data class TravelPersonalityResultResponse(
 	@field:Schema(description = "여행 MBTI 코드", example = "healing_traveler")
 	val code: TravelPersonalityTypeCode,
 
-	@field:Schema(description = "결과 화면 유형명", example = "유유자적 힐링러형")
+	@field:Schema(description = "결과 화면 유형 보조명", example = "풍경 수집가")
 	val name: String,
 
-	@field:Schema(description = "결과 화면 한 줄 문구", example = "여행은 쉬러 가는 거지.")
+	@field:Schema(description = "결과 화면 유형 별명", example = "쉬엄쉬엄이 최고!")
 	val catchphrase: String,
 
 	@field:Schema(
 		description = "결과 화면 유형 설명",
-		example = "자연풍경, 역사, 산책을 좋아하며 천천히 둘러보는 타입이시네요. 음식도 한식처럼 편안한 선택을 선호하시는 편이에요.",
+		example = "아름다운 풍경 속에서 여유롭게 쉬며 편안하게 둘러보는 여행이 잘 맞아요.",
 	)
 	val description: String,
 ) {
@@ -115,39 +115,39 @@ data class TravelPersonalityResultResponse(
 			when (type) {
 				TravelPersonalityTypeCode.URBAN_EXPLORER -> TravelPersonalityResultResponse(
 					code = type,
-					name = "도시 취향 탐험가형",
-					catchphrase = "유명한 곳은 알차게 둘러봐야지.",
-					description = "쇼핑, 문화생활, 랜드마크를 좋아하며 도시의 볼거리를 알차게 즐기는 타입이시네요. 적당히 움직이고 익숙한 음식을 편안하게 즐기시는 편이에요.",
+					name = "도시 탐험가",
+					catchphrase = "볼 건 다 봐야지!",
+					description = "대표 명소와 쇼핑을 놓치지 않고, 도시의 볼거리를 알차게 즐기는 여행이 잘 맞아요.",
 				)
 				TravelPersonalityTypeCode.CULTURE_STROLLER -> TravelPersonalityResultResponse(
 					code = type,
-					name = "감성 문화 산책가형",
-					catchphrase = "좋은 곳에서는 천천히 쉬어가도 괜찮아.",
-					description = "문화생활과 랜드마크를 좋아하며 여유 있게 도시를 둘러보는 타입이시네요. 중간중간 카페나 맛집에서 쉬어가는 일정을 선호하시는 편이에요.",
+					name = "문화 산책가",
+					catchphrase = "분위기가 반이지!",
+					description = "공연과 전시, 분위기 좋은 장소를 천천히 감상하며 여행하는 걸 좋아해요.",
 				)
 				TravelPersonalityTypeCode.HEALING_TRAVELER -> TravelPersonalityResultResponse(
 					code = type,
-					name = "유유자적 힐링러형",
-					catchphrase = "여행은 쉬러 가는 거지.",
-					description = "자연풍경, 역사, 산책을 좋아하며 천천히 둘러보는 타입이시네요. 음식도 한식처럼 편안한 선택을 선호하시는 편이에요.",
+					name = "풍경 수집가",
+					catchphrase = "쉬엄쉬엄이 최고!",
+					description = "아름다운 풍경 속에서 여유롭게 쉬며 편안하게 둘러보는 여행이 잘 맞아요.",
 				)
 				TravelPersonalityTypeCode.HERITAGE_WALKER -> TravelPersonalityResultResponse(
 					code = type,
-					name = "역사 산책가형",
-					catchphrase = "이야기가 있는 길을 걷는 게 좋아.",
-					description = "역사적인 장소와 자연풍경을 좋아하며 적당히 걸으면서 여유를 챙기는 타입이시네요. 익숙한 음식 안에서 지역의 특색도 함께 즐기시는 편이에요.",
+					name = "시간 여행자",
+					catchphrase = "아는 만큼 보인다!",
+					description = "유적지와 박물관을 산책하듯 둘러보며 지역의 이야기를 알아가는 걸 좋아해요.",
 				)
 				TravelPersonalityTypeCode.ACTIVE_ADVENTURER -> TravelPersonalityResultResponse(
 					code = type,
-					name = "액티비티 열정가형",
-					catchphrase = "가만히 있기엔 여행 시간이 아까워.",
-					description = "액티비티와 체험, 이동이 많은 일정을 좋아하는 타입이시네요. 여러 장소를 둘러보고 새로운 음식에도 적극적으로 도전하시는 편이에요.",
+					name = "체험 대장",
+					catchphrase = "해봐야 제맛이지!",
+					description = "직접 움직이고 참여하는 활동을 즐기며 하루를 활기차게 보내는 편이에요.",
 				)
 				TravelPersonalityTypeCode.LOCAL_CHALLENGER -> TravelPersonalityResultResponse(
 					code = type,
-					name = "로컬 도전가형",
-					catchphrase = "여행은 직접 해보고 먹어봐야지.",
-					description = "체험형 여행과 새로운 음식, 현지 분위기를 좋아하는 타입이시네요. 유명 관광지만 보기보다 직접 경험하고 맛보는 데서 여행의 재미를 찾으시는 편이에요.",
+					name = "골목 탐험가",
+					catchphrase = "현지인처럼 즐기자!",
+					description = "시장과 골목, 음식과 생활문화를 통해 그 지역만의 매력을 발견하는 걸 좋아해요.",
 				)
 			}
 	}

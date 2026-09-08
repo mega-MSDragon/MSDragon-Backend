@@ -100,8 +100,8 @@
         "profileCurrentStep": 3,
         "personalityResult": {
           "code": "healing_traveler",
-          "name": "유유자적 힐링러형",
-          "catchphrase": "여행은 쉬러 가는 거지.",
+          "name": "풍경 수집가",
+          "catchphrase": "쉬엄쉬엄이 최고!",
           "description": "자연풍경, 역사, 산책을 좋아하며 천천히 둘러보는 타입이시네요. 음식도 한식처럼 편안한 선택을 선호하시는 편이에요."
         }
       }

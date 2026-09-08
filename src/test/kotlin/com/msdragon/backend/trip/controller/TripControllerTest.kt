@@ -201,7 +201,7 @@ class TripControllerTest {
 			.andExpect(jsonPath("$.data.parents[0].profileCompleted").value(true))
 			.andExpect(jsonPath("$.data.parents[0].profileCurrentStep").value(3))
 			.andExpect(jsonPath("$.data.parents[0].personalityResult.code").value("healing_traveler"))
-			.andExpect(jsonPath("$.data.parents[0].personalityResult.name").value("유유자적 힐링러형"))
+			.andExpect(jsonPath("$.data.parents[0].personalityResult.name").value("풍경 수집가"))
 			.andExpect(jsonPath("$.data.parents[1].relationLabel").value("아빠"))
 			.andExpect(jsonPath("$.data.parents[1].profileCompleted").value(false))
 			.andExpect(jsonPath("$.data.parents[1].profileCurrentStep").value(1))

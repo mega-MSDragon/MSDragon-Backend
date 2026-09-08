@@ -78,9 +78,9 @@
     "personalityType": "heritage_walker",
     "personalityResult": {
       "code": "heritage_walker",
-      "name": "역사 산책가형",
-      "catchphrase": "이야기가 있는 길을 걷는 게 좋아.",
-      "description": "역사적인 장소와 자연풍경을 좋아하며 적당히 걸으면서 여유를 챙기는 타입이시네요. 익숙한 음식 안에서 지역의 특색도 함께 즐기시는 편이에요."
+      "name": "시간 여행자",
+      "catchphrase": "아는 만큼 보인다!",
+      "description": "유적지와 박물관을 산책하듯 둘러보며 지역의 이야기를 알아가는 걸 좋아해요."
     },
     "completionPercent": 100,
     "completedAt": "2026-07-01T12:00:00"
@@ -126,16 +126,16 @@
 
 ## 추천용 여행 MBTI
 
-현재 구현은 부모님 프로필 완료 시 `docs/policy/parent-travel-mbti.md`의 가중치 정책으로 아래 enum 중 하나를 `personalityType`에 저장합니다. 화면 표시용 이름, 한 줄 문구, 설명은 `personalityResult`로 반환합니다.
+현재 구현은 부모님 프로필 완료 시 `docs/policy/parent-travel-mbti.md`의 가중치 정책으로 아래 enum 중 하나를 `personalityType`에 저장합니다. 화면 표시용 보조명(`name`), 별명(`catchphrase`), 설명(`description`)은 `personalityResult`로 반환합니다. 결과 화면 제목은 `catchphrase`와 `name`을 이어 붙여 `쉬엄쉬엄이 최고! 풍경 수집가`처럼 표시합니다.
 
 | Value | 설명 |
 |-------|------|
-| `urban_explorer` | 도시 취향 탐험가형 |
-| `culture_stroller` | 감성 문화 산책가형 |
-| `healing_traveler` | 유유자적 힐링러형 |
-| `heritage_walker` | 역사 산책가형 |
-| `active_adventurer` | 액티비티 열정가형 |
-| `local_challenger` | 로컬 도전가형 |
+| `urban_explorer` | 볼 건 다 봐야지! 도시 탐험가 |
+| `culture_stroller` | 분위기가 반이지! 문화 산책가 |
+| `healing_traveler` | 쉬엄쉬엄이 최고! 풍경 수집가 |
+| `heritage_walker` | 아는 만큼 보인다! 시간 여행자 |
+| `active_adventurer` | 해봐야 제맛이지! 체험 대장 |
+| `local_challenger` | 현지인처럼 즐기자! 골목 탐험가 |
 
 ---
 

@@ -83,8 +83,8 @@
         "profileCompleted": true,
         "personalityResult": {
           "code": "healing_traveler",
-          "name": "유유자적 힐링러형",
-          "catchphrase": "여행은 쉬러 가는 거지.",
+          "name": "풍경 수집가",
+          "catchphrase": "쉬엄쉬엄이 최고!",
           "description": "천천히 걷고 오래 머무는 여행을 좋아합니다."
         }
       }
@@ -166,8 +166,8 @@
         "profileCompleted": true,
         "personalityResult": {
           "code": "healing_traveler",
-          "name": "유유자적 힐링러형",
-          "catchphrase": "여행은 쉬러 가는 거지.",
+          "name": "풍경 수집가",
+          "catchphrase": "쉬엄쉬엄이 최고!",
           "description": "천천히 걷고 오래 머무는 여행을 좋아합니다."
         }
       }

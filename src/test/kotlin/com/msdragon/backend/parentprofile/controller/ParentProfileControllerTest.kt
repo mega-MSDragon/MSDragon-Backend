@@ -117,13 +117,13 @@ class ParentProfileControllerTest {
 			.andExpect(jsonPath("$.data.completionPercent").value(100))
 			.andExpect(jsonPath("$.data.personalityType").value("heritage_walker"))
 			.andExpect(jsonPath("$.data.personalityResult.code").value("heritage_walker"))
-			.andExpect(jsonPath("$.data.personalityResult.name").value("역사 산책가형"))
-			.andExpect(jsonPath("$.data.personalityResult.catchphrase").value("이야기가 있는 길을 걷는 게 좋아."))
+			.andExpect(jsonPath("$.data.personalityResult.name").value("시간 여행자"))
+			.andExpect(jsonPath("$.data.personalityResult.catchphrase").value("아는 만큼 보인다!"))
 			.andExpect(jsonPath("$.data.travelThemes.length()").value(2))
 	}
 
 	@Test
-	fun `PDF 예시 입력은 유유자적 힐링러형 결과를 반환한다`() {
+	fun `시안 결과 예시 입력은 풍경 수집가 결과를 반환한다`() {
 		val parent = saveUser(UserRole.PARENT, "parent-healing", "영희")
 
 		mockMvc.perform(
@@ -146,11 +146,11 @@ class ParentProfileControllerTest {
 			.andExpect(jsonPath("$.data.parentDisplayName").value("영희"))
 			.andExpect(jsonPath("$.data.personalityType").value("healing_traveler"))
 			.andExpect(jsonPath("$.data.personalityResult.code").value("healing_traveler"))
-			.andExpect(jsonPath("$.data.personalityResult.name").value("유유자적 힐링러형"))
-			.andExpect(jsonPath("$.data.personalityResult.catchphrase").value("여행은 쉬러 가는 거지."))
+			.andExpect(jsonPath("$.data.personalityResult.name").value("풍경 수집가"))
+			.andExpect(jsonPath("$.data.personalityResult.catchphrase").value("쉬엄쉬엄이 최고!"))
 			.andExpect(
 				jsonPath("$.data.personalityResult.description").value(
-					"자연풍경, 역사, 산책을 좋아하며 천천히 둘러보는 타입이시네요. 음식도 한식처럼 편안한 선택을 선호하시는 편이에요.",
+					"아름다운 풍경 속에서 여유롭게 쉬며 편안하게 둘러보는 여행이 잘 맞아요.",
 				),
 			)
 	}

@@ -91,9 +91,9 @@ class ParentProfileService(
 			profile.currentStep = COMPLETED_STEP
 			profile.completionPercent = 100
 			profile.completedAt = profile.completedAt ?: LocalDateTime.now()
+			// 이동 도움 여부는 성향 점수에 넣지 않는다. 완료 필수값 검증은 validateCompletable이 한다.
 			profile.personalityType = TravelPersonalityPolicy.resolve(
 				walkingPace = requireNotNull(profile.walkingPace),
-				needsMobilityAssistance = requireNotNull(profile.needsMobilityAssistance),
 				travelThemes = profile.travelThemes.map(TravelThemeCode::from),
 				foodPreference = requireNotNull(profile.foodPreference),
 			)

@@ -335,7 +335,7 @@ Table parent_profile_themes {
     (parent_profile_id, theme_code) [unique]
   }
 
-  Note: '정책 확정값: 자연·풍경, 역사·문화, 쇼핑, 액티비티, 문화생활, 랜드마크, 체험. 여행 테마 선택은 최소 1개, 최대 3개까지 서비스 레이어에서 검증한다.'
+  Note: '정책 확정값(코드): nature_scenery, history_culture, shopping, activity, culture_life, landmark, experience. 화면 문구는 docs/policy/parent-travel-mbti.md를 따른다. 여행 테마 선택은 최소 1개, 최대 3개까지 서비스 레이어에서 검증한다.'
 }
 
 // ---------- 3. 장소 · 접근성 ----------

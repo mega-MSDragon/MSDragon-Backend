@@ -5,113 +5,113 @@ import com.msdragon.backend.parentprofile.entity.TravelPersonalityTypeCode
 import com.msdragon.backend.parentprofile.entity.TravelThemeCode
 import com.msdragon.backend.parentprofile.entity.WalkingPace
 
+/**
+ * 확정 시안(`여행 MBTI 6유형 네이밍 보드`)의 점수 산정 방식을 그대로 구현한다.
+ *
+ * `테마 점수 + 일정 점수 + 음식 점수 = 최종 유형`이며 대표 테마 +2점, 보조 테마 +1점이다.
+ * 이동 도움 여부는 시안 명시대로 **성향 점수에 넣지 않고** 여행 동선 필터로만 쓴다.
+ */
 object TravelPersonalityPolicy {
 	fun resolve(
 		walkingPace: WalkingPace,
-		needsMobilityAssistance: Boolean,
 		travelThemes: Collection<TravelThemeCode>,
 		foodPreference: FoodPreference,
 	): TravelPersonalityTypeCode {
-		val scores = TravelPersonalityTypeCode.entries
-			.associateWith { PersonalityScore() }
-			.toMutableMap()
-
-		fun addScore(
-			type: TravelPersonalityTypeCode,
-			points: Int,
-			axis: ScoreAxis,
-		) {
-			scores[type] = scores.getValue(type).plus(points, axis)
+		val themes = travelThemes.toSet()
+		val scores = TravelPersonalityTypeCode.entries.associateWith { type ->
+			PersonalityScore(
+				theme = themes.sumOf { themePoints(type, it) },
+				pace = PACE_POINTS.getValue(walkingPace)[type] ?: 0,
+				food = FOOD_POINTS.getValue(foodPreference)[type] ?: 0,
+			)
 		}
 
-		when (walkingPace) {
-			WalkingPace.SLOW -> {
-				addScore(TravelPersonalityTypeCode.HEALING_TRAVELER, 4, ScoreAxis.MOBILITY)
-				addScore(TravelPersonalityTypeCode.CULTURE_STROLLER, 1, ScoreAxis.MOBILITY)
-				addScore(TravelPersonalityTypeCode.HERITAGE_WALKER, 1, ScoreAxis.MOBILITY)
-			}
-			WalkingPace.NORMAL -> {
-				addScore(TravelPersonalityTypeCode.CULTURE_STROLLER, 2, ScoreAxis.MOBILITY)
-				addScore(TravelPersonalityTypeCode.HERITAGE_WALKER, 2, ScoreAxis.MOBILITY)
-				addScore(TravelPersonalityTypeCode.URBAN_EXPLORER, 1, ScoreAxis.MOBILITY)
-			}
-			WalkingPace.FAST -> {
-				addScore(TravelPersonalityTypeCode.ACTIVE_ADVENTURER, 5, ScoreAxis.MOBILITY)
-				addScore(TravelPersonalityTypeCode.LOCAL_CHALLENGER, 3, ScoreAxis.MOBILITY)
-				addScore(TravelPersonalityTypeCode.URBAN_EXPLORER, 2, ScoreAxis.MOBILITY)
-			}
-		}
-
-		if (needsMobilityAssistance) {
-			addScore(TravelPersonalityTypeCode.HEALING_TRAVELER, 2, ScoreAxis.MOBILITY)
-			addScore(TravelPersonalityTypeCode.CULTURE_STROLLER, 1, ScoreAxis.MOBILITY)
-			addScore(TravelPersonalityTypeCode.HERITAGE_WALKER, 1, ScoreAxis.MOBILITY)
-		} else {
-			addScore(TravelPersonalityTypeCode.URBAN_EXPLORER, 1, ScoreAxis.MOBILITY)
-			addScore(TravelPersonalityTypeCode.ACTIVE_ADVENTURER, 1, ScoreAxis.MOBILITY)
-			addScore(TravelPersonalityTypeCode.LOCAL_CHALLENGER, 1, ScoreAxis.MOBILITY)
-		}
-
-		travelThemes.forEach { theme ->
-			when (theme) {
-				TravelThemeCode.NATURE_SCENERY -> {
-					addScore(TravelPersonalityTypeCode.HEALING_TRAVELER, 4, ScoreAxis.THEME)
-					addScore(TravelPersonalityTypeCode.HERITAGE_WALKER, 3, ScoreAxis.THEME)
-				}
-				TravelThemeCode.HISTORY_CULTURE -> {
-					addScore(TravelPersonalityTypeCode.HERITAGE_WALKER, 4, ScoreAxis.THEME)
-					addScore(TravelPersonalityTypeCode.HEALING_TRAVELER, 1, ScoreAxis.THEME)
-					addScore(TravelPersonalityTypeCode.CULTURE_STROLLER, 1, ScoreAxis.THEME)
-				}
-				TravelThemeCode.SHOPPING -> {
-					addScore(TravelPersonalityTypeCode.URBAN_EXPLORER, 4, ScoreAxis.THEME)
-					addScore(TravelPersonalityTypeCode.CULTURE_STROLLER, 3, ScoreAxis.THEME)
-				}
-				TravelThemeCode.ACTIVITY -> {
-					addScore(TravelPersonalityTypeCode.ACTIVE_ADVENTURER, 4, ScoreAxis.THEME)
-					addScore(TravelPersonalityTypeCode.LOCAL_CHALLENGER, 2, ScoreAxis.THEME)
-				}
-				TravelThemeCode.CULTURE_LIFE -> {
-					addScore(TravelPersonalityTypeCode.CULTURE_STROLLER, 4, ScoreAxis.THEME)
-					addScore(TravelPersonalityTypeCode.URBAN_EXPLORER, 2, ScoreAxis.THEME)
-				}
-				TravelThemeCode.LANDMARK -> {
-					addScore(TravelPersonalityTypeCode.URBAN_EXPLORER, 5, ScoreAxis.THEME)
-					addScore(TravelPersonalityTypeCode.CULTURE_STROLLER, 3, ScoreAxis.THEME)
-					addScore(TravelPersonalityTypeCode.HERITAGE_WALKER, 2, ScoreAxis.THEME)
-				}
-				TravelThemeCode.EXPERIENCE -> {
-					addScore(TravelPersonalityTypeCode.LOCAL_CHALLENGER, 5, ScoreAxis.THEME)
-					addScore(TravelPersonalityTypeCode.ACTIVE_ADVENTURER, 3, ScoreAxis.THEME)
-				}
-			}
-		}
-
-		when (foodPreference) {
-			FoodPreference.KOREAN -> {
-				addScore(TravelPersonalityTypeCode.HEALING_TRAVELER, 4, ScoreAxis.FOOD)
-				addScore(TravelPersonalityTypeCode.HERITAGE_WALKER, 3, ScoreAxis.FOOD)
-			}
-			FoodPreference.FAMILIAR -> {
-				addScore(TravelPersonalityTypeCode.URBAN_EXPLORER, 2, ScoreAxis.FOOD)
-				addScore(TravelPersonalityTypeCode.CULTURE_STROLLER, 2, ScoreAxis.FOOD)
-				addScore(TravelPersonalityTypeCode.HERITAGE_WALKER, 2, ScoreAxis.FOOD)
-			}
-			FoodPreference.ADVENTUROUS -> {
-				addScore(TravelPersonalityTypeCode.LOCAL_CHALLENGER, 5, ScoreAxis.FOOD)
-				addScore(TravelPersonalityTypeCode.ACTIVE_ADVENTURER, 4, ScoreAxis.FOOD)
-			}
-		}
-
+		// 시안: 점수가 비슷하면 일정 속도로 최종 결과를 나눈다.
 		return PERSONALITY_TIE_BREAKERS.maxWith(
 			compareBy<TravelPersonalityTypeCode> { scores.getValue(it).total }
+				.thenBy { scores.getValue(it).pace }
 				.thenBy { scores.getValue(it).theme }
-				.thenBy { scores.getValue(it).mobility }
 				.thenBy { scores.getValue(it).food }
 				.thenBy { -PERSONALITY_TIE_BREAKERS.indexOf(it) },
 		)
 	}
 
+	private fun themePoints(type: TravelPersonalityTypeCode, theme: TravelThemeCode): Int =
+		when (theme) {
+			PRIMARY_THEMES.getValue(type) -> PRIMARY_THEME_POINTS
+			in SECONDARY_THEMES.getValue(type) -> SECONDARY_THEME_POINTS
+			else -> 0
+		}
+
+	private const val PRIMARY_THEME_POINTS = 2
+	private const val SECONDARY_THEME_POINTS = 1
+
+	/** 시안 유형 카드에 나열된 테마 3개 중 첫 번째. */
+	private val PRIMARY_THEMES: Map<TravelPersonalityTypeCode, TravelThemeCode> = mapOf(
+		TravelPersonalityTypeCode.URBAN_EXPLORER to TravelThemeCode.SHOPPING,
+		TravelPersonalityTypeCode.CULTURE_STROLLER to TravelThemeCode.CULTURE_LIFE,
+		TravelPersonalityTypeCode.HEALING_TRAVELER to TravelThemeCode.NATURE_SCENERY,
+		TravelPersonalityTypeCode.HERITAGE_WALKER to TravelThemeCode.HISTORY_CULTURE,
+		TravelPersonalityTypeCode.ACTIVE_ADVENTURER to TravelThemeCode.ACTIVITY,
+		TravelPersonalityTypeCode.LOCAL_CHALLENGER to TravelThemeCode.EXPERIENCE,
+	)
+
+	/** 시안 유형 카드에 나열된 테마 3개 중 두 번째와 세 번째. */
+	private val SECONDARY_THEMES: Map<TravelPersonalityTypeCode, Set<TravelThemeCode>> = mapOf(
+		TravelPersonalityTypeCode.URBAN_EXPLORER to
+			setOf(TravelThemeCode.LANDMARK, TravelThemeCode.CULTURE_LIFE),
+		TravelPersonalityTypeCode.CULTURE_STROLLER to
+			setOf(TravelThemeCode.LANDMARK, TravelThemeCode.HISTORY_CULTURE),
+		TravelPersonalityTypeCode.HEALING_TRAVELER to
+			setOf(TravelThemeCode.HISTORY_CULTURE, TravelThemeCode.LANDMARK),
+		TravelPersonalityTypeCode.HERITAGE_WALKER to
+			setOf(TravelThemeCode.NATURE_SCENERY, TravelThemeCode.LANDMARK),
+		TravelPersonalityTypeCode.ACTIVE_ADVENTURER to
+			setOf(TravelThemeCode.EXPERIENCE, TravelThemeCode.NATURE_SCENERY),
+		TravelPersonalityTypeCode.LOCAL_CHALLENGER to
+			setOf(TravelThemeCode.SHOPPING, TravelThemeCode.CULTURE_LIFE),
+	)
+
+	/**
+	 * 일정 속도 점수. 시안은 `유형별 +1~2점`이라고만 정하고 표를 주지 않아,
+	 * 시안의 동점 처리 방향(천천히→풍경 수집가, 적당히→시간 여행자, 여러 곳→도시 탐험가)을
+	 * 지키면서 여섯 유형 결과 비율이 고르게 나오도록 정했다.
+	 */
+	private val PACE_POINTS: Map<WalkingPace, Map<TravelPersonalityTypeCode, Int>> = mapOf(
+		WalkingPace.SLOW to mapOf(
+			TravelPersonalityTypeCode.HEALING_TRAVELER to 2,
+			TravelPersonalityTypeCode.HERITAGE_WALKER to 2,
+			TravelPersonalityTypeCode.CULTURE_STROLLER to 1,
+		),
+		WalkingPace.NORMAL to mapOf(
+			TravelPersonalityTypeCode.CULTURE_STROLLER to 1,
+			TravelPersonalityTypeCode.HERITAGE_WALKER to 1,
+			TravelPersonalityTypeCode.URBAN_EXPLORER to 1,
+		),
+		WalkingPace.FAST to mapOf(
+			TravelPersonalityTypeCode.URBAN_EXPLORER to 2,
+			TravelPersonalityTypeCode.ACTIVE_ADVENTURER to 2,
+			TravelPersonalityTypeCode.LOCAL_CHALLENGER to 2,
+		),
+	)
+
+	/** 음식 취향 점수. 일정 속도와 같은 이유로 시안의 `+1~2점` 범위 안에서 정했다. */
+	private val FOOD_POINTS: Map<FoodPreference, Map<TravelPersonalityTypeCode, Int>> = mapOf(
+		FoodPreference.KOREAN to mapOf(
+			TravelPersonalityTypeCode.HEALING_TRAVELER to 2,
+			TravelPersonalityTypeCode.HERITAGE_WALKER to 1,
+		),
+		FoodPreference.FAMILIAR to mapOf(
+			TravelPersonalityTypeCode.CULTURE_STROLLER to 2,
+			TravelPersonalityTypeCode.URBAN_EXPLORER to 1,
+		),
+		FoodPreference.ADVENTUROUS to mapOf(
+			TravelPersonalityTypeCode.LOCAL_CHALLENGER to 2,
+			TravelPersonalityTypeCode.ACTIVE_ADVENTURER to 2,
+		),
+	)
+
+	/** 모든 축이 완전히 같을 때만 쓰는 안정적인 최종 tie-breaker. */
 	private val PERSONALITY_TIE_BREAKERS = listOf(
 		TravelPersonalityTypeCode.CULTURE_STROLLER,
 		TravelPersonalityTypeCode.URBAN_EXPLORER,
@@ -122,22 +122,10 @@ object TravelPersonalityPolicy {
 	)
 }
 
-private enum class ScoreAxis {
-	THEME,
-	MOBILITY,
-	FOOD,
-}
-
 private data class PersonalityScore(
-	val total: Int = 0,
-	val theme: Int = 0,
-	val mobility: Int = 0,
-	val food: Int = 0,
+	val theme: Int,
+	val pace: Int,
+	val food: Int,
 ) {
-	fun plus(points: Int, axis: ScoreAxis): PersonalityScore =
-		when (axis) {
-			ScoreAxis.THEME -> copy(total = total + points, theme = theme + points)
-			ScoreAxis.MOBILITY -> copy(total = total + points, mobility = mobility + points)
-			ScoreAxis.FOOD -> copy(total = total + points, food = food + points)
-		}
+	val total: Int get() = theme + pace + food
 }
