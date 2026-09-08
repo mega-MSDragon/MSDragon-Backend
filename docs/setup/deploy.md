@@ -193,7 +193,21 @@ docker compose exec postgres sh -lc 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" 
 ALTER TABLE users DROP CONSTRAINT IF EXISTS users_profile_image_check;
 ```
 
-자세한 배경은 `docs/harness/mistakes.md`의 check constraint 항목을 확인합니다.
+**NOT NULL 컬럼을 추가한 커밋도 같은 위험이 있습니다.** `ddl-auto=update`는 기존 행이 있는 테이블에 DEFAULT 없는 NOT NULL 컬럼을 추가할 수 없고, Hibernate는 이 실패를 WARN으로만 남기고 기동을 계속합니다. 기동은 성공한 것처럼 보이지만 해당 테이블 조회가 전부 실패합니다.
+
+배포 직후 기동 로그의 DDL 실패를 확인합니다.
+
+```bash
+docker compose logs app --since 5m | grep -iE "GenerationTarget|CommandAcceptanceException"
+```
+
+출력이 있으면 해당 컬럼을 기본값과 함께 수동으로 추가합니다. 재실행해도 안전합니다.
+
+```sql
+ALTER TABLE users ADD COLUMN IF NOT EXISTS notification_enabled boolean NOT NULL DEFAULT true;
+```
+
+자세한 배경은 `docs/harness/mistakes.md`의 check constraint와 NOT NULL 기본값 항목을 확인합니다.
 
 ---
 

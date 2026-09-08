@@ -40,8 +40,14 @@ class User(
 	@Column(name = "profile_image", length = 30)
 	var profileImage: UserProfileImage? = null,
 
-	/** 마이페이지 알림 설정. false면 푸시를 보내지 않는다. */
-	@Column(name = "notification_enabled", nullable = false)
+	/**
+	 * 마이페이지 알림 설정. false면 푸시를 보내지 않는다.
+	 *
+	 * `columnDefinition`으로 DB 기본값을 준다. 기본값이 없으면 `ddl-auto=update`가
+	 * 기존 행이 있는 테이블에 NOT NULL 컬럼을 추가하지 못해 컬럼이 생성되지 않고
+     * 이후 users 조회가 전부 실패한다.
+	 */
+	@Column(name = "notification_enabled", nullable = false, columnDefinition = "boolean default true")
 	var notificationEnabled: Boolean = true,
 
 	/**

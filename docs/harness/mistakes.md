@@ -263,6 +263,43 @@ FROM pg_constraint WHERE contype = 'c' ORDER BY 1;
 
 - H2 테스트는 이 문제를 잡지 못합니다. 테스트 DB는 매번 새로 만들어져 제약이 항상 현재 enum 값과 일치하기 때문입니다. **운영 PostgreSQL에서만 재현되는 부류**임을 전제로 배포 절차에 넣습니다.
 
+**재발 (2026-09-08): NOT NULL 컬럼에 DB 기본값 누락 — 로그인 전면 장애**
+
+- `users.notification_enabled`를 `@Column(nullable = false)`로 추가하면서 **DB 기본값을 주지 않았습니다.** Kotlin 프로퍼티 기본값(`= true`)은 DDL에 반영되지 않습니다.
+- `ddl-auto=update`가 `alter table users add column notification_enabled boolean not null`을 시도했고, 기존 행이 있는 PostgreSQL 테이블에서는 **DEFAULT 없는 NOT NULL 컬럼을 추가할 수 없어** 실패했습니다.
+
+```
+ERROR: column "notification_enabled" of relation "users" contains null values
+```
+
+- Hibernate는 이 DDL 실패를 **WARN으로만 남기고 기동을 계속합니다.** 애플리케이션은 정상 기동한 것처럼 보이지만 컬럼이 없어 이후 `users` 조회가 전부 실패하고, `AuthInterceptor`와 `socialLogin`이 막혀 **로그인부터 전면 장애**가 되었습니다.
+- 이번에도 조회·쓰기가 동시에 깨져 증상만으로는 원인이 보이지 않았고, 기동 로그의 `GenerationTarget encountered exception`을 찾아야 확인할 수 있었습니다.
+- 같은 `ddl-auto=update` 계열이 네 번째입니다. 앞의 셋은 check constraint, 이번은 NOT NULL 기본값입니다.
+
+**보강 규칙**
+
+- **기존 행이 있는 테이블에 NOT NULL 컬럼을 추가할 때는 반드시 DB 기본값을 함께 준다.** Kotlin·Java 필드 기본값은 DDL에 나가지 않습니다.
+
+```kotlin
+@Column(name = "notification_enabled", nullable = false, columnDefinition = "boolean default true")
+var notificationEnabled: Boolean = true,
+```
+
+- 대안은 컬럼을 nullable로 두고 코드에서 null을 기본값으로 해석하는 것입니다. 기본값을 정할 수 없는 컬럼이면 이 방법을 씁니다.
+- 운영 DB에는 재실행 가능한 패치를 먼저 적용합니다.
+
+```sql
+ALTER TABLE users ADD COLUMN IF NOT EXISTS notification_enabled boolean NOT NULL DEFAULT true;
+```
+
+- **기동 로그의 DDL 실패를 확인하는 것을 배포 절차에 넣습니다.** Hibernate가 WARN으로 넘기므로 기동 성공만 보고 배포가 끝났다고 판단하면 안 됩니다.
+
+```bash
+docker compose logs app --since 5m | grep -iE "GenerationTarget|CommandAcceptanceException"
+```
+
+- H2 테스트는 이 문제를 잡지 못합니다. 테스트 DB는 매번 새로 만들어져 `CREATE TABLE`로 컬럼이 생기고, 기존 행과 충돌할 일이 없기 때문입니다. **기존 데이터가 있는 PostgreSQL에서만 재현되는 부류**입니다.
+
 ### 2026-08-06: Swagger 예시와 기본 미디어 타입 분리
 
 **상황**
