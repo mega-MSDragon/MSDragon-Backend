@@ -8,7 +8,10 @@ import com.msdragon.backend.auth.entity.User
 import com.msdragon.backend.auth.entity.UserRole
 import com.msdragon.backend.auth.repository.UserRefreshTokenRepository
 import com.msdragon.backend.auth.repository.UserRepository
+import com.msdragon.backend.auth.entity.DevicePlatform
 import com.msdragon.backend.notification.repository.UserDeviceTokenRepository
+import com.msdragon.backend.notification.service.NotificationService
+import com.msdragon.backend.notification.service.NotificationServiceTest
 import com.msdragon.backend.auth.service.TokenService
 import com.msdragon.backend.family.entity.Family
 import com.msdragon.backend.family.entity.FamilyMember
@@ -30,6 +33,7 @@ import com.msdragon.backend.trip.repository.TripDayRepository
 import com.msdragon.backend.trip.repository.TripParticipantRepository
 import com.msdragon.backend.trip.repository.TripRepository
 import com.msdragon.backend.trip.repository.TripStopRepository
+import org.assertj.core.api.Assertions.assertThat
 import org.apache.pdfbox.Loader
 import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject
 import org.apache.pdfbox.text.PDFTextStripper
@@ -38,6 +42,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.context.annotation.Import
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.http.MediaType
 import org.springframework.test.web.servlet.MockMvc
@@ -56,6 +61,7 @@ import javax.imageio.ImageIO
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@Import(NotificationServiceTest.PushSenderTestConfig::class)
 class TripPledgeControllerTest {
 	@Autowired
 	private lateinit var mockMvc: MockMvc
@@ -71,6 +77,12 @@ class TripPledgeControllerTest {
 
 	@Autowired
 	private lateinit var userDeviceTokenRepository: UserDeviceTokenRepository
+
+	@Autowired
+	private lateinit var notificationService: NotificationService
+
+	@Autowired
+	private lateinit var pushSender: NotificationServiceTest.RecordingPushSender
 
 	@Autowired
 	private lateinit var userRefreshTokenRepository: UserRefreshTokenRepository
@@ -379,6 +391,33 @@ class TripPledgeControllerTest {
 			.andExpect(jsonPath("$.data.canSign").value(false))
 			.andExpect(jsonPath("$.data.requestedAt").isString)
 		check(tripPledgeRepository.findByTripId(requireNotNull(trip.id))?.status == TripPledgeStatus.SIGNATURE_REQUESTED)
+	}
+
+	@Test
+	fun `자녀가 서명하면 아직 서명하지 않은 참여 부모에게만 푸시를 보낸다`() {
+		pushSender.reset()
+		val (child, firstParent, trip) = createFamilyTrip()
+		val secondParent = saveUser(UserRole.PARENT, "parent-2", "아빠")
+		familyMemberRepository.save(
+			FamilyMember(family = trip.family, user = secondParent, memberRole = UserRole.PARENT),
+		)
+		tripParticipantRepository.save(TripParticipant(trip = trip, user = secondParent))
+		saveReviewedPledge(child, trip)
+		listOf(child to "token-child", firstParent to "token-parent-1", secondParent to "token-parent-2")
+			.forEach { (user, token) ->
+				notificationService.registerDeviceToken(requireNotNull(user.id), token, DevicePlatform.IOS)
+			}
+
+		submitSignature(child, trip).andExpect(status().isOk)
+
+		assertThat(pushSender.sentTokens).containsExactlyInAnyOrder("token-parent-1", "token-parent-2")
+		assertThat(pushSender.lastData).containsEntry("type", "pledge_signature_request")
+		assertThat(pushSender.lastData).containsEntry("tripId", requireNotNull(trip.id).toString())
+
+		// 부모 서명은 서명 요청이 아니므로 알림을 만들지 않는다.
+		pushSender.reset()
+		submitSignature(firstParent, trip).andExpect(status().isOk)
+		assertThat(pushSender.callCount).isZero()
 	}
 
 	@Test

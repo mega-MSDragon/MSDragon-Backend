@@ -25,6 +25,7 @@ import com.msdragon.backend.pledge.entity.TripPledgeStatus
 import com.msdragon.backend.pledge.repository.PledgeItemRepository
 import com.msdragon.backend.pledge.repository.PledgeSignatureRepository
 import com.msdragon.backend.pledge.repository.PledgeTemplateRepository
+import com.msdragon.backend.notification.service.NotificationService
 import com.msdragon.backend.pledge.repository.TripPledgeRepository
 import com.msdragon.backend.trip.entity.Trip
 import com.msdragon.backend.trip.entity.TripStatus
@@ -47,6 +48,7 @@ class TripPledgeService(
 	private val pledgeSignatureRepository: PledgeSignatureRepository,
 	private val tripParticipantRepository: TripParticipantRepository,
 	private val tripPledgePdfRenderer: TripPledgePdfRenderer,
+	private val notificationService: NotificationService,
 ) {
 	@Transactional(readOnly = true)
 	fun getCandidates(currentUser: AuthenticatedUser, tripId: Long): TripPledgeCandidatesResponse {
@@ -212,7 +214,12 @@ class TripPledgeService(
 		)
 
 		when (user.role) {
-			UserRole.CHILD -> pledge.requestSignatures(signedAt)
+			UserRole.CHILD -> {
+				pledge.requestSignatures(signedAt)
+				// 자녀 서명이 곧 서명 요청이다. 이 시점부터 부모가 조회·서명할 수 있으므로 여기서 알린다.
+				notifyParentsToSign(pledgeId, trip, user)
+			}
+
 			UserRole.PARENT -> pledge.complete(signedAt)
 		}
 
@@ -399,6 +406,22 @@ class TripPledgeService(
 				isTripParticipant(pledge.trip, user) &&
 					pledge.status in setOf(TripPledgeStatus.SIGNATURE_REQUESTED, TripPledgeStatus.COMPLETED)
 		}
+	}
+
+	/** 아직 서명하지 않은 참여 부모에게만 알린다. */
+	private fun notifyParentsToSign(pledgeId: Long, trip: Trip, child: User) {
+		val signedUserIds = pledgeSignatureRepository.findAllByTripPledgeIdOrderBySignedAtAsc(pledgeId)
+			.mapTo(mutableSetOf()) { it.user.id }
+		val tripId = requireNotNull(trip.id)
+		notificationService.notifyUsers(
+			userIds = tripParticipantRepository.findAllByTripIdOrderByIdAsc(tripId)
+				.map { it.user }
+				.filter { it.role == UserRole.PARENT && it.id !in signedUserIds }
+				.mapNotNull { it.id },
+			title = "여행 10계명에 서명해주세요",
+			body = "${child.displayName}님이 ${trip.title} 여행 10계명에 서명했어요.",
+			data = mapOf("type" to "pledge_signature_request", "tripId" to tripId.toString()),
+		)
 	}
 
 	private fun isTripParticipant(trip: Trip, user: User): Boolean =

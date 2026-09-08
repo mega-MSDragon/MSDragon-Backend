@@ -222,7 +222,7 @@
 - `data:image/png;base64,` prefix는 보내지 않습니다.
 - Base64 디코딩 결과는 최대 512KB입니다.
 - PNG 파일 시그니처가 아닌 데이터는 거부합니다.
-- 자녀가 `reviewed` 상태에서 먼저 서명하면 상태가 `signature_requested`로 변경됩니다.
+- 자녀가 `reviewed` 상태에서 먼저 서명하면 상태가 `signature_requested`로 변경되고, 아직 서명하지 않은 참여 부모에게 `pledge_signature_request` 푸시 알림을 보냅니다. 발송 실패는 응답에 영향을 주지 않습니다.
 - 참여 부모가 처음 서명하면 상태가 `completed`로 변경되고 `completedAt`이 기록됩니다.
 - 다른 참여 부모가 이후 추가 서명해도 최초 `completedAt`은 변경하지 않습니다.
 

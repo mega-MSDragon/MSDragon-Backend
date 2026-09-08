@@ -171,6 +171,7 @@ remoteMessage.data["tripId"]
 |-------------|------|
 | `trip_feedback_request` (+ `tripId`) | 피드백 작성 |
 | `parent_profile_request` | 부모님 프로필 작성 |
+| `pledge_signature_request` (+ `tripId`) | 여행 10계명 서명 |
 | 그 외 · 모르는 값 | **홈** |
 
 **모르는 `type`은 홈으로 보냅니다.** 서버가 알림 종류를 추가했을 때 구버전 앱이 멈추지 않게 하기 위함입니다.
@@ -190,6 +191,7 @@ remoteMessage.data["tripId"]
 |------|--------|------|-------------|
 | 여행 평가 요청 | `POST /api/v1/trips/{tripId}/feedback/requests` | 새로 요청된 참여 부모 | `trip_feedback_request` (`tripId` 포함) |
 | 부모님 프로필 작성 요청 | `POST /api/v1/parent-profiles/{parentUserId}/requests` | 요청 대상 부모 | `parent_profile_request` |
+| 여행 10계명 서명 요청 | `POST /api/v1/trips/{tripId}/pledge/signatures/me` (자녀 서명) | 아직 서명하지 않은 참여 부모 | `pledge_signature_request` (`tripId` 포함) |
 
 - 알림 본문에는 **개인정보를 넣지 않습니다.** 잠금 화면에 그대로 표시되기 때문입니다. 앱은 `data.type`으로 열 화면을 결정합니다.
 - 알림을 끈 사용자(`notificationEnabled=false`)와 기기 토큰이 없는 사용자는 발송 대상에서 제외되지만, **트리거 API는 성공으로 응답합니다.**
