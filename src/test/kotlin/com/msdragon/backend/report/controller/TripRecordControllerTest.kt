@@ -206,6 +206,52 @@ class TripRecordControllerTest {
 	}
 
 	@Test
+	fun `본인이 참여하지 않은 여행은 기록과 통계에서 제외한다`() {
+		val child = saveUser(UserRole.CHILD, "record-nonparticipant-child", "혜린", GenderType.FEMALE)
+		val mother = saveUser(UserRole.PARENT, "record-nonparticipant-mother", "길순", GenderType.FEMALE)
+		val father = saveUser(UserRole.PARENT, "record-nonparticipant-father", "철수", GenderType.MALE)
+		val family = saveFamily(child, mother, father)
+
+		// 아빠가 나중에 가족에 연결된 경우. 이 여행에는 참여하지 않았다.
+		val motherOnlyTrip = saveTrip(
+			family = family,
+			child = child,
+			participants = listOf(child, mother),
+			title = "엄마와 둘이 간 여행",
+			destinationCode = TripDestinationCode.GYEONGJU,
+			startDate = today().minusDays(5),
+			endDate = today().minusDays(4),
+			stopNames = listOf("첨성대", "한식 점심"),
+			routeDistanceMeters = 7_500,
+		)
+		saveFeedback(motherOnlyTrip, mother, BigDecimal("4.0"), motherOnlyTrip.stops[0])
+
+		mockMvc.perform(
+			get("/api/v1/records")
+				.header("Authorization", authorization(father)),
+		)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.data.familyId").value(requireNotNull(family.id)))
+			.andExpect(jsonPath("$.data.records").isEmpty)
+			.andExpect(jsonPath("$.data.statistics.completedTripCount").value(0))
+			.andExpect(jsonPath("$.data.statistics.totalPlaceCount").value(0))
+			.andExpect(jsonPath("$.data.statistics.averageRating").doesNotExist())
+			.andExpect(jsonPath("$.data.statistics.totalDistanceKm").doesNotExist())
+
+		// 참여자에게는 그대로 보인다.
+		listOf(child, mother).forEach { participant ->
+			mockMvc.perform(
+				get("/api/v1/records")
+					.header("Authorization", authorization(participant)),
+			)
+				.andExpect(status().isOk)
+				.andExpect(jsonPath("$.data.records.length()").value(1))
+				.andExpect(jsonPath("$.data.statistics.completedTripCount").value(1))
+				.andExpect(jsonPath("$.data.statistics.totalDistanceKm").value(7.5))
+		}
+	}
+
+	@Test
 	fun `가족 매칭 전에는 빈 기록과 통계를 반환한다`() {
 		val child = saveUser(UserRole.CHILD, "record-unmatched", "미매칭", GenderType.FEMALE)
 

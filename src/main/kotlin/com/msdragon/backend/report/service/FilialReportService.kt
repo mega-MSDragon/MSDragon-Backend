@@ -86,12 +86,12 @@ class FilialReportService(
 		val member = familyMemberRepository.findByUserId(requireNotNull(user.id))
 		val familyId = member?.family?.takeIf { it.isActive }?.id
 		val today = currentDate()
-		val familyTrips = familyId?.let(tripRepository::findAllByFamilyIdAndDeletedAtIsNullOrderByStartDateAscIdAsc)
-			.orEmpty()
-		val participatedTrips = tripParticipantRepository.findAllByUserId(requireNotNull(user.id))
+		// 가족 여행 전체가 아니라 내가 참여한 여행만 집계한다. 합집합으로 두면 나중에 참여자가 된
+		// 부모의 기록과 통계에 본인이 빠진 여행이 섞인다. 작성 자녀도 참여자로 저장되고 가족당
+		// 자녀는 1명이므로 자녀 쪽 결과는 달라지지 않는다.
+		val records = tripParticipantRepository.findAllByUserId(requireNotNull(user.id))
 			.map(TripParticipant::trip)
 			.filter { it.deletedAt == null }
-		val records = (familyTrips + participatedTrips)
 			.distinctBy { requireNotNull(it.id) }
 			.onEach { it.synchronizeStatus(today) }
 			.filter { it.status in RECORD_TRIP_STATUSES }
