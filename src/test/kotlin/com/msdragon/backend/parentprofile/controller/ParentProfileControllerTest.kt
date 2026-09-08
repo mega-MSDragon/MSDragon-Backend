@@ -148,6 +148,11 @@ class ParentProfileControllerTest {
 			.andExpect(jsonPath("$.data.personalityResult.code").value("healing_traveler"))
 			.andExpect(jsonPath("$.data.personalityResult.name").value("풍경 수집가"))
 			.andExpect(jsonPath("$.data.personalityResult.catchphrase").value("쉬엄쉬엄이 최고!"))
+			// 결과 카드 테마 칩. 첫 번째가 대표 테마다.
+			.andExpect(jsonPath("$.data.personalityResult.themes.length()").value(3))
+			.andExpect(jsonPath("$.data.personalityResult.themes[0]").value("nature_scenery"))
+			.andExpect(jsonPath("$.data.personalityResult.themes[1]").value("history_culture"))
+			.andExpect(jsonPath("$.data.personalityResult.themes[2]").value("landmark"))
 			.andExpect(
 				jsonPath("$.data.personalityResult.description").value(
 					"아름다운 풍경 속에서 여유롭게 쉬며 편안하게 둘러보는 여행이 잘 맞아요.",

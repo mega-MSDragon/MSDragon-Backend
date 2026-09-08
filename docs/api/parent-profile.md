@@ -80,7 +80,8 @@
       "code": "heritage_walker",
       "name": "시간 여행자",
       "catchphrase": "아는 만큼 보인다!",
-      "description": "유적지와 박물관을 산책하듯 둘러보며 지역의 이야기를 알아가는 걸 좋아해요."
+      "description": "유적지와 박물관을 산책하듯 둘러보며 지역의 이야기를 알아가는 걸 좋아해요.",
+      "themes": ["history_culture", "nature_scenery", "landmark"]
     },
     "completionPercent": 100,
     "completedAt": "2026-07-01T12:00:00"
@@ -126,7 +127,7 @@
 
 ## 추천용 여행 MBTI
 
-현재 구현은 부모님 프로필 완료 시 `docs/policy/parent-travel-mbti.md`의 가중치 정책으로 아래 enum 중 하나를 `personalityType`에 저장합니다. 화면 표시용 보조명(`name`), 별명(`catchphrase`), 설명(`description`)은 `personalityResult`로 반환합니다. 결과 화면 제목은 `catchphrase`와 `name`을 이어 붙여 `쉬엄쉬엄이 최고! 풍경 수집가`처럼 표시합니다.
+현재 구현은 부모님 프로필 완료 시 `docs/policy/parent-travel-mbti.md`의 가중치 정책으로 아래 enum 중 하나를 `personalityType`에 저장합니다. 화면 표시용 보조명(`name`), 별명(`catchphrase`), 설명(`description`)은 `personalityResult`로 반환합니다. 결과 화면 제목은 `catchphrase`와 `name`을 이어 붙여 `쉬엄쉬엄이 최고! 풍경 수집가`처럼 표시합니다. 결과 카드의 테마 칩은 `personalityResult.themes`를 표시 순서대로 사용합니다. 첫 번째가 대표 테마입니다.
 
 | Value | 설명 |
 |-------|------|

@@ -37,39 +37,32 @@ object TravelPersonalityPolicy {
 	}
 
 	private fun themePoints(type: TravelPersonalityTypeCode, theme: TravelThemeCode): Int =
-		when (theme) {
-			PRIMARY_THEMES.getValue(type) -> PRIMARY_THEME_POINTS
-			in SECONDARY_THEMES.getValue(type) -> SECONDARY_THEME_POINTS
-			else -> 0
+		when (THEMES_BY_TYPE.getValue(type).indexOf(theme)) {
+			-1 -> 0
+			0 -> PRIMARY_THEME_POINTS
+			else -> SECONDARY_THEME_POINTS
 		}
 
 	private const val PRIMARY_THEME_POINTS = 2
 	private const val SECONDARY_THEME_POINTS = 1
 
-	/** 시안 유형 카드에 나열된 테마 3개 중 첫 번째. */
-	private val PRIMARY_THEMES: Map<TravelPersonalityTypeCode, TravelThemeCode> = mapOf(
-		TravelPersonalityTypeCode.URBAN_EXPLORER to TravelThemeCode.SHOPPING,
-		TravelPersonalityTypeCode.CULTURE_STROLLER to TravelThemeCode.CULTURE_LIFE,
-		TravelPersonalityTypeCode.HEALING_TRAVELER to TravelThemeCode.NATURE_SCENERY,
-		TravelPersonalityTypeCode.HERITAGE_WALKER to TravelThemeCode.HISTORY_CULTURE,
-		TravelPersonalityTypeCode.ACTIVE_ADVENTURER to TravelThemeCode.ACTIVITY,
-		TravelPersonalityTypeCode.LOCAL_CHALLENGER to TravelThemeCode.EXPERIENCE,
-	)
-
-	/** 시안 유형 카드에 나열된 테마 3개 중 두 번째와 세 번째. */
-	private val SECONDARY_THEMES: Map<TravelPersonalityTypeCode, Set<TravelThemeCode>> = mapOf(
+	/**
+	 * 시안 유형 카드에 나열된 테마. **첫 번째가 대표 테마, 나머지가 보조 테마다.**
+	 * 결과 카드의 테마 칩도 이 순서로 표시하므로 응답에도 이 목록을 그대로 내린다.
+	 */
+	val THEMES_BY_TYPE: Map<TravelPersonalityTypeCode, List<TravelThemeCode>> = mapOf(
 		TravelPersonalityTypeCode.URBAN_EXPLORER to
-			setOf(TravelThemeCode.LANDMARK, TravelThemeCode.CULTURE_LIFE),
+			listOf(TravelThemeCode.SHOPPING, TravelThemeCode.LANDMARK, TravelThemeCode.CULTURE_LIFE),
 		TravelPersonalityTypeCode.CULTURE_STROLLER to
-			setOf(TravelThemeCode.LANDMARK, TravelThemeCode.HISTORY_CULTURE),
+			listOf(TravelThemeCode.CULTURE_LIFE, TravelThemeCode.LANDMARK, TravelThemeCode.HISTORY_CULTURE),
 		TravelPersonalityTypeCode.HEALING_TRAVELER to
-			setOf(TravelThemeCode.HISTORY_CULTURE, TravelThemeCode.LANDMARK),
+			listOf(TravelThemeCode.NATURE_SCENERY, TravelThemeCode.HISTORY_CULTURE, TravelThemeCode.LANDMARK),
 		TravelPersonalityTypeCode.HERITAGE_WALKER to
-			setOf(TravelThemeCode.NATURE_SCENERY, TravelThemeCode.LANDMARK),
+			listOf(TravelThemeCode.HISTORY_CULTURE, TravelThemeCode.NATURE_SCENERY, TravelThemeCode.LANDMARK),
 		TravelPersonalityTypeCode.ACTIVE_ADVENTURER to
-			setOf(TravelThemeCode.EXPERIENCE, TravelThemeCode.NATURE_SCENERY),
+			listOf(TravelThemeCode.ACTIVITY, TravelThemeCode.EXPERIENCE, TravelThemeCode.NATURE_SCENERY),
 		TravelPersonalityTypeCode.LOCAL_CHALLENGER to
-			setOf(TravelThemeCode.SHOPPING, TravelThemeCode.CULTURE_LIFE),
+			listOf(TravelThemeCode.EXPERIENCE, TravelThemeCode.SHOPPING, TravelThemeCode.CULTURE_LIFE),
 	)
 
 	/**
