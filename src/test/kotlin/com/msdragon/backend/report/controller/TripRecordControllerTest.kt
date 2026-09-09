@@ -17,6 +17,11 @@ import com.msdragon.backend.feedback.entity.TripFeedback
 import com.msdragon.backend.feedback.repository.TripFeedbackRepository
 import com.msdragon.backend.feedback.repository.TripFeedbackRequestRepository
 import com.msdragon.backend.report.entity.FilialReport
+import com.msdragon.backend.pledge.entity.PledgeSignature
+import com.msdragon.backend.pledge.entity.TripPledge
+import com.msdragon.backend.pledge.entity.TripPledgeStatus
+import com.msdragon.backend.pledge.repository.PledgeSignatureRepository
+import com.msdragon.backend.pledge.repository.TripPledgeRepository
 import com.msdragon.backend.report.repository.FilialReportRepository
 import com.msdragon.backend.trip.entity.ExternalApiProvider
 import com.msdragon.backend.trip.entity.Trip
@@ -85,6 +90,12 @@ class TripRecordControllerTest {
 
 	@Autowired
 	private lateinit var filialReportRepository: FilialReportRepository
+
+	@Autowired
+	private lateinit var tripPledgeRepository: TripPledgeRepository
+
+	@Autowired
+	private lateinit var pledgeSignatureRepository: PledgeSignatureRepository
 
 	@BeforeEach
 	fun setUp() {
@@ -268,6 +279,114 @@ class TripRecordControllerTest {
 			.andExpect(jsonPath("$.data.records").isEmpty)
 	}
 
+	@Test
+	fun `기록 상세는 여행 정보와 요약, 일차별 코스, 10계명·리포트 진행 상태를 한 번에 반환한다`() {
+		val child = saveUser(UserRole.CHILD, "record-detail-child", "혜린", GenderType.FEMALE)
+		val mother = saveUser(UserRole.PARENT, "record-detail-mother", "길순", GenderType.FEMALE)
+		val father = saveUser(UserRole.PARENT, "record-detail-father", "철수", GenderType.MALE)
+		val family = saveFamily(child, mother, father)
+		val fixture = saveTrip(
+			family = family,
+			child = child,
+			participants = listOf(child, mother, father),
+			title = "부산 온천 가족여행",
+			destinationCode = TripDestinationCode.BUSAN,
+			startDate = today().minusDays(3),
+			endDate = today().minusDays(2),
+			stopNames = listOf("대릉원", "스프카레"),
+			routeDistanceMeters = 120_500,
+		)
+		fixture.stops[0].note = "엄마가 제일 가고 싶어 하던 곳!"
+		tripStopRepository.saveAllAndFlush(fixture.stops)
+		// 엄마만 별점을 제출했다. 리포트는 아직 없다.
+		saveFeedback(fixture, mother, BigDecimal("4.0"), fixture.stops[0])
+		// 자녀와 엄마만 10계명에 서명했다.
+		val pledge = tripPledgeRepository.save(
+			TripPledge(trip = fixture.trip, createdByUser = child, status = TripPledgeStatus.SIGNATURE_REQUESTED),
+		)
+		listOf(child, mother).forEach { signer ->
+			pledgeSignatureRepository.save(
+				PledgeSignature(
+					tripPledge = pledge,
+					user = signer,
+					signatureImageData = byteArrayOf(1),
+					signatureMimeType = "image/png",
+					signedAt = LocalDateTime.now(),
+				),
+			)
+		}
+
+		mockMvc.perform(
+			get("/api/v1/records/${requireNotNull(fixture.trip.id)}")
+				.header("Authorization", authorization(child)),
+		)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.data.title").value("부산 온천 가족여행"))
+			.andExpect(jsonPath("$.data.status").value("completed"))
+			.andExpect(jsonPath("$.data.destination.code").value("busan"))
+			.andExpect(jsonPath("$.data.participants.length()").value(3))
+			// 이번 여행을 한눈에
+			.andExpect(jsonPath("$.data.summary.totalDistanceKm").value(120.5))
+			.andExpect(jsonPath("$.data.summary.totalPlaceCount").value(2))
+			.andExpect(jsonPath("$.data.summary.averageRating").value(4.0))
+			.andExpect(jsonPath("$.data.summary.parentRatings.length()").value(1))
+			.andExpect(jsonPath("$.data.summary.parentRatings[0].displayName").value("길순"))
+			// 여행 코스와 메모
+			.andExpect(jsonPath("$.data.days.length()").value(1))
+			.andExpect(jsonPath("$.data.days[0].dayNumber").value(1))
+			.andExpect(jsonPath("$.data.days[0].stops.length()").value(2))
+			.andExpect(jsonPath("$.data.days[0].stops[0].name").value("대릉원"))
+			.andExpect(jsonPath("$.data.days[0].stops[0].note").value("엄마가 제일 가고 싶어 하던 곳!"))
+			.andExpect(jsonPath("$.data.days[0].stops[1].note").doesNotExist())
+			// 여행 10계명: 아빠만 미서명
+			.andExpect(jsonPath("$.data.pledge.exists").value(true))
+			.andExpect(jsonPath("$.data.pledge.allSigned").value(false))
+			.andExpect(jsonPath("$.data.pledge.signedParticipants.length()").value(2))
+			.andExpect(jsonPath("$.data.pledge.pendingParticipants.length()").value(1))
+			.andExpect(jsonPath("$.data.pledge.pendingParticipants[0].displayName").value("철수"))
+			// 효도 리포트: 1/2
+			.andExpect(jsonPath("$.data.report.ready").value(false))
+			.andExpect(jsonPath("$.data.report.submittedParentCount").value(1))
+			.andExpect(jsonPath("$.data.report.totalParentCount").value(2))
+			.andExpect(jsonPath("$.data.report.pendingParents[0].displayName").value("철수"))
+			// 여행을 만든 자녀만 삭제할 수 있다.
+			.andExpect(jsonPath("$.data.canDelete").value(true))
+
+		mockMvc.perform(
+			get("/api/v1/records/${requireNotNull(fixture.trip.id)}")
+				.header("Authorization", authorization(mother)),
+		)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.data.canDelete").value(false))
+	}
+
+	@Test
+	fun `참여하지 않은 여행의 기록 상세는 조회할 수 없다`() {
+		val child = saveUser(UserRole.CHILD, "record-detail-outsider-child", "혜린", GenderType.FEMALE)
+		val mother = saveUser(UserRole.PARENT, "record-detail-outsider-mother", "길순", GenderType.FEMALE)
+		val father = saveUser(UserRole.PARENT, "record-detail-outsider-father", "철수", GenderType.MALE)
+		val family = saveFamily(child, mother, father)
+		val fixture = saveTrip(
+			family = family,
+			child = child,
+			participants = listOf(child, mother),
+			title = "엄마와 둘이 간 여행",
+			destinationCode = TripDestinationCode.BUSAN,
+			startDate = today().minusDays(3),
+			endDate = today().minusDays(2),
+			stopNames = listOf("대릉원"),
+			routeDistanceMeters = 1_000,
+		)
+
+		mockMvc.perform(
+			get("/api/v1/records/${requireNotNull(fixture.trip.id)}")
+				.header("Authorization", authorization(father)),
+		)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value(403))
+			.andExpect(jsonPath("$.message").value("참여한 여행만 기록을 조회할 수 있습니다."))
+	}
+
 	private fun saveFamily(child: User, mother: User, father: User): Family {
 		val family = familyRepository.save(Family(ownerUser = child))
 		familyMemberRepository.saveAll(
@@ -370,6 +489,8 @@ class TripRecordControllerTest {
 	private fun today(): LocalDate = LocalDate.now(ZoneId.of("Asia/Seoul"))
 
 	private fun cleanDatabase() {
+		pledgeSignatureRepository.deleteAll()
+		tripPledgeRepository.deleteAll()
 		filialReportRepository.deleteAll()
 		tripFeedbackRepository.deleteAll()
 		tripFeedbackRequestRepository.deleteAll()

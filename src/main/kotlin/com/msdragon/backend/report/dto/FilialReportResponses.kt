@@ -56,9 +56,6 @@ data class FilialReportResponse(
 	@field:Schema(description = "일차와 순서대로 정렬한 방문지 목록")
 	val stops: List<FilialReportStopResponse>,
 
-	@field:Schema(description = "공유 이미지 URL. 공유 디자인 구현 전에는 null입니다.", nullable = true)
-	val shareImageUrl: String?,
-
 	@field:Schema(description = "최초 리포트 생성 시간", example = "2026-07-28T12:00:00")
 	val generatedAt: LocalDateTime,
 )

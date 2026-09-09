@@ -21,6 +21,16 @@ import com.msdragon.backend.report.dto.TripRecordStatisticsResponse
 import com.msdragon.backend.report.dto.TripRecordSummaryResponse
 import com.msdragon.backend.report.dto.TripRecordsResponse
 import com.msdragon.backend.report.entity.FilialReport
+import com.msdragon.backend.pledge.repository.PledgeSignatureRepository
+import com.msdragon.backend.pledge.repository.TripPledgeRepository
+import com.msdragon.backend.report.dto.TripRecordDayResponse
+import com.msdragon.backend.report.dto.TripRecordDetailResponse
+import com.msdragon.backend.report.dto.TripRecordDetailSummaryResponse
+import com.msdragon.backend.report.dto.TripRecordParentRatingResponse
+import com.msdragon.backend.report.dto.TripRecordPlaceCountResponse
+import com.msdragon.backend.report.dto.TripRecordPledgeResponse
+import com.msdragon.backend.report.dto.TripRecordReportResponse
+import com.msdragon.backend.report.dto.TripRecordStopResponse
 import com.msdragon.backend.report.repository.FilialReportRepository
 import com.msdragon.backend.trip.dto.TripDestinationResponse
 import com.msdragon.backend.trip.dto.TripParticipantResponse
@@ -53,6 +63,8 @@ class FilialReportService(
 	private val tripStopRepository: TripStopRepository,
 	private val tripFeedbackRepository: TripFeedbackRepository,
 	private val filialReportRepository: FilialReportRepository,
+	private val tripPledgeRepository: TripPledgeRepository,
+	private val pledgeSignatureRepository: PledgeSignatureRepository,
 ) {
 	@Transactional
 	fun createReport(currentUser: AuthenticatedUser, tripId: Long): FilialReportResponse {
@@ -244,8 +256,128 @@ class FilialReportService(
 					imageUrl = stop.imageUrl,
 				)
 			},
-			shareImageUrl = report.shareImageUrl,
 			generatedAt = report.generatedAt,
+		)
+	}
+
+	/**
+	 * 기록 상세 화면 한 벌. 여행 상세·피드백·효도 리포트를 각각 부르지 않도록 한 번에 내려준다.
+	 * 효도 리포트 본문은 여기 넣지 않는다. `보러가기`를 눌렀을 때만 필요하고 응답이 커진다.
+	 */
+	@Transactional
+	fun getRecordDetail(currentUser: AuthenticatedUser, tripId: Long): TripRecordDetailResponse {
+		val user = getLoginUser(currentUser.id)
+		val userId = requireNotNull(user.id)
+		val trip = getTrip(tripId)
+		if (!tripParticipantRepository.existsByTripIdAndUserId(tripId, userId)) {
+			throw ForbiddenException("참여한 여행만 기록을 조회할 수 있습니다.")
+		}
+		trip.synchronizeStatus(currentDate())
+
+		val source = loadSource(tripId)
+		val report = filialReportRepository.findByTripId(tripId)
+		val stopsByDayId = source.stops.groupBy { requireNotNull(it.tripDay.id) }
+		val feedbackByParentId = source.feedbacks.associateBy { requireNotNull(it.parentUser.id) }
+		val parents = source.participants.filter { it.user.role == UserRole.PARENT }
+		val signedUserIds = tripPledgeRepository.findByTripId(tripId)
+			?.let { pledge ->
+				pledgeSignatureRepository.findAllByTripPledgeIdOrderBySignedAtAsc(requireNotNull(pledge.id))
+					.mapTo(mutableSetOf()) { requireNotNull(it.user.id) }
+			}
+
+		return TripRecordDetailResponse(
+			tripId = tripId,
+			title = trip.title,
+			coverImageUrl = report?.coverImageUrl?.takeIf(String::isNotBlank)
+				?: source.stops.firstNotNullOfOrNull { it.imageUrl?.takeIf(String::isNotBlank) },
+			status = trip.status,
+			destination = TripDestinationResponse.from(trip.destinationCode),
+			startDate = trip.startDate,
+			endDate = trip.endDate,
+			participants = source.participants.map(TripParticipantResponse::from),
+			summary = recordDetailSummary(source, parents, feedbackByParentId),
+			days = source.days.map { day ->
+				TripRecordDayResponse(
+					dayNumber = day.dayNumber,
+					travelDate = day.travelDate,
+					stops = stopsByDayId[requireNotNull(day.id)].orEmpty().map { stop ->
+						TripRecordStopResponse(
+							tripStopId = requireNotNull(stop.id),
+							sortOrder = stop.sortOrder,
+							name = stop.name,
+							category = stop.category,
+							note = stop.note?.takeIf(String::isNotBlank),
+							latitude = stop.latitude,
+							longitude = stop.longitude,
+						)
+					},
+				)
+			},
+			pledge = TripRecordPledgeResponse(
+				exists = signedUserIds != null,
+				allSigned = signedUserIds != null &&
+					source.participants.all { requireNotNull(it.user.id) in signedUserIds },
+				signedParticipants = source.participants
+					.filter { requireNotNull(it.user.id) in signedUserIds.orEmpty() }
+					.map(TripParticipantResponse::from),
+				pendingParticipants = source.participants
+					.filterNot { requireNotNull(it.user.id) in signedUserIds.orEmpty() }
+					.map(TripParticipantResponse::from)
+					.takeIf { signedUserIds != null }
+					.orEmpty(),
+			),
+			report = TripRecordReportResponse(
+				ready = report != null,
+				submittedParentCount = parents.count { requireNotNull(it.user.id) in feedbackByParentId },
+				totalParentCount = parents.size,
+				submittedParents = parents
+					.filter { requireNotNull(it.user.id) in feedbackByParentId }
+					.map(TripParticipantResponse::from),
+				pendingParents = parents
+					.filterNot { requireNotNull(it.user.id) in feedbackByParentId }
+					.map(TripParticipantResponse::from),
+			),
+			// 삭제 권한은 여행 삭제 API와 같다. 권한이 없으면 클라이언트가 휴지통을 숨긴다.
+			canDelete = user.role == UserRole.CHILD && trip.createdByUser.id == userId,
+		)
+	}
+
+	private fun recordDetailSummary(
+		source: ReportSource,
+		parents: List<TripParticipant>,
+		feedbackByParentId: Map<Long, TripFeedback>,
+	): TripRecordDetailSummaryResponse {
+		val submitted = parents.mapNotNull { feedbackByParentId[requireNotNull(it.user.id)] }
+		val averageRating = submitted
+			.takeIf(List<TripFeedback>::isNotEmpty)
+			?.fold(BigDecimal.ZERO) { sum, feedback -> sum + feedback.overallRating }
+			?.divide(BigDecimal(submitted.size), 4, RoundingMode.HALF_UP)
+			?.setScale(1, RoundingMode.HALF_UP)
+		val routeDistances = source.days.mapNotNull(TripDay::routeTotalDistanceMeters)
+
+		return TripRecordDetailSummaryResponse(
+			totalDistanceKm = routeDistances
+				.takeIf(List<Int>::isNotEmpty)
+				?.sumOf(Int::toLong)
+				?.toBigDecimal()
+				?.divide(BigDecimal(1_000), 1, RoundingMode.HALF_UP),
+			totalPlaceCount = source.stops.size,
+			// 방문 순서대로 처음 나온 카테고리부터 센다. 카테고리가 없는 방문지는 제외한다.
+			placeCounts = source.stops
+				.mapNotNull { it.category?.takeIf(String::isNotBlank) }
+				.groupingBy { it }
+				.eachCount()
+				.map { (category, count) -> TripRecordPlaceCountResponse(category, count) },
+			averageRating = averageRating,
+			parentRatings = parents.mapNotNull { participant ->
+				val feedback = feedbackByParentId[requireNotNull(participant.user.id)] ?: return@mapNotNull null
+				TripRecordParentRatingResponse(
+					parentUserId = requireNotNull(participant.user.id),
+					displayName = participant.user.displayName,
+					relationLabel = TripParticipantResponse.from(participant).relationLabel,
+					overallRating = feedback.overallRating,
+				)
+			},
 		)
 	}
 

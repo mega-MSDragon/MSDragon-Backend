@@ -11,6 +11,7 @@
 | Method | Path | 설명 |
 |--------|------|------|
 | `GET` | `/api/v1/records` | 기록 탭 완료·중단 여행 목록과 완료 여행 통계 조회 |
+| `GET` | `/api/v1/records/{tripId}` | 기록 상세 화면 한 벌 조회 |
 | `POST` | `/api/v1/trips/{tripId}/filial-report` | 효도 리포트 생성 또는 기존 리포트 반환 |
 | `GET` | `/api/v1/trips/{tripId}/filial-report` | 생성된 효도 리포트 조회 |
 
@@ -62,6 +63,122 @@
   }
 }
 ```
+
+## GET /api/v1/records/{tripId}
+
+기록 카드를 눌렀을 때 필요한 값을 **한 번에** 조회합니다. 여행 상세·피드백·효도 리포트를 각각 부르지 않아도 됩니다.
+
+**참여자만 조회할 수 있습니다.** 같은 가족이어도 참여하지 않은 여행은 HTTP `200`, 본문 `status=403`으로 차단합니다.
+
+효도 리포트 본문은 포함하지 않습니다. `보러가기`를 눌렀을 때만 필요하고 응답이 커지기 때문입니다. 그때 `GET /api/v1/trips/{tripId}/filial-report`를 호출합니다.
+
+### Response
+
+```json
+{
+  "status": 200,
+  "success": true,
+  "message": "기록 상세 조회 성공",
+  "data": {
+    "tripId": 1,
+    "title": "부산 온천 가족여행",
+    "coverImageUrl": "https://tong.visitkorea.or.kr/cms/resource/00/1234500_image2_1.jpg",
+    "status": "completed",
+    "destination": { "code": "busan", "displayName": "부산" },
+    "startDate": "2026-09-12",
+    "endDate": "2026-09-14",
+    "participants": [
+      { "userId": 1, "role": "child", "displayName": "혜린", "gender": "female", "relationLabel": null },
+      { "userId": 2, "role": "parent", "displayName": "김영희", "gender": "female", "relationLabel": "엄마" },
+      { "userId": 3, "role": "parent", "displayName": "김철수", "gender": "male", "relationLabel": "아빠" }
+    ],
+    "summary": {
+      "totalDistanceKm": 120.5,
+      "totalPlaceCount": 5,
+      "placeCounts": [
+        { "category": "관광지", "count": 3 },
+        { "category": "음식점", "count": 2 }
+      ],
+      "averageRating": 4.5,
+      "parentRatings": [
+        { "parentUserId": 2, "displayName": "김영희", "relationLabel": "엄마", "overallRating": 4.0 },
+        { "parentUserId": 3, "displayName": "김철수", "relationLabel": "아빠", "overallRating": 5.0 }
+      ]
+    },
+    "days": [
+      {
+        "dayNumber": 1,
+        "travelDate": "2026-09-12",
+        "stops": [
+          {
+            "tripStopId": 10,
+            "sortOrder": 1,
+            "name": "대릉원",
+            "category": "관광지",
+            "note": "엄마가 이번 여행에서 제일 가고 싶어 하던 곳!",
+            "latitude": 35.8383,
+            "longitude": 129.2126
+          }
+        ]
+      }
+    ],
+    "pledge": {
+      "exists": true,
+      "allSigned": true,
+      "signedParticipants": [],
+      "pendingParticipants": []
+    },
+    "report": {
+      "ready": true,
+      "submittedParentCount": 2,
+      "totalParentCount": 2,
+      "submittedParents": [],
+      "pendingParents": []
+    },
+    "canDelete": true
+  }
+}
+```
+
+### 화면 매핑
+
+| 화면 | 사용 필드 |
+|------|-----------|
+| 상단 배경과 제목 | `coverImageUrl`, `title` |
+| 휴지통 아이콘 | `canDelete`. `false`면 숨깁니다. 삭제는 `DELETE /api/v1/trips/{tripId}` |
+| `여행 정보` | `destination.displayName`, `startDate`~`endDate`, `participants` |
+| `동행` | `participants[].relationLabel`. 본인은 클라이언트가 `나`로 바꿔 표시합니다 |
+| `함께 걸은 길` | `summary.totalDistanceKm`. `null`이면 카드를 숨깁니다 |
+| `함께 방문한 장소` | `summary.totalPlaceCount`와 `summary.placeCounts`를 `관광지 3 · 음식점 2`로 이어 붙입니다 |
+| `부모님 만족도` | `summary.averageRating`. `null`이면 `-`를 표시합니다. 옆줄은 `summary.parentRatings` |
+| 일차 탭 | `days[].dayNumber`, `days[].travelDate` |
+| 방문지 카드 | `days[].stops[]`. `note`가 없으면 메모 영역을 숨깁니다 |
+| `지도로 보기` | `days[].stops[].latitude`/`longitude`. 좌표가 없는 방문지는 핀을 그리지 않습니다 |
+| `여행 10계명` 카드 | `pledge`. `exists=false`면 카드를 숨깁니다 |
+| `효도 리포트` 카드 | `report` |
+
+### 여행 10계명 카드 상태
+
+| 상태 | 판단 |
+|------|------|
+| `가족 모두 서명 완료` + `보러가기` | `pledge.allSigned = true` |
+| 미완료 | `pledge.pendingParticipants`로 남은 사람을 표시합니다. 문구는 시안 미정입니다 |
+
+### 효도 리포트 카드 상태
+
+`report.pendingParents`에 **조회자 본인이 있는지**로 버튼이 갈립니다.
+
+| 조회자 | 상태 | 문구 | 버튼 |
+|--------|------|------|------|
+| 자녀 | `submittedParentCount = 0` | `부모님의 별점이 필요해요` / `두분 다 아직이에요` | `별점 부탁드리기` |
+| 자녀 | 일부 제출 | `{미제출 부모}의 별점이 필요해요` / `{제출 부모}는 완료했어요` | `별점 부탁드리기` |
+| 자녀 | `ready = true` | `부모님이 모두 별점을 남기셨어요` | `보러가기` |
+| 부모 | 본인이 `pendingParents`에 있음 | `별점을 남겨주세요` | `별점 남기기` |
+| 부모 | `ready = true` | `부모님이 모두 별점을 남기셨어요` | `보러가기` |
+
+`별점 부탁드리기`는 `POST /api/v1/trips/{tripId}/feedback/requests`, `별점 남기기`는 피드백 작성 화면으로 이동합니다.
+
+---
 
 ## POST /api/v1/trips/{tripId}/filial-report
 
@@ -135,7 +252,6 @@
         "imageUrl": "https://example.com/place.jpg"
       }
     ],
-    "shareImageUrl": null,
     "generatedAt": "2026-07-28T12:00:00"
   }
 }
