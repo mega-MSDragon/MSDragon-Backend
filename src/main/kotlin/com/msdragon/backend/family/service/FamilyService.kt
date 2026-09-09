@@ -167,13 +167,10 @@ class FamilyService(
 	 * 여행을 남기면 참여 기준으로 조회하는 기록 탭에 계속 보여서 반쪽 초기화가 된다.
 	 * 부모가 호출하면 본인 연결만 끊는다.
 	 *
-	 * 사용자에게 노출하는 기능이 아니다. `app.family.dev-tools-enabled`가 꺼져 있으면 없는 API처럼 동작한다.
+	 * 앱에 노출하는 기능은 아니지만 인증만 있으면 누구나 호출할 수 있다.
 	 */
 	@Transactional
 	fun disconnectMyFamilyForDevelopment(userId: Long): FamilyDisconnectResponse {
-		if (!familyProperties.devToolsEnabled) {
-			throw NotFoundException("요청한 API를 찾을 수 없습니다.")
-		}
 		val user = getLoginUser(userId)
 		val member = familyMemberRepository.findByUserId(userId)
 			?: throw BadRequestException("연결된 가족이 없습니다.")

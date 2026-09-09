@@ -26,7 +26,6 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.http.MediaType
 import org.springframework.test.web.servlet.MockMvc
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
@@ -217,19 +216,6 @@ class FamilyControllerTest {
 				.content("""{"code":"$childCode"}"""),
 		)
 			.andExpect(status().isOk)
-	}
-
-	@Test
-	fun `개발용 가족 연결 해제는 기본적으로 꺼져 있다`() {
-		// 이 테스트는 기본 설정으로 뜬다. 운영 배포에서 이 API가 열려 있으면 가족과 여행이 사라진다.
-		val child = saveUser(UserRole.CHILD, "dev-tools-off", "혜린")
-
-		mockMvc.perform(
-			delete("/api/v1/dev/family")
-				.header("Authorization", "Bearer ${tokenService.createAccessToken(child)}"),
-		)
-			.andExpect(status().isOk)
-			.andExpect(jsonPath("$.status").value(404))
 	}
 
 	private fun saveUser(

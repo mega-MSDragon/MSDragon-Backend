@@ -19,7 +19,6 @@ import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
-import org.springframework.test.context.TestPropertySource
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
@@ -27,10 +26,9 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import java.time.LocalDate
 import java.time.LocalDateTime
 
-/** 개발용 가족 연결 해제. 운영에서 열리면 가족과 여행이 사라지므로 기본값이 꺼짐인지도 함께 확인한다. */
+/** 개발용 가족 연결 해제. */
 @SpringBootTest
 @AutoConfigureMockMvc
-@TestPropertySource(properties = ["app.family.dev-tools-enabled=true"])
 class FamilyDevControllerTest {
 	@Autowired
 	private lateinit var mockMvc: MockMvc
