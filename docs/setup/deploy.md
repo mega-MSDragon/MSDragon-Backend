@@ -93,6 +93,7 @@ APP_AUTH_APPLE_PRIVATE_KEY=<.p8 파일 내용>
 APP_AUTH_KAKAO_ADMIN_KEY=<카카오 어드민 키>
 APP_AUTH_OAUTH_REQUEST_TIMEOUT=PT5S
 APP_REVIEW_FAMILY_CODE=<앱 스토어 심사 기간에만 설정>
+APP_FAMILY_DEV_TOOLS_ENABLED=false
 APP_BASE_URL=https://api.ms-dragon.com
 FIREBASE_CREDENTIALS=<Firebase 서비스 계정 키 JSON 한 줄>
 TOUR_API_SERVICE_KEY=<한국관광공사 TourAPI 서비스키>
@@ -223,6 +224,7 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS notification_enabled boolean NOT NULL
 - 탈퇴 시 소셜 연결 해제를 사용할 경우 `.env`에 `APP_AUTH_APPLE_TEAM_ID`, `APP_AUTH_APPLE_KEY_ID`, `APP_AUTH_APPLE_PRIVATE_KEY`, `APP_AUTH_KAKAO_ADMIN_KEY` 설정 완료. 없으면 연결 해제를 건너뛰고 탈퇴는 정상 동작합니다
 - `.env`에 `APP_BASE_URL` 설정 완료. 홈 추천 도시 이미지 URL에 사용하므로 운영 도메인이어야 합니다. 기본값은 `http://localhost:8080`이라 설정하지 않으면 앱에서 이미지가 보이지 않습니다
 - 푸시 알림을 사용할 경우 `.env`에 `FIREBASE_CREDENTIALS` 설정 완료. 없으면 알림 발송만 건너뛰고 나머지는 정상 동작합니다
+- **`APP_FAMILY_DEV_TOOLS_ENABLED`가 운영 `.env`에 없거나 `false`인지 확인.** `true`면 로그인한 누구나 자기 가족과 그 가족의 여행을 지울 수 있습니다
 - 앱 스토어 심사를 제출할 경우 `.env`에 `APP_REVIEW_FAMILY_CODE` 설정 완료. **심사가 끝나면 값을 비우고 컨테이너를 재생성합니다.** `docs/policy/app-review-family-code.md`를 따릅니다
 - `deploy/nginx/certs/origin.pem` 존재
 - `deploy/nginx/certs/origin.key` 존재

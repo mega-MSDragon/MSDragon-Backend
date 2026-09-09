@@ -167,3 +167,18 @@ data class FamilyMemberResponse(
 		}
 	}
 }
+
+@Schema(description = "개발용 가족 연결 해제 결과")
+data class FamilyDisconnectResponse(
+	@field:Schema(description = "해제한 가족 ID", example = "1")
+	val familyId: Long,
+
+	@field:Schema(description = "가족을 통째로 해체했는지 여부. 자녀가 호출하면 true입니다.", example = "true")
+	val dissolved: Boolean,
+
+	@field:Schema(description = "연결이 끊긴 사용자 ID", example = "[1, 2, 3]")
+	val removedUserIds: List<Long>,
+
+	@field:Schema(description = "함께 삭제한 여행 ID", example = "[10, 11]")
+	val deletedTripIds: List<Long>,
+)

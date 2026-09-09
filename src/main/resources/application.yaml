@@ -27,6 +27,7 @@ app:
       request-timeout: ${APP_AUTH_OAUTH_REQUEST_TIMEOUT:PT5S}
   family:
     review-code: ${APP_REVIEW_FAMILY_CODE:}
+    dev-tools-enabled: ${APP_FAMILY_DEV_TOOLS_ENABLED:false}
   home:
     base-url: ${APP_BASE_URL:http://localhost:8080}
   notification:

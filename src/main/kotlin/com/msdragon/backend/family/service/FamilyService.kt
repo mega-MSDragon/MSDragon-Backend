@@ -8,6 +8,7 @@ import com.msdragon.backend.common.exception.InternalServerException
 import com.msdragon.backend.common.exception.NotFoundException
 import com.msdragon.backend.common.exception.UnAuthorizedException
 import com.msdragon.backend.family.dto.FamilyCodeResponse
+import com.msdragon.backend.family.dto.FamilyDisconnectResponse
 import com.msdragon.backend.family.dto.FamilyMatchResponse
 import com.msdragon.backend.family.dto.MyFamilyResponse
 import com.msdragon.backend.family.dto.MatchFamilyCodeRequest
@@ -159,6 +160,65 @@ class FamilyService(
 	 *
 	 * 데모 부모에게는 완료된 프로필과 여행 MBTI를 넣어 심사자가 바로 여행을 만들 수 있게 한다.
 	 */
+	/**
+	 * **개발용.** 내 가족 연결을 끊어 다시 연결해볼 수 있는 상태로 만든다.
+	 *
+	 * 자녀가 호출하면 가족을 통째로 해체한다. 자녀 없는 가족은 여행을 만들 수 없어 남겨둘 이유가 없고,
+	 * 여행을 남기면 참여 기준으로 조회하는 기록 탭에 계속 보여서 반쪽 초기화가 된다.
+	 * 부모가 호출하면 본인 연결만 끊는다.
+	 *
+	 * 사용자에게 노출하는 기능이 아니다. `app.family.dev-tools-enabled`가 꺼져 있으면 없는 API처럼 동작한다.
+	 */
+	@Transactional
+	fun disconnectMyFamilyForDevelopment(userId: Long): FamilyDisconnectResponse {
+		if (!familyProperties.devToolsEnabled) {
+			throw NotFoundException("요청한 API를 찾을 수 없습니다.")
+		}
+		val user = getLoginUser(userId)
+		val member = familyMemberRepository.findByUserId(userId)
+			?: throw BadRequestException("연결된 가족이 없습니다.")
+		val family = member.family
+		val familyId = requireNotNull(family.id)
+
+		val dissolved = user.role == UserRole.CHILD
+		val members = if (dissolved) {
+			familyMemberRepository.findAllByFamilyIdOrderByJoinedAtAsc(familyId)
+		} else {
+			listOf(member)
+		}
+		val deletedTripIds = if (dissolved) {
+			val deletedAt = LocalDateTime.now()
+			tripRepository.findAllByFamilyIdAndDeletedAtIsNullOrderByStartDateAscIdAsc(familyId)
+				.onEach { it.softDelete(deletedAt) }
+				.map { requireNotNull(it.id) }
+		} else {
+			emptyList()
+		}
+
+		// 코드를 살려두면 해체된 가족으로 다시 연결된다.
+		members.forEach { familyCodeRepository.findByUserId(requireNotNull(it.user.id))?.deactivate() }
+		familyMemberRepository.deleteAll(members)
+		if (dissolved) {
+			family.deactivate()
+		}
+
+		log.warn(
+			"개발용 가족 연결 해제: userId={}, familyId={}, dissolved={}, removedMembers={}, deletedTrips={}",
+			userId,
+			familyId,
+			dissolved,
+			members.size,
+			deletedTripIds.size,
+		)
+
+		return FamilyDisconnectResponse(
+			familyId = familyId,
+			dissolved = dissolved,
+			removedUserIds = members.mapNotNull { it.user.id },
+			deletedTripIds = deletedTripIds,
+		)
+	}
+
 	private fun isReviewCode(code: String): Boolean =
 		familyProperties.isReviewCodeEnabled() &&
 			normalizeCode(code) == normalizeCode(familyProperties.reviewCode)
