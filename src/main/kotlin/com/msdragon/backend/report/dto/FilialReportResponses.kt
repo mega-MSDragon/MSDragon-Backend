@@ -4,6 +4,7 @@ import com.msdragon.backend.feedback.entity.FeedbackBodyCondition
 import com.msdragon.backend.feedback.entity.FeedbackTag
 import com.msdragon.backend.trip.dto.TripDestinationResponse
 import com.msdragon.backend.trip.dto.TripParticipantResponse
+import com.msdragon.backend.auth.entity.UserProfileImage
 import io.swagger.v3.oas.annotations.media.Schema
 import java.math.BigDecimal
 import java.time.LocalDate
@@ -70,6 +71,14 @@ data class FilialReportParentFeedbackResponse(
 
 	@field:Schema(description = "가족 관계 표시값", example = "엄마", nullable = true)
 	val relationLabel: String?,
+
+	@field:Schema(
+		description = "프로필 아바타 식별자. 선택 전이면 null이며 클라이언트가 기본 실루엣을 표시합니다.",
+		example = "coral",
+		allowableValues = ["green", "coral", "yellow", "blue"],
+		nullable = true,
+	)
+	val profileImage: UserProfileImage?,
 
 	@field:Schema(description = "전체 만족도", example = "4.5")
 	val overallRating: BigDecimal,

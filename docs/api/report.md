@@ -234,6 +234,7 @@
         "parentUserId": 2,
         "displayName": "길순님",
         "relationLabel": "엄마",
+        "profileImage": "coral",
         "overallRating": 4.5,
         "bodyCondition": "comfortable",
         "bestPlace": {

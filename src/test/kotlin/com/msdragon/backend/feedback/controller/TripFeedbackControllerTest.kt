@@ -4,6 +4,7 @@ import com.msdragon.backend.auth.entity.AgeBand
 import com.msdragon.backend.auth.entity.GenderType
 import com.msdragon.backend.auth.entity.OAuthProvider
 import com.msdragon.backend.auth.entity.User
+import com.msdragon.backend.auth.entity.UserProfileImage
 import com.msdragon.backend.auth.entity.UserRole
 import com.msdragon.backend.auth.repository.UserRepository
 import com.msdragon.backend.notification.repository.UserDeviceTokenRepository
@@ -248,6 +249,8 @@ class TripFeedbackControllerTest {
 			.andExpect(jsonPath("$.data.improvementTags[0]").value("more_rest_needed"))
 			.andExpect(jsonPath("$.data.parentFeedbacks.length()").value(2))
 			.andExpect(jsonPath("$.data.parentFeedbacks[0].bestPlace.tripStopId").value(stopId))
+			.andExpect(jsonPath("$.data.parentFeedbacks[0].profileImage").value("coral"))
+			.andExpect(jsonPath("$.data.parentFeedbacks[1].profileImage").doesNotExist())
 			.andExpect(
 				jsonPath("$.data.parentFeedbacks[1].bestPlace.tripStopId")
 					.value(requireNotNull(fixture.secondStop.id)),
@@ -587,6 +590,9 @@ class TripFeedbackControllerTest {
 		val child = saveUser(UserRole.CHILD, "child-1", "혜린", GenderType.FEMALE)
 		val mother = saveUser(UserRole.PARENT, "parent-1", "길순", GenderType.FEMALE)
 		val father = saveUser(UserRole.PARENT, "parent-2", "철수", GenderType.MALE)
+		// 아바타를 고른 부모와 고르지 않은 부모를 섞어 `부모님 한마디` 응답을 확인한다.
+		mother.profileImage = UserProfileImage.CORAL
+		userRepository.saveAndFlush(mother)
 		val family = familyRepository.save(Family(ownerUser = child))
 		familyMemberRepository.saveAll(
 			listOf(

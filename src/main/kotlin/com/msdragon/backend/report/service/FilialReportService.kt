@@ -235,6 +235,7 @@ class FilialReportService(
 					parentUserId = requireNotNull(feedback.parentUser.id),
 					displayName = feedback.parentUser.displayName,
 					relationLabel = relationLabelOf(feedback.parentUser),
+					profileImage = feedback.parentUser.profileImage,
 					overallRating = feedback.overallRating,
 					bodyCondition = feedback.bodyCondition,
 					bestPlace = FilialReportBestPlaceResponse(
