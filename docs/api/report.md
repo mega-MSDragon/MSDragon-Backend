@@ -145,11 +145,11 @@
 | 화면 | 사용 필드 |
 |------|-----------|
 | 상단 배경과 제목 | `coverImageUrl`, `title` |
-| 휴지통 아이콘 | `canDelete`. `false`면 숨깁니다. 삭제는 `DELETE /api/v1/trips/{tripId}` |
+| 휴지통 아이콘 | `canDelete`. 여행을 만든 자녀만 `true`이며 `false`면 숨깁니다. 삭제는 `DELETE /api/v1/trips/{tripId}` |
 | `여행 정보` | `destination.displayName`, `startDate`~`endDate`, `participants` |
 | `동행` | `participants[].relationLabel`. 본인은 클라이언트가 `나`로 바꿔 표시합니다 |
 | `함께 걸은 길` | `summary.totalDistanceKm`. `null`이면 카드를 숨깁니다 |
-| `함께 방문한 장소` | `summary.totalPlaceCount`와 `summary.placeCounts`를 `관광지 3 · 음식점 2`로 이어 붙입니다 |
+| `함께 방문한 장소` | `summary.totalPlaceCount`와 `summary.placeCounts`를 `관광지 3 · 음식점 2`로 이어 붙입니다. 카테고리는 방문지 카드와 같은 저장값이며 종류가 고정되어 있지 않습니다 |
 | `부모님 만족도` | `summary.averageRating`. `null`이면 `-`를 표시합니다. 옆줄은 `summary.parentRatings` |
 | 일차 탭 | `days[].dayNumber`, `days[].travelDate` |
 | 방문지 카드 | `days[].stops[]`. `note`가 없으면 메모 영역을 숨깁니다 |
@@ -159,14 +159,17 @@
 
 ### 여행 10계명 카드 상태
 
+서버는 상태만 내려주고 **문구는 클라이언트가 정합니다.**
+
 | 상태 | 판단 |
 |------|------|
-| `가족 모두 서명 완료` + `보러가기` | `pledge.allSigned = true` |
-| 미완료 | `pledge.pendingParticipants`로 남은 사람을 표시합니다. 문구는 시안 미정입니다 |
+| 모두 서명 완료 | `pledge.allSigned = true` |
+| 일부 미서명 | `pledge.pendingParticipants`에 남은 사람이 들어 있습니다 |
+| 10계명 없음 | `pledge.exists = false`. 카드를 숨깁니다 |
 
 ### 효도 리포트 카드 상태
 
-`report.pendingParents`에 **조회자 본인이 있는지**로 버튼이 갈립니다.
+서버는 상태만 내려주고 문구는 클라이언트가 정합니다. `report.pendingParents`에 **조회자 본인이 있는지**로 버튼이 갈립니다. 아래 문구는 시안 예시입니다.
 
 | 조회자 | 상태 | 문구 | 버튼 |
 |--------|------|------|------|
