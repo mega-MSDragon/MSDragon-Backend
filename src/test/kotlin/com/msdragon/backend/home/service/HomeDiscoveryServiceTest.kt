@@ -104,6 +104,7 @@ class HomeDiscoveryServiceTest {
 						HomeTourApiAttraction(
 							contentId = "c-${destination.value}",
 							title = "${destination.displayName} 명소",
+							summary = "${destination.displayName} 명소 소개",
 							imageUrl = "https://example.com/${destination.value}.jpg",
 							address = "${destination.displayName}시 어딘가",
 							regionName = destination.displayName,
@@ -138,6 +139,8 @@ class HomeDiscoveryServiceTest {
 		assertEquals("12", attraction.contentTypeId)
 		assertEquals(attraction.regionName, attraction.caption)
 		assertTrue(attraction.tags.contains("관광지"))
+		// 축제와 같은 카드라 개요가 비면 본문이 빈 카드가 된다.
+		assertEquals("${attraction.title} 소개", attraction.summary)
 		// 부제는 이번 달 추천 도시 이름을 이어 붙인다.
 		assertTrue(sections[1].subtitle?.contains("·") == true)
 

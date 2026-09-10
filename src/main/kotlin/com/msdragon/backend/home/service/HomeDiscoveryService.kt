@@ -252,7 +252,7 @@ private fun HomeTourApiAttraction.toSectionItem(): HomeSectionItemResponse =
 		title = title,
 		// 축제는 기간이 들어가는 자리에 관광지는 지역을 넣는다. 카드 형태가 같아야 한다.
 		caption = regionName,
-		summary = null,
+		summary = summary,
 		imageUrl = imageUrl,
 		address = address,
 		regionName = regionName,

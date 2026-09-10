@@ -70,7 +70,7 @@ class HttpHomeTourApiClient(
 			.take(limit)
 
 		val summaryFutures = festivals.associate { festival ->
-			festival.contentId to CompletableFuture.supplyAsync { findFestivalSummary(festival.contentId) }
+			festival.contentId to CompletableFuture.supplyAsync { findOverview(festival.contentId) }
 		}
 		return festivals.map { festival ->
 			HomeTourApiFestival(
@@ -93,7 +93,12 @@ class HttpHomeTourApiClient(
 		val futures = destinations.associateWith { destination ->
 			CompletableFuture.supplyAsync { findAttractionsOf(destination, limitPerDestination) }
 		}
-		return destinations.flatMap { futures.getValue(it).join() }
+		val attractions = destinations.flatMap { futures.getValue(it).join() }
+		// 축제와 같은 카드라 개요가 비면 본문이 빈 카드가 된다. 목록 조회에는 개요가 없어 따로 받는다.
+		val summaries = attractions.associate { attraction ->
+			attraction.contentId to CompletableFuture.supplyAsync { findOverview(attraction.contentId) }
+		}
+		return attractions.map { it.copy(summary = summaries.getValue(it.contentId).join()) }
 	}
 
 	/**
@@ -140,6 +145,8 @@ class HttpHomeTourApiClient(
 		return HomeTourApiAttraction(
 			contentId = contentId,
 			title = title,
+			// 개요는 목록 응답에 없다. findAttractions가 상세 조회로 채운다.
+			summary = null,
 			imageUrl = imageUrl,
 			address = address,
 			regionName = regionNameOf(address),
@@ -147,7 +154,8 @@ class HttpHomeTourApiClient(
 		)
 	}
 
-	private fun findFestivalSummary(contentId: String): String? =
+	/** detailCommon2 개요. 축제와 관광지가 같은 카드를 쓰므로 콘텐츠 종류를 가리지 않는다. */
+	private fun findOverview(contentId: String): String? =
 		try {
 			requestItems(
 				operation = "detailCommon2",

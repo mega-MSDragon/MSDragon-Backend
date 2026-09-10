@@ -157,7 +157,7 @@
             "contentTypeId": "12",
             "title": "불국사",
             "caption": "경주",
-            "summary": null,
+            "summary": "신라 불교문화를 대표하는 사찰입니다.",
             "imageUrl": "https://example.com/bulguksa.jpg",
             "address": "경상북도 경주시 진현동",
             "regionName": "경주",
@@ -190,7 +190,7 @@
 | `items[].contentTypeId` | string | false | 상세 조회에 그대로 넘기는 콘텐츠 타입. 축제 `15`, 관광지 `12` |
 | `items[].title` | string | false | 항목명 |
 | `items[].caption` | string | true | 카드에 표시할 부가 문장. 축제는 기간(`2026.08.01 - 08.31`), 관광지는 지역 |
-| `items[].summary` | string | true | 소개 요약 |
+| `items[].summary` | string | true | 소개 요약. 축제와 관광지 모두 TourAPI 공통정보의 개요를 넣습니다. 개요가 없거나 조회에 실패하면 `null`입니다 |
 | `items[].imageUrl` | string | true | 대표 이미지 |
 | `items[].address` | string | true | 주소 |
 | `items[].regionName` | string | true | 화면 표시용 지역 이름 |

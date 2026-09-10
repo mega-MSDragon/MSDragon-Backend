@@ -479,6 +479,7 @@ class HomeControllerTest {
 					HomeTourApiAttraction(
 						contentId = "attraction-${destination.value}",
 						title = "${destination.displayName} 명소",
+						summary = "${destination.displayName} 명소 소개",
 						imageUrl = "https://example.com/${destination.value}-attraction.jpg",
 						address = "${destination.displayName}시 어딘가",
 						regionName = destination.displayName,

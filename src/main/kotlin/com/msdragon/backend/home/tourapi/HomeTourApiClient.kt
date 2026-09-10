@@ -25,6 +25,7 @@ interface HomeTourApiClient {
 data class HomeTourApiAttraction(
 	val contentId: String,
 	val title: String,
+	val summary: String?,
 	val imageUrl: String?,
 	val address: String?,
 	val regionName: String?,
