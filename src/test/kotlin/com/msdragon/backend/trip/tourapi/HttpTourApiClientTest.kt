@@ -62,6 +62,55 @@ class HttpTourApiClientTest {
 	}
 
 	@Test
+	fun `상세 조회는 일반 관광 API를 쓰고 무장애 정보만 무장애 API에서 읽는다`() {
+		// 무장애 관광정보는 일반 관광정보의 부분집합이다. 홈 섹션에서 고른 콘텐츠를 무장애 쪽에
+		// 물으면 빈 결과라 상세가 통째로 404가 됐다.
+		val hit = mutableSetOf<String>()
+		val server = HttpServer.create(InetSocketAddress(0), 0)
+		fun respond(path: String, itemJson: String) {
+			server.createContext(path) { exchange ->
+				hit.add(path)
+				val body =
+					"""{"response":{"header":{"resultCode":"0000","resultMsg":"OK"},"body":{"items":{"item":[$itemJson]}}}}"""
+						.toByteArray()
+				exchange.responseHeaders.add("Content-Type", "application/json")
+				exchange.sendResponseHeaders(200, body.size.toLong())
+				exchange.responseBody.use { it.write(body) }
+			}
+		}
+		respond("/KorService2/detailCommon2", """{"contentid":"2699287","contenttypeid":"15","overview":"축제 소개"}""")
+		respond("/KorService2/detailIntro2", """{"contentid":"2699287","eventstartdate":"20260912"}""")
+		respond("/KorService2/detailImage2", """{"originimgurl":"https://example.com/a.jpg"}""")
+		respond("/WithTourService2/detailWithTour2", """{"contentid":"2699287","elevator":"있음"}""")
+		// 무장애 서비스에 없는 콘텐츠를 흉내 낸다. 여기로 요청이 가면 빈 결과가 돼야 한다.
+		respond("/WithTourService2/detailCommon2", "")
+		server.start()
+
+		try {
+			val client = HttpTourApiClient(
+				TourApiProperties(
+					baseUri = "http://localhost:${server.address.port}/WithTourService2",
+					generalBaseUri = "http://localhost:${server.address.port}/KorService2",
+					serviceKey = "test-key",
+				),
+			)
+
+			assertEquals("축제 소개", client.getPlaceDetail("2699287")?.overview)
+			assertEquals(1, client.getPlaceImages("2699287").size)
+			assertTrue(client.getPlaceIntro("2699287", "15") != null)
+			assertTrue(client.getAccessibility("2699287") != null)
+
+			assertTrue(hit.contains("/KorService2/detailCommon2"))
+			assertTrue(hit.contains("/KorService2/detailIntro2"))
+			assertTrue(hit.contains("/KorService2/detailImage2"))
+			assertTrue(hit.contains("/WithTourService2/detailWithTour2"))
+			assertFalse(hit.contains("/WithTourService2/detailCommon2"))
+		} finally {
+			server.stop(0)
+		}
+	}
+
+	@Test
 	fun `최상위 TourAPI 오류 응답의 작업명과 오류 코드를 전달한다`() {
 		val server = HttpServer.create(InetSocketAddress(0), 0)
 		server.createContext("/detailCommon2") { exchange ->
@@ -78,6 +127,7 @@ class HttpTourApiClientTest {
 			val client = HttpTourApiClient(
 				TourApiProperties(
 					baseUri = "http://localhost:${server.address.port}",
+					generalBaseUri = "http://localhost:${server.address.port}",
 					serviceKey = "test-key",
 				),
 			)
@@ -113,6 +163,7 @@ class HttpTourApiClientTest {
 			val client = HttpTourApiClient(
 				TourApiProperties(
 					baseUri = "http://localhost:${server.address.port}",
+					generalBaseUri = "http://localhost:${server.address.port}",
 					serviceKey = "test-key",
 				),
 			)

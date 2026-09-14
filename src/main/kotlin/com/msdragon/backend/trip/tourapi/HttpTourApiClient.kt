@@ -68,6 +68,11 @@ class HttpTourApiClient(
 		return items.mapNotNull { item -> item.toPlaceSummary() }
 	}
 
+	/**
+	 * 공통정보·소개정보·이미지정보는 **일반 관광정보**로 조회한다.
+	 * 무장애 관광정보는 일반 관광정보의 부분집합이라, 홈 섹션처럼 일반 쪽에서 고른 콘텐츠는
+	 * 무장애 서비스에 없어 상세가 통째로 404가 된다. 무장애 정보만 detailWithTour2로 따로 받는다.
+	 */
 	override fun getPlaceDetail(contentId: String): TourApiPlaceDetail? {
 		val item = requestItems(
 			operation = "detailCommon2",
@@ -76,6 +81,7 @@ class HttpTourApiClient(
 				"pageNo" to "1",
 				"contentId" to contentId,
 			),
+			baseUri = tourApiProperties.generalBaseUri,
 		).firstOrNull() ?: return null
 
 		return TourApiPlaceDetail(
@@ -108,6 +114,7 @@ class HttpTourApiClient(
 				"contentId" to contentId,
 				"contentTypeId" to contentTypeId,
 			),
+			baseUri = tourApiProperties.generalBaseUri,
 		).firstOrNull() ?: return null
 
 		return TourApiPlaceIntro(
@@ -127,6 +134,7 @@ class HttpTourApiClient(
 				"contentId" to contentId,
 				"imageYN" to "Y",
 			),
+			baseUri = tourApiProperties.generalBaseUri,
 		).map { item ->
 			TourApiPlaceImage(
 				imageUrl = item.string("originimgurl"),
