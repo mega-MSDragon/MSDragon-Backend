@@ -32,6 +32,7 @@ import com.msdragon.backend.report.dto.TripRecordPledgeResponse
 import com.msdragon.backend.report.dto.TripRecordReportResponse
 import com.msdragon.backend.report.dto.TripRecordStopResponse
 import com.msdragon.backend.report.repository.FilialReportRepository
+import com.msdragon.backend.trip.support.DestinationImageResolver
 import com.msdragon.backend.trip.dto.TripDestinationResponse
 import com.msdragon.backend.trip.dto.TripParticipantResponse
 import com.msdragon.backend.trip.dto.relationLabelOf
@@ -65,6 +66,7 @@ class FilialReportService(
 	private val filialReportRepository: FilialReportRepository,
 	private val tripPledgeRepository: TripPledgeRepository,
 	private val pledgeSignatureRepository: PledgeSignatureRepository,
+	private val destinationImageResolver: DestinationImageResolver,
 ) {
 	@Transactional
 	fun createReport(currentUser: AuthenticatedUser, tripId: Long): FilialReportResponse {
@@ -289,8 +291,7 @@ class FilialReportService(
 		return TripRecordDetailResponse(
 			tripId = tripId,
 			title = trip.title,
-			coverImageUrl = report?.coverImageUrl?.takeIf(String::isNotBlank)
-				?: source.stops.firstNotNullOfOrNull { it.imageUrl?.takeIf(String::isNotBlank) },
+			coverImageUrl = recordCoverImageUrl(trip, source),
 			status = trip.status,
 			destination = TripDestinationResponse.from(trip.destinationCode),
 			startDate = trip.startDate,
@@ -394,8 +395,7 @@ class FilialReportService(
 		val totalDistanceMeters = routeDistances
 			.takeIf(List<Int>::isNotEmpty)
 			?.sumOf(Int::toLong)
-		val coverImageUrl = report?.coverImageUrl?.takeIf(String::isNotBlank)
-			?: source.stops.firstNotNullOfOrNull { it.imageUrl?.takeIf(String::isNotBlank) }
+		val coverImageUrl = recordCoverImageUrl(trip, source)
 
 		return RecordAggregate(
 			response = TripRecordSummaryResponse(
@@ -415,6 +415,15 @@ class FilialReportService(
 			totalDistanceMeters = totalDistanceMeters,
 		)
 	}
+
+	/**
+	 * 기록 목록과 기록 상세 상단에 쓰는 이미지. **여행 도시 대표 이미지를 먼저 쓴다.**
+	 * 방문지 사진은 여행마다 제각각이라 목록이 어수선해지고, 자녀가 직접 추가한 장소는 사진이 아예 없다.
+	 * 이미지를 넣지 않은 도시가 생기면 기존처럼 방문지 사진으로 넘어간다.
+	 */
+	private fun recordCoverImageUrl(trip: Trip, source: ReportSource): String? =
+		destinationImageResolver.imageUrlOf(trip.destinationCode)
+			?: source.stops.firstNotNullOfOrNull { it.imageUrl?.takeIf(String::isNotBlank) }
 
 	private fun loadSource(tripId: Long): ReportSource =
 		ReportSource(

@@ -1,6 +1,7 @@
 package com.msdragon.backend.home.service
 
 import com.msdragon.backend.home.config.HomeProperties
+import com.msdragon.backend.trip.support.DestinationImageResolver
 import com.msdragon.backend.common.exception.InternalServerException
 import com.msdragon.backend.home.tourapi.HomeTourApiAttraction
 import com.msdragon.backend.home.tourapi.HomeTourApiClient
@@ -65,7 +66,7 @@ class HomeDiscoveryServiceTest {
 					throw InternalServerException("호출 실패")
 				}
 			},
-			homeProperties = HomeProperties(baseUrl = "https://api.example.com"),
+			destinationImageResolver = DestinationImageResolver(HomeProperties(baseUrl = "https://api.example.com")),
 		)
 
 		val recommendations = service.getMonthlyRecommendations(LocalDate.of(2026, 5, 1))
@@ -119,7 +120,7 @@ class HomeDiscoveryServiceTest {
 					limit: Int,
 				): List<HomeTourApiFestival> = throw InternalServerException("호출 실패")
 			},
-			homeProperties = HomeProperties(),
+			destinationImageResolver = DestinationImageResolver(HomeProperties()),
 		)
 
 		val sections = service.getSections(today).sections
@@ -187,7 +188,7 @@ class HomeDiscoveryServiceTest {
 					),
 				)
 			},
-			homeProperties = HomeProperties(),
+			destinationImageResolver = DestinationImageResolver(HomeProperties()),
 		)
 
 		val items = service.getSections(today).sections.first { it.key == "festivals" }.items

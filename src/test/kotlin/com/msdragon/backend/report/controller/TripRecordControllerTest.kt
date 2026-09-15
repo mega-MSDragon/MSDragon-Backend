@@ -194,12 +194,13 @@ class TripRecordControllerTest {
 			.andExpect(jsonPath("$.data.records[1].tripId").value(requireNotNull(pendingTrip.trip.id)))
 			.andExpect(jsonPath("$.data.records[1].title").value("부산 온천 여행"))
 			.andExpect(jsonPath("$.data.records[1].status").value("completed"))
-			.andExpect(jsonPath("$.data.records[1].coverImageUrl").value("https://example.com/해운대 산책로.jpg"))
+			// 썸네일은 방문지 사진이 아니라 여행 도시 대표 이미지다.
+			.andExpect(jsonPath("$.data.records[1].coverImageUrl").value("http://localhost:8080/images/destinations/busan.png"))
 			.andExpect(jsonPath("$.data.records[1].averageRating").value(3.5))
 			.andExpect(jsonPath("$.data.records[1].reportReady").value(false))
 			.andExpect(jsonPath("$.data.records[1].participants.length()").value(3))
 			.andExpect(jsonPath("$.data.records[2].tripId").value(requireNotNull(readyTrip.trip.id)))
-			.andExpect(jsonPath("$.data.records[2].coverImageUrl").value("https://example.com/report-cover.jpg"))
+			.andExpect(jsonPath("$.data.records[2].coverImageUrl").value("http://localhost:8080/images/destinations/gyeongju.png"))
 			.andExpect(jsonPath("$.data.records[2].averageRating").value(4.5))
 			.andExpect(jsonPath("$.data.records[2].reportReady").value(true))
 
@@ -324,6 +325,8 @@ class TripRecordControllerTest {
 			.andExpect(jsonPath("$.data.title").value("부산 온천 가족여행"))
 			.andExpect(jsonPath("$.data.status").value("completed"))
 			.andExpect(jsonPath("$.data.destination.code").value("busan"))
+			// 기록 목록과 기록 상세가 같은 도시 이미지를 쓴다.
+			.andExpect(jsonPath("$.data.coverImageUrl").value("http://localhost:8080/images/destinations/busan.png"))
 			.andExpect(jsonPath("$.data.participants.length()").value(3))
 			// 이번 여행을 한눈에
 			.andExpect(jsonPath("$.data.summary.totalDistanceKm").value(120.5))
