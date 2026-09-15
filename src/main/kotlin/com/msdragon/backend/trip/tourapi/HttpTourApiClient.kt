@@ -1,6 +1,7 @@
 package com.msdragon.backend.trip.tourapi
 
 import com.msdragon.backend.common.exception.InternalServerException
+import com.msdragon.backend.trip.support.TourApiTextFormatter
 import com.msdragon.backend.trip.config.TourApiProperties
 import com.nimbusds.jose.util.JSONObjectUtils
 import org.springframework.stereotype.Component
@@ -86,7 +87,7 @@ class HttpTourApiClient(
 
 		return TourApiPlaceDetail(
 			homepage = item.string("homepage"),
-			overview = item.string("overview"),
+			overview = TourApiTextFormatter.readable(item.string("overview")),
 			raw = item,
 			contentId = item.string("contentid") ?: contentId,
 			contentTypeId = item.string("contenttypeid"),
