@@ -90,7 +90,7 @@ class FilialReportService(
 			?: throw NotFoundException("생성된 효도 리포트가 없습니다.")
 		val source = loadSource(tripId)
 		validateReportReady(source)
-		refreshReport(report, source)
+		refreshReport(trip, report, source)
 		return reportResponse(report, source)
 	}
 
@@ -154,7 +154,7 @@ class FilialReportService(
 	}
 
 	private fun createOrRefresh(trip: Trip, source: ReportSource): FilialReport {
-		val summary = summarize(source)
+		val summary = summarize(trip, source)
 		val existing = filialReportRepository.findByTripId(requireNotNull(trip.id))
 		if (existing != null) {
 			existing.refreshCourseSummary(
@@ -178,8 +178,8 @@ class FilialReportService(
 		)
 	}
 
-	private fun refreshReport(report: FilialReport, source: ReportSource) {
-		val summary = summarize(source)
+	private fun refreshReport(trip: Trip, report: FilialReport, source: ReportSource) {
+		val summary = summarize(trip, source)
 		report.refreshCourseSummary(
 			coverImageUrl = summary.coverImageUrl,
 			totalPlaceCount = summary.totalPlaceCount,
@@ -188,11 +188,9 @@ class FilialReportService(
 		)
 	}
 
-	private fun summarize(source: ReportSource): ReportSummary {
-		val stopsById = source.stops.associateBy { requireNotNull(it.id) }
-		val coverImageUrl = source.feedbacks.firstNotNullOfOrNull { feedback ->
-			stopsById[feedback.bestTripStopId]?.imageUrl?.takeIf(String::isNotBlank)
-		} ?: source.stops.firstNotNullOfOrNull { it.imageUrl?.takeIf(String::isNotBlank) }
+	private fun summarize(trip: Trip, source: ReportSource): ReportSummary {
+		// 기록 목록·기록 상세와 같은 여행 도시 대표 이미지를 쓴다.
+		val coverImageUrl = recordCoverImageUrl(trip, source)
 		val averageRating = source.feedbacks
 			.fold(BigDecimal.ZERO) { sum, feedback -> sum + feedback.overallRating }
 			.divide(BigDecimal(source.feedbacks.size), 1, RoundingMode.HALF_UP)

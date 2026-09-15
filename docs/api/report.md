@@ -183,6 +183,8 @@
 
 ---
 
+효도 리포트의 `coverImageUrl`은 기록 목록·기록 상세와 같은 여행 도시 대표 이미지입니다. 부모가 고른 가장 좋았던 장소 사진은 `parentFeedbacks[].bestPlace.imageUrl`에 있습니다.
+
 ## POST /api/v1/trips/{tripId}/filial-report
 
 모든 참여 부모가 피드백을 제출한 여행의 효도 리포트를 생성합니다.

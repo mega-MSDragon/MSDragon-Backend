@@ -237,7 +237,8 @@ class TripFeedbackControllerTest {
 		)
 			.andExpect(status().isOk)
 			.andExpect(jsonPath("$.data.tripId").value(tripId))
-			.andExpect(jsonPath("$.data.coverImageUrl").value("https://example.com/park.jpg"))
+			// 커버는 방문지 사진이 아니라 여행 도시 대표 이미지다. 기록 목록·상세와 같은 값이다.
+			.andExpect(jsonPath("$.data.coverImageUrl").value("http://localhost:8080/images/destinations/gyeongju.png"))
 			.andExpect(jsonPath("$.data.totalPlaceCount").value(2))
 			.andExpect(jsonPath("$.data.averageRating").value(2.5))
 			.andExpect(jsonPath("$.data.totalDistanceKm").value(7.5))
