@@ -33,6 +33,7 @@ DB 스키마와 공통 엔티티 규칙을 기록합니다.
 | `TripFeedback` | `trip_feedbacks` | 부모별 여행 피드백 1건 |
 | `TripFeedback.tags` | `trip_feedback_tags` | 피드백에서 선택한 좋았던 점·개선점 태그 |
 | `FilialReport` | `filial_reports` | 부모 피드백 완료 시 자동 생성하는 여행별 효도 리포트 |
+| `LocationUsageLog` | `location_usage_logs` | 좌표를 제외한 위치정보 이용 및 외부 요청 시도 이력 |
 | `SupportFacility` | `support_facilities` | 여행 모드 주변 공중화장실 등 편의시설 좌표 |
 | `ChatSession` | `chat_sessions` | 사용자별·여행별 AI 채팅 세션과 여행 문맥 스냅샷 |
 | `ChatMessage` | `chat_messages` | 사용자 질문과 AI 답변 이력 |
@@ -328,3 +329,19 @@ DB 스키마와 공통 엔티티 규칙을 기록합니다.
 - 인덱스와 unique 제약
 - 연관관계
 - 공통 timestamp/base entity 적용 여부
+
+## location_usage_logs
+
+위치정보 이용 시작(`USE`)과 외부 요청 시도(`EXTERNAL_REQUEST_ATTEMPT`)를 추가 전용으로 기록합니다.
+
+| 컬럼 | 타입/의미 |
+|---|---|
+| id | bigint, 생성 PK |
+| user_id / trip_id | bigint, 이용자 및 여행 식별값. 삭제 연쇄를 피하기 위해 FK 없음 |
+| acquisition_source | varchar(40), APP_DEVICE_LOCATION |
+| service_name | varchar(40), nearby_restrooms / nearby_cafes / nearby_hospital / nearby_pharmacy / nearby_cafe_images |
+| event_type | varchar(40), USE / EXTERNAL_REQUEST_ATTEMPT |
+| external_recipient | varchar(40), USE는 null, 외부 시도는 TMAP / TOUR_API |
+| occurred_at | Instant, UTC timestamp with time zone |
+
+좌표·요청 본문·토큰은 저장하지 않습니다. 인덱스는 `(user_id, occurred_at)` 및 `occurred_at`입니다. 생성 후 일반 앱 수정·삭제 경로는 제공하지 않으며, 운영 DB 관리자 권한 통제는 별도입니다.

@@ -66,6 +66,9 @@ class TravelChatControllerTest {
 	private lateinit var mockMvc: MockMvc
 
 	@Autowired
+	private lateinit var jdbc: org.springframework.jdbc.core.JdbcTemplate
+
+	@Autowired
 	private lateinit var tokenService: TokenService
 
 	@Autowired
@@ -293,6 +296,27 @@ class TravelChatControllerTest {
 			.andExpect(jsonPath("$.status").value(200))
 
 		assertTrue(fakeOpenAiResponsesClient.toolOutput.orEmpty().contains("신라 시대의 천문 관측 시설입니다."))
+	}
+
+	@Test
+	fun `AI 주변 화장실 조회도 위치정보 이용 이력을 자동 저장한다`() {
+		val child = saveUser("child-location-audit")
+		val tripId = createTrip(child = child, travelDate = LocalDate.now(SEOUL_ZONE))
+		fakeOpenAiResponsesClient.toolCall = OpenAiToolCall(
+			callId = "call_nearby", name = "find_nearby_facilities",
+			arguments = mapOf("facility_type" to "restroom"),
+		)
+		mockMvc.perform(
+			post("/api/v1/trips/$tripId/chat/messages")
+				.header("Authorization", "Bearer ${tokenService.createAccessToken(child)}")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""{"message":"주변 화장실", "latitude":37.0, "longitude":127.0}"""),
+		).andExpect(status().isOk)
+		assertEquals(1, jdbc.queryForObject(
+			"select count(*) from location_usage_logs where user_id = ? and trip_id = ? and event_type = 'USE' and service_name = 'nearby_restrooms'",
+			Int::class.java, child.id, tripId,
+		))
+		jdbc.update("delete from location_usage_logs where user_id = ?", child.id)
 	}
 
 	private fun sendMessage(tripId: Long, token: String, message: String) {

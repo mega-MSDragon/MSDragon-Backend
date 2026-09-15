@@ -27,6 +27,7 @@ supportfacility
 ## 관련 테이블
 
 - `support_facilities`
+- `location_usage_logs`
 
 ## 관련 API
 
@@ -47,3 +48,7 @@ supportfacility
 - 카페·병원·약국은 각각 Tmap `카페`, `병원`, `약국` 카테고리를 5km·10개·거리순으로 조회하며 DB에 저장하지 않습니다.
 - 카페 썸네일 보강 실패는 카페 목록 조회 실패로 전파하지 않습니다.
 - 적재와 조회 기준은 `docs/policy/nearby-support-facilities.md`를 따릅니다.
+
+## 위치정보 이용 이력
+
+`location_usage_logs`에 현재 좌표 없이 이용자·여행 ID, 취득 경로, 서비스, UTC 시각을 자동 저장합니다. 일반 조회와 AI 채팅의 주변 조회가 같은 기록 경로를 사용합니다. 상세 기록 의미와 증빙 SQL은 `docs/setup/location-usage-evidence.md`를 참고합니다.
