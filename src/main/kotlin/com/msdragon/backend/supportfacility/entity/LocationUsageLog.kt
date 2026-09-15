@@ -27,7 +27,7 @@ class LocationUsageLog(
 	@Column(name = "external_recipient", updatable = false, length = 40)
 	val externalRecipient: String? = null,
 	@Column(name = "acquisition_source", nullable = false, updatable = false, length = 40)
-	val acquisitionSource: String = "APP_DEVICE_LOCATION",
+	val acquisitionSource: String,
 	@Column(name = "occurred_at", nullable = false, updatable = false)
 	val occurredAt: Instant = Instant.now(),
 ) {

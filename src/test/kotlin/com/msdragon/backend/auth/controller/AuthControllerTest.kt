@@ -38,6 +38,9 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 @AutoConfigureMockMvc
 class AuthControllerTest {
 	@Autowired
+	private lateinit var tokenService: com.msdragon.backend.auth.service.TokenService
+
+	@Autowired
 	private lateinit var mockMvc: MockMvc
 
 	@Autowired
@@ -255,14 +258,17 @@ class AuthControllerTest {
 					  "displayName": "최혜린",
 					  "ageBand": "20s",
 					  "gender": "female",
-					  "privacyConsentAgreed": true
+					  "privacyConsentAgreed": true,
+					  "platform": "ios"
 					}
 					""".trimIndent(),
 				),
 		).andReturn().response.contentAsString
 		val refreshToken = JsonPath.read<String>(signupResponse, "$.data.refreshToken")
+		assertEquals(com.msdragon.backend.auth.entity.DevicePlatform.IOS,
+			tokenService.parseAccessToken(JsonPath.read<String>(signupResponse, "$.data.accessToken")).platform)
 
-		mockMvc.perform(
+		val refreshed = mockMvc.perform(
 			post("/api/v1/auth/refresh")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""{"refreshToken":"$refreshToken"}"""),
@@ -271,6 +277,9 @@ class AuthControllerTest {
 			.andExpect(jsonPath("$.data.signupRequired").value(false))
 			.andExpect(jsonPath("$.data.accessToken").isString)
 			.andExpect(jsonPath("$.data.refreshToken").isString)
+			.andReturn().response.contentAsString
+		assertEquals(com.msdragon.backend.auth.entity.DevicePlatform.IOS,
+			tokenService.parseAccessToken(JsonPath.read<String>(refreshed, "$.data.accessToken")).platform)
 	}
 
 	@Test

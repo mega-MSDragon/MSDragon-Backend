@@ -338,7 +338,7 @@ DB 스키마와 공통 엔티티 규칙을 기록합니다.
 |---|---|
 | id | bigint, 생성 PK |
 | user_id / trip_id | bigint, 이용자 및 여행 식별값. 삭제 연쇄를 피하기 위해 FK 없음 |
-| acquisition_source | varchar(40), APP_DEVICE_LOCATION |
+| acquisition_source | varchar(40), APPLE(iOS) / GOOGLE(Android) / UNKNOWN(미확인·web). 기존 APP_DEVICE_LOCATION 기록은 보존 |
 | service_name | varchar(40), nearby_restrooms / nearby_cafes / nearby_hospital / nearby_pharmacy / nearby_cafe_images |
 | event_type | varchar(40), USE / EXTERNAL_REQUEST_ATTEMPT |
 | external_recipient | varchar(40), USE는 null, 외부 시도는 TMAP / TOUR_API |

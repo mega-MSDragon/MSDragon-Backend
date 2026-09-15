@@ -308,12 +308,12 @@ class TravelChatControllerTest {
 		)
 		mockMvc.perform(
 			post("/api/v1/trips/$tripId/chat/messages")
-				.header("Authorization", "Bearer ${tokenService.createAccessToken(child)}")
+				.header("Authorization", "Bearer ${tokenService.createAccessToken(child, com.msdragon.backend.auth.entity.DevicePlatform.IOS)}")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""{"message":"주변 화장실", "latitude":37.0, "longitude":127.0}"""),
 		).andExpect(status().isOk)
 		assertEquals(1, jdbc.queryForObject(
-			"select count(*) from location_usage_logs where user_id = ? and trip_id = ? and event_type = 'USE' and service_name = 'nearby_restrooms'",
+			"select count(*) from location_usage_logs where user_id = ? and trip_id = ? and event_type = 'USE' and service_name = 'nearby_restrooms' and acquisition_source = 'APPLE'",
 			Int::class.java, child.id, tripId,
 		))
 		jdbc.update("delete from location_usage_logs where user_id = ?", child.id)

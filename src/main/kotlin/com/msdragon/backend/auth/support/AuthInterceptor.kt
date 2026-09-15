@@ -32,6 +32,7 @@ class AuthInterceptor(
 			AuthenticatedUser(
 				id = requireNotNull(user.id),
 				role = user.role,
+				platform = claims.platform,
 			),
 		)
 		return true

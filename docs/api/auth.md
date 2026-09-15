@@ -70,7 +70,7 @@ access token이 없거나, 형식이 다르거나, 만료/변조된 경우 HTTP 
 | `provider` | enum | true | `kakao`, `apple` | 소셜 로그인 종류 |
 | `token` | string | true | - | Kakao `accessToken` 또는 Apple `identityToken` |
 | `authorizationCode` | string | false | - | 애플 로그인 시 함께 받은 authorizationCode. 탈퇴 시 애플 연결 해제에 필요합니다. 카카오는 보내지 않습니다 |
-| `platform` | enum | false | `ios`, `android`, `web` | 요청 앱 플랫폼. 통계/디버깅용 선택 값 |
+| `platform` | enum | false | `ios`, `android`, `web` | 요청 앱 플랫폼. 모바일은 위치정보 취득 경로 구분을 위해 반드시 전달. 생략·web은 이력에 UNKNOWN 기록 |
 
 `authorizationCode`는 일회용이고 발급 후 5분 안에만 유효하므로 서버가 로그인 시점에 provider refresh token으로 교환해 보관합니다. 탈퇴 시점에는 코드를 다시 받을 수 없습니다.
 
@@ -147,6 +147,8 @@ access token이 없거나, 형식이 다르거나, 만료/변조된 경우 HTTP 
 | `privacyConsentAgreed` | boolean | true | 개인정보 수집 및 이용 필수 약관. `true`만 허용 |
 | `locationBasedFacilityConsentAgreed` | boolean | false | 위치 기반 편의시설 안내 선택 약관. 기본값 `false` |
 | `platform` | enum | false | `ios`, `android`, `web` |
+
+로그인·가입 시 `platform`은 액세스 토큰에 포함됩니다. 토큰 재발급 시에는 해당 refresh token에 저장된 플랫폼을 유지합니다. 위치 기능을 사용하는 모바일 앱은 이 값을 전달해야 취득 경로가 구분됩니다. 기존 플랫폼 없는 토큰도 인증은 가능하지만 이력은 `UNKNOWN`으로 기록됩니다.
 
 역할별 연령대 검증:
 

@@ -1,6 +1,7 @@
 package com.msdragon.backend.supportfacility.service
 
 import com.msdragon.backend.auth.entity.UserRole
+import com.msdragon.backend.auth.entity.DevicePlatform
 import com.msdragon.backend.auth.support.AuthenticatedUser
 import com.msdragon.backend.common.exception.BadRequestException
 import com.msdragon.backend.supportfacility.entity.LocationUsageLog
@@ -28,7 +29,7 @@ class LocationUsageTest {
 	private val facilities = mock(SupportFacilityRepository::class.java)
 	private val recorder = LocationUsageRecorder(repository)
 	private val service = SupportFacilityService(facilities, tmap, tourApi, tripService, recorder)
-	private val user = AuthenticatedUser(7, UserRole.CHILD)
+	private val user = AuthenticatedUser(7, UserRole.CHILD, DevicePlatform.ANDROID)
 
 	@Test
 	fun `화장실은 이용만 기록하고 카페는 두 외부 요청 시도를 구분한다`() {
@@ -38,8 +39,17 @@ class LocationUsageTest {
 		service.getNearbyCafes(user, 9, 37.0, 127.0)
 		assertEquals(listOf("USE", "EXTERNAL_REQUEST_ATTEMPT", "EXTERNAL_REQUEST_ATTEMPT"), logs.map { it.eventType })
 		assertEquals(listOf(null, "TMAP", "TOUR_API"), logs.map { it.externalRecipient })
-		assertTrue(logs.all { it.userId == 7L && it.tripId == 9L && it.acquisitionSource == "APP_DEVICE_LOCATION" })
+		assertTrue(logs.all { it.userId == 7L && it.tripId == 9L && it.acquisitionSource == "GOOGLE" })
 		assertTrue(LocationUsageLog::class.java.declaredFields.none { it.name in listOf("latitude", "longitude", "token", "request") })
+	}
+
+	@Test
+	fun `같은 이용자도 요청 토큰의 플랫폼별로 취득 경로를 구분한다`() {
+		for (platform in listOf(DevicePlatform.IOS, DevicePlatform.ANDROID, DevicePlatform.WEB, null)) {
+			service.getNearbyCafes(user.copy(platform = platform), 9, 37.0, 127.0)
+		}
+		assertEquals(listOf("APPLE", "GOOGLE", "UNKNOWN", "UNKNOWN"), logs.filter { it.eventType == "USE" }.map { it.acquisitionSource })
+		assertEquals(listOf("APPLE", "GOOGLE", "UNKNOWN", "UNKNOWN"), logs.filter { it.externalRecipient == "TOUR_API" }.map { it.acquisitionSource })
 	}
 
 	@Test

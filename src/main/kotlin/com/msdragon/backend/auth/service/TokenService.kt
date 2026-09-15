@@ -2,6 +2,7 @@ package com.msdragon.backend.auth.service
 
 import com.msdragon.backend.auth.config.AuthProperties
 import com.msdragon.backend.auth.entity.OAuthProvider
+import com.msdragon.backend.auth.entity.DevicePlatform
 import com.msdragon.backend.auth.entity.User
 import com.msdragon.backend.common.exception.InternalServerException
 import com.msdragon.backend.common.exception.UnAuthorizedException
@@ -32,7 +33,7 @@ class TokenService(
 		}
 	}
 
-	fun createAccessToken(user: User): String {
+	fun createAccessToken(user: User, platform: DevicePlatform? = null): String {
 		val userId = user.id ?: throw InternalServerException("사용자 식별자가 없습니다.")
 		return createJwt(
 			subject = userId.toString(),
@@ -40,6 +41,7 @@ class TokenService(
 			claims = mapOf(
 				"token_type" to ACCESS_TOKEN_TYPE,
 				"role" to user.role.value,
+				"platform" to platform?.value,
 			),
 		)
 	}
@@ -67,7 +69,11 @@ class TokenService(
 	fun parseAccessToken(token: String): AccessTokenClaims {
 		val claims = parseJwt(token, ACCESS_TOKEN_TYPE)
 		val userId = claims.subject.toLongOrNull() ?: throw UnAuthorizedException("인증 토큰의 사용자 식별자가 올바르지 않습니다.")
-		return AccessTokenClaims(userId = userId)
+		val platform = claims.getStringClaim("platform")?.let { value ->
+			DevicePlatform.entries.firstOrNull { it.value == value }
+				?: throw UnAuthorizedException("인증 토큰의 플랫폼이 올바르지 않습니다.")
+		}
+		return AccessTokenClaims(userId = userId, platform = platform)
 	}
 
 	fun parseSignupToken(token: String): SignupTokenClaims {
@@ -159,6 +165,7 @@ class TokenService(
 
 data class AccessTokenClaims(
 	val userId: Long,
+	val platform: DevicePlatform? = null,
 )
 
 data class SignupTokenClaims(

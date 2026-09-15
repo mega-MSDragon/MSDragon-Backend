@@ -29,7 +29,7 @@ data class SocialLoginRequest(
 	)
 	val authorizationCode: String? = null,
 
-	@field:Schema(description = "요청이 발생한 앱 플랫폼. 통계/디버깅용 선택 값입니다.", example = "ios", allowableValues = ["ios", "android", "web"], nullable = true)
+	@field:Schema(description = "요청 앱 플랫폼. 위치정보 취득 경로 구분에 사용하므로 모바일 앱은 ios 또는 android를 전달합니다. 생략·web은 위치정보 이력에서 UNKNOWN으로 기록됩니다.", example = "ios", allowableValues = ["ios", "android", "web"], nullable = true)
 	val platform: DevicePlatform? = null,
 )
 
@@ -62,7 +62,7 @@ data class CompleteSignupRequest(
 	@field:Schema(description = "위치 기반 편의시설 안내 선택 약관 동의 여부", example = "false", defaultValue = "false", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
 	val locationBasedFacilityConsentAgreed: Boolean = false,
 
-	@field:Schema(description = "요청이 발생한 앱 플랫폼. 통계/디버깅용 선택 값입니다.", example = "ios", allowableValues = ["ios", "android", "web"], nullable = true)
+	@field:Schema(description = "요청 앱 플랫폼. 위치정보 취득 경로 구분에 사용하므로 모바일 앱은 ios 또는 android를 전달합니다. 생략·web은 위치정보 이력에서 UNKNOWN으로 기록됩니다.", example = "ios", allowableValues = ["ios", "android", "web"], nullable = true)
 	val platform: DevicePlatform? = null,
 )
 

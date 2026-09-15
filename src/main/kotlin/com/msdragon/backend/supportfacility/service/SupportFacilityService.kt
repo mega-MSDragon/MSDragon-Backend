@@ -41,7 +41,7 @@ class SupportFacilityService(
 	): List<NearbyRestroomResponse> {
 		validateCoordinate(latitude, longitude)
 		tripService.validateTravelModeAccess(currentUser, tripId)
-		locationUsageRecorder.record(currentUser.id, tripId, "nearby_restrooms")
+		locationUsageRecorder.record(currentUser, tripId, "nearby_restrooms")
 
 		val latitudeDelta = SEARCH_RADIUS_METERS / METERS_PER_LATITUDE_DEGREE
 		val longitudeDelta = latitudeDelta / abs(cos(Math.toRadians(latitude))).coerceAtLeast(0.01)
@@ -85,8 +85,8 @@ class SupportFacilityService(
 		check(facilityType == SupportFacilityType.HOSPITAL || facilityType == SupportFacilityType.PHARMACY)
 		validateCoordinate(latitude, longitude)
 		tripService.validateTravelModeAccess(currentUser, tripId)
-		locationUsageRecorder.record(currentUser.id, tripId, "nearby_${facilityType.value}")
-		locationUsageRecorder.record(currentUser.id, tripId, "nearby_${facilityType.value}", "TMAP")
+		locationUsageRecorder.record(currentUser, tripId, "nearby_${facilityType.value}")
+		locationUsageRecorder.record(currentUser, tripId, "nearby_${facilityType.value}", "TMAP")
 
 		return tmapPoiClient.findNearby(
 			facilityType = facilityType,
@@ -126,8 +126,8 @@ class SupportFacilityService(
 	): List<NearbyCafeResponse> {
 		validateCoordinate(latitude, longitude)
 		tripService.validateTravelModeAccess(currentUser, tripId)
-		locationUsageRecorder.record(currentUser.id, tripId, "nearby_cafes")
-		locationUsageRecorder.record(currentUser.id, tripId, "nearby_cafes", "TMAP")
+		locationUsageRecorder.record(currentUser, tripId, "nearby_cafes")
+		locationUsageRecorder.record(currentUser, tripId, "nearby_cafes", "TMAP")
 
 		val cafes = tmapPoiClient.findNearbyCafes(
 			latitude = BigDecimal.valueOf(latitude),
@@ -139,7 +139,7 @@ class SupportFacilityService(
 			.filter { it.distanceMeters <= SEARCH_RADIUS_METERS }
 			.sortedWith(compareBy<MedicalFacilityDistance> { it.distanceMeters }.thenBy { it.poi.id })
 			.take(RESULT_LIMIT)
-		locationUsageRecorder.record(currentUser.id, tripId, "nearby_cafe_images", "TOUR_API")
+		locationUsageRecorder.record(currentUser, tripId, "nearby_cafe_images", "TOUR_API")
 		val imageCandidates = findNearbyCafeImages(latitude, longitude)
 
 		return cafes

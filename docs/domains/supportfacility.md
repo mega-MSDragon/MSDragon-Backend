@@ -52,3 +52,5 @@ supportfacility
 ## 위치정보 이용 이력
 
 `location_usage_logs`에 현재 좌표 없이 이용자·여행 ID, 취득 경로, 서비스, UTC 시각을 자동 저장합니다. 일반 조회와 AI 채팅의 주변 조회가 같은 기록 경로를 사용합니다. 상세 기록 의미와 증빙 SQL은 `docs/setup/location-usage-evidence.md`를 참고합니다.
+
+취득 경로는 인증된 액세스 토큰의 앱 플랫폼을 기준으로 iOS=`APPLE`, Android=`GOOGLE`로 구분합니다. 플랫폼 없는 기존 토큰 및 web은 `UNKNOWN`으로 기록하며 기존 이력은 소급 변경하지 않습니다.

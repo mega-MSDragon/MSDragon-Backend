@@ -162,7 +162,7 @@ class AuthService(
 		user: User,
 		platform: DevicePlatform?,
 	): AuthResponse {
-		val accessToken = tokenService.createAccessToken(user)
+		val accessToken = tokenService.createAccessToken(user, platform)
 		val refreshToken = tokenService.generateRefreshToken()
 		val issuedAt = LocalDateTime.now()
 		userRefreshTokenRepository.save(
