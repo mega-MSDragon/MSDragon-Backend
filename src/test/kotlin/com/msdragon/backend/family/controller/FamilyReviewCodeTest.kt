@@ -31,7 +31,7 @@ import java.time.LocalDateTime
  */
 @SpringBootTest
 @AutoConfigureMockMvc
-@TestPropertySource(properties = ["app.family.review-code=MSH-0901"])
+@TestPropertySource(properties = ["app.family.review-code=MSH-0000"])
 class FamilyReviewCodeTest {
 	@Autowired
 	private lateinit var mockMvc: MockMvc
@@ -51,7 +51,7 @@ class FamilyReviewCodeTest {
 		repeat(3) { index ->
 			val reviewer = saveUser(UserRole.CHILD, "apple-reviewer-$index", "리뷰어$index")
 
-			mockMvc.perform(matchRequest(reviewer, "MSH-0901"))
+			mockMvc.perform(matchRequest(reviewer, "MSH-0000"))
 				.andExpect(status().isOk)
 				.andExpect(jsonPath("$.status").value(200))
 				.andExpect(jsonPath("$.data.familyId").isNumber)
@@ -64,7 +64,7 @@ class FamilyReviewCodeTest {
 	fun `심사용 데모 부모는 프로필이 완료되어 바로 여행을 만들 수 있다`() {
 		val reviewer = saveUser(UserRole.CHILD, "apple-reviewer-profile", "리뷰어")
 
-		mockMvc.perform(matchRequest(reviewer, "MSH-0901"))
+		mockMvc.perform(matchRequest(reviewer, "MSH-0000"))
 			.andExpect(status().isOk)
 			// 마이페이지·여행 생성이 완료 프로필과 여행 MBTI를 요구한다.
 			.andExpect(jsonPath("$.data.members[1].profileCompleted").value(true))
@@ -80,7 +80,7 @@ class FamilyReviewCodeTest {
 	fun `부모가 심사용 코드를 입력하면 데모 자녀와 연결한다`() {
 		val reviewer = saveUser(UserRole.PARENT, "apple-reviewer-parent", "리뷰어", GenderType.MALE)
 
-		mockMvc.perform(matchRequest(reviewer, "MSH-0901"))
+		mockMvc.perform(matchRequest(reviewer, "MSH-0000"))
 			.andExpect(status().isOk)
 			.andExpect(jsonPath("$.data.members.length()").value(2))
 			.andExpect(jsonPath("$.data.matchedUser.role").value("child"))
@@ -90,11 +90,11 @@ class FamilyReviewCodeTest {
 	fun `심사용 코드를 두 번 입력해도 오류 없이 같은 가족을 반환한다`() {
 		val reviewer = saveUser(UserRole.CHILD, "apple-reviewer-twice", "리뷰어")
 
-		val first = mockMvc.perform(matchRequest(reviewer, "MSH-0901"))
+		val first = mockMvc.perform(matchRequest(reviewer, "MSH-0000"))
 			.andExpect(status().isOk)
 			.andReturn().response.contentAsString
 
-		mockMvc.perform(matchRequest(reviewer, "MSH-0901"))
+		mockMvc.perform(matchRequest(reviewer, "MSH-0000"))
 			.andExpect(status().isOk)
 			.andExpect(jsonPath("$.status").value(200))
 			.andExpect(jsonPath("$.data.members.length()").value(2))
@@ -106,7 +106,7 @@ class FamilyReviewCodeTest {
 	fun `하이픈 없이 입력해도 심사용 코드로 인식한다`() {
 		val reviewer = saveUser(UserRole.CHILD, "apple-reviewer-nohyphen", "리뷰어")
 
-		mockMvc.perform(matchRequest(reviewer, "MSH0901"))
+		mockMvc.perform(matchRequest(reviewer, "MSH0000"))
 			.andExpect(status().isOk)
 			.andExpect(jsonPath("$.data.members.length()").value(2))
 	}
@@ -116,7 +116,7 @@ class FamilyReviewCodeTest {
 		val reviewer = saveUser(UserRole.PARENT, "apple-reviewer-trip", "리뷰어", GenderType.MALE)
 		val authorization = "Bearer ${tokenService.createAccessToken(reviewer)}"
 
-		mockMvc.perform(matchRequest(reviewer, "MSH-0901")).andExpect(status().isOk)
+		mockMvc.perform(matchRequest(reviewer, "MSH-0000")).andExpect(status().isOk)
 
 		// 여행 생성은 대표 자녀 권한이라 부모 심사자는 볼 여행이 없으면 앱을 확인할 수 없다.
 		val tripId = JsonPath.read<Int>(
@@ -150,7 +150,7 @@ class FamilyReviewCodeTest {
 	fun `연결했던 심사자가 탈퇴한 뒤 다시 연결할 수 있다`() {
 		// 자녀로 연결 후 탈퇴하면 가족이 해체되고 구성원 row가 모두 삭제된다.
 		val first = saveUser(UserRole.CHILD, "apple-reviewer-rejoin-1", "리뷰어")
-		mockMvc.perform(matchRequest(first, "MSH-0901")).andExpect(status().isOk)
+		mockMvc.perform(matchRequest(first, "MSH-0000")).andExpect(status().isOk)
 
 		mockMvc.perform(
 			delete("/api/v1/users/me")
@@ -161,7 +161,7 @@ class FamilyReviewCodeTest {
 
 		// 같은 애플 계정으로 다시 로그인하면 새 users row가 되므로 새 계정으로 재현한다.
 		val rejoined = saveUser(UserRole.CHILD, "apple-reviewer-rejoin-2", "리뷰어")
-		mockMvc.perform(matchRequest(rejoined, "MSH-0901"))
+		mockMvc.perform(matchRequest(rejoined, "MSH-0000"))
 			.andExpect(status().isOk)
 			.andExpect(jsonPath("$.status").value(200))
 			.andExpect(jsonPath("$.data.members.length()").value(2))
@@ -173,7 +173,7 @@ class FamilyReviewCodeTest {
 	fun `부모로 연결했던 심사자가 탈퇴한 뒤 다시 연결할 수 있다`() {
 		// 부모 탈퇴는 본인 구성원 row만 삭제하고 데모 자녀와 가족은 남는다.
 		val first = saveUser(UserRole.PARENT, "apple-reviewer-prejoin-1", "리뷰어", GenderType.MALE)
-		mockMvc.perform(matchRequest(first, "MSH-0901")).andExpect(status().isOk)
+		mockMvc.perform(matchRequest(first, "MSH-0000")).andExpect(status().isOk)
 
 		mockMvc.perform(
 			delete("/api/v1/users/me")
@@ -182,11 +182,34 @@ class FamilyReviewCodeTest {
 			.andExpect(status().isOk)
 
 		val rejoined = saveUser(UserRole.PARENT, "apple-reviewer-prejoin-2", "리뷰어", GenderType.MALE)
-		mockMvc.perform(matchRequest(rejoined, "MSH-0901"))
+		mockMvc.perform(matchRequest(rejoined, "MSH-0000"))
 			.andExpect(status().isOk)
 			.andExpect(jsonPath("$.status").value(200))
 			.andExpect(jsonPath("$.data.members.length()").value(2))
 			.andExpect(jsonPath("$.data.matchedUser.role").value("child"))
+	}
+
+	@Test
+	fun `심사용 코드와 같은 값은 일반 가족 코드로 발급되지 않는다`() {
+		// 클라이언트 입력이 영문 3자 + 숫자 4자 고정이라 심사용 코드도 실제 코드와 형식이 같다.
+		// 같은 값이 발급되면 그 사용자의 코드를 입력한 사람이 심사용 데모 가족으로 연결된다.
+		repeat(30) { index ->
+			val child = saveUser(UserRole.CHILD, "code-collision-$index", "자녀$index")
+
+			val code: String = JsonPath.read(
+				mockMvc.perform(
+					post("/api/v1/family/code")
+						.header("Authorization", "Bearer ${tokenService.createAccessToken(child)}"),
+				)
+					.andExpect(status().isOk)
+					.andReturn()
+					.response
+					.contentAsString,
+				"$.data.code",
+			)
+
+			assertThat(code).isNotEqualTo("MSH-0000")
+		}
 	}
 
 	private fun matchRequest(user: User, code: String) =

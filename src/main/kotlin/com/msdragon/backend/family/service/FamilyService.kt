@@ -407,10 +407,15 @@ class FamilyService(
 	private fun familyMembers(family: Family): List<FamilyMember> =
 		familyMemberRepository.findAllByFamilyIdOrderByJoinedAtAsc(requireNotNull(family.id))
 
+	/**
+	 * 실제 코드와 심사용 코드는 형식이 같다(`MSH-0000`). 클라이언트 입력이 영문 3자 + 숫자 4자로 고정이라
+	 * 심사용 코드만 다른 형식을 쓸 수 없다. 그래서 심사용 코드와 같은 값이 발급되지 않게 막는다.
+	 * 막지 않으면 그 사용자의 코드를 입력한 사람이 가족 연결 대신 심사용 데모 가족으로 연결된다.
+	 */
 	private fun generateUniqueCode(): String {
 		repeat(CODE_GENERATION_MAX_ATTEMPTS) {
 			val code = "MSH-%04d".format(random.nextInt(CODE_NUMBER_BOUND))
-			if (!familyCodeRepository.existsByCode(code)) {
+			if (!familyCodeRepository.existsByCode(code) && !isReviewCode(code)) {
 				return code
 			}
 		}
